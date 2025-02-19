@@ -12,22 +12,27 @@ numbers across each individual for a single project to form a score for this pro
 
 
 ### Example ranking
-
-Ranking: 1, 2, 3, 4, 5, 8, 7, 6
-Corresponds to projects: P21, P63, P24, P15, P8, P66, P26, P19
-
-P21 is the most highly rated project in this example ranking (1), followed by P63 (2) and P66 is the lowest ranked project (8).
-
 {
 P21: 1,
 P63: 2,
 P24: 3,
 P15: 4,
 P8: 5,
-P66: 6,
+P66: 8,
 P26: 7,
-P19: 8,
+P19: 6,
 }
 
+P21 is the most highly rated project in this example ranking (1), followed by P63 (2) and P66 is the lowest ranked project (8).
+
 ### 'The Owner'
-Rankings: 
+{
+P21: 7,
+P63: 2,
+P24: 3,
+P15: 5,
+P8: 1,
+P66: 6,
+P26: 4,
+P19: 8,
+}
