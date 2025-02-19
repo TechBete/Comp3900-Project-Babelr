@@ -8,3 +8,7 @@
 1. P24 Online Audio Quality Rating System
 2. P15 Social Mobile Application with in-app coins
 
+### 'The Owner'
+1. P8 System for finding key events or users in sentiment changes at macro or micro levels on social media
+2. P14 SAT Decisions Scraper & Search Application with RAG (Retrieval-Augmented Generation)
+Note: Both are pretty AI heavy.
