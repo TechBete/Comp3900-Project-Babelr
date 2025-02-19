@@ -16,3 +16,7 @@ Note: Both are pretty AI heavy.
 ### Kevin
 1. P15 Social Mobile Application with in-app coins
 2. P66-69 Atlassian Forge (Team Tamagotchi: Develop a virtual team pet accessible across Jira and Confluence) OR (Confluence note taker: Create an app to take notes as you read a Confluence page)
+
+### Nick
+1.  P24 - Online Audio Quality Rating System
+2.  P26 - Web Platform for Microservices and APIs
