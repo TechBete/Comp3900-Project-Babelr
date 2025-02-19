@@ -20,3 +20,8 @@ P21 is the most highly rated project in this example ranking (1), followed by P6
 
 ### 'The Owner'
 Rankings: 1, 2, 3, 4, 5, 6, 7, 8
+
+### TechBete (Fong)
+Rankings: 6, 7, 3, 4, 5, 2, 8, 1
+
+
