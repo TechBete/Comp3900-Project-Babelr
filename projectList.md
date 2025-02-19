@@ -10,7 +10,7 @@
 
 ### 'The Owner'
 1. P8 System for finding key events or users in sentiment changes at macro or micro levels on social media
-2. P14 SAT Decisions Scraper & Search Application with RAG (Retrieval-Augmented Generation)
+2. P63 SAT Decisions Scraper & Search Application with RAG (Retrieval-Augmented Generation)
 Note: Both are pretty AI heavy.
 
 ### Kevin
