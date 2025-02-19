@@ -26,8 +26,6 @@ P19: 6
 P21 is the most highly rated project in this example ranking (1), followed by P63 (2) and P66 is the lowest ranked project (8).
 
 ### 'The Owner'
-Rankings: 1, 2, 3, 4, 5, 6, 7, 8
-
 {
 P21: 7,
 P63: 2,
@@ -40,8 +38,6 @@ P19: 8
 }
 
 ### TechBete (Fong)
-Rankings: 6, 7, 3, 4, 5, 2, 8, 1
-
 {
 P21: 6,
 P63: 7,
