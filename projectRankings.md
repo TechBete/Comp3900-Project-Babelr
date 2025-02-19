@@ -18,5 +18,16 @@ Corresponds to projects: P21, P63, P24, P15, P8, P66, P26, P19
 
 P21 is the most highly rated project in this example ranking (1), followed by P63 (2) and P66 is the lowest ranked project (8).
 
+{
+P21: 1,
+P63: 2,
+P24: 3,
+P15: 4,
+P8: 5,
+P66: 6,
+P26: 7,
+P19: 8,
+}
+
 ### 'The Owner'
-Rankings: 1, 2, 3, 4, 5, 6, 7, 8
+Rankings: 
