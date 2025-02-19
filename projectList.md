@@ -20,3 +20,10 @@ Note: Both are pretty AI heavy.
 ### Nick
 1.  P24 - Online Audio Quality Rating System
 2.  P26 - Web Platform for Microservices and APIs
+
+### Jeremy (Backup)
+1. P21
+2. P19
+3. P24
+4. P15
+5. ?
