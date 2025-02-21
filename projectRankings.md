@@ -25,6 +25,18 @@ P19: 6
 
 P21 is the most highly rated project in this example ranking (1), followed by P63 (2) and P66 is the lowest ranked project (8).
 
+### Categories 
+{
+Web Development: 0,
+NLP: 0,
+VR/AR: 0,
+Data Science: 0,
+AI/ML: 0,
+Cybersecurity: 0,
+Networking/IoT: 0,
+Mobile Application: 0 
+}
+
 ### 'The Owner'
 {
 P21: 7,
@@ -38,6 +50,7 @@ P19: 8
 }
 
 ### TechBete (Fong)
+Project Ranking: 
 {
 P21: 6,
 P63: 7,
@@ -48,6 +61,28 @@ P66: 2,
 P26: 8,
 P19: 1
 }
+
+Category Ranking:
+{
+Web Development: 2,
+NLP: 5,
+VR/AR: 8,
+Data Science: 6,
+AI/ML: 7,
+Cybersecurity: 1,
+Networking/IoT: 4,
+Mobile Application: 3
+}
+
+Relevant Knowledge and Skills: 
+{
+Comp1531,
+Comp2041,
+Comp2521,
+Comp2511 (o.o.p),
+Cybersecurity (cloud, digital forensics, web apps, network),
+database (minor)
+} 
 
 ### Nick
 {
