@@ -142,7 +142,7 @@ Relevant Knowledge and Skills:
 {
 COMP1531, COMP3231, COMP6441, COMP6447
 Interests: Cybersecurity, Digital Forensics, OS, Network, Incident response
-Python, C, Team management, Docker, Git
+Python, C, SQL, HTML, React
 } 
 
 
@@ -173,6 +173,23 @@ P66: 2,
 P26: 6,
 P19: 3
 }
+
+Category Ranking:
+{
+Web Development: 1,
+NLP: 6,
+VR/AR: 8,
+Data Science: 5,
+AI/ML: 7,
+Cybersecurity: 3,
+Networking/IoT: 4,
+Mobile Application: 2 
+}
+
+Relevant Knowledge and Skills: 
+{
+COMP1531, COMP6080 (front end), COMP2511 (oop), COMP3311 (databases), COMP6841 (sec eng), COMP2041
+} 
 
 
 ## FINAL SCORES
