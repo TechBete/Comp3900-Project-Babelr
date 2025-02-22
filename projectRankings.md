@@ -160,6 +160,12 @@ P66: 8,
 P26: 7,
 P19: 3
 }
+Relevant Knowledge and Skills: 
+{
+COMP1531, COMP3231, COMP6441, COMP6447, COMP3141, COMP6991
+Interests: Cybersecurity, Digital Forensics, OS, Rust, Zig,
+Python, C, Binary exploitation
+}
 
 ### Kevin
 
