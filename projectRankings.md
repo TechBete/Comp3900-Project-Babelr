@@ -96,6 +96,26 @@ P26: 2,
 P19: 7
 }
 
+Category Ranking:
+{
+Web Development: 1,
+NLP: 3,
+VR/AR: 8,
+Data Science: 6,
+AI/ML: 5,
+Cybersecurity: 7,
+Networking/IoT: 4,
+Mobile Application: 2
+}
+
+Relevant Knowledge and Skills: 
+{
+COMP1531 (Python Backend/Webdev),
+COMP2511 (OOP),
+COMP2041 (Shell),
+COMP3311 (databases),
+} 
+
 ### 'The ~~scrum~~ Master'
 {
 P21: 7,
