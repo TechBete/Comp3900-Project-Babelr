@@ -160,6 +160,9 @@ P66: 8,
 P26: 7,
 P19: 3
 }
+
+Category Ranking: { Web Development: 7, NLP: 3, VR/AR: 8, Data Science: 5, AI/ML: 2, Cybersecurity: 1, Networking/IoT: 4, Mobile Application: 6 }
+
 Relevant Knowledge and Skills: 
 {
 COMP1531, COMP3231, COMP6441, COMP6447, COMP3141, COMP6991
