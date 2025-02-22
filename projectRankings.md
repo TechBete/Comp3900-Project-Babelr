@@ -49,6 +49,10 @@ P26: 4,
 P19: 8
 }
 
+Relevant Skills: { University experience: [OS, Networking, Databases, AI/ML (NLP, computer vision, deep learning), data science, a lot of statistics, all core computer science courses], Work experience: [React.js, Python/Django, Full-stack dev, data science] }
+
+Category Ranking: { Web Development: 4, NLP: 2, VR/AR: 7, Data Science: 5, AI/ML: 1, Cybersecurity: 8, Networking/IoT: 6, Mobile Application: 3 }
+
 ### TechBete (Fong)
 Project Ranking: 
 {
