@@ -108,6 +108,27 @@ P26: 4,
 P19: 1
 }
 
+Category Ranking:
+{
+Web Development: 3,
+NLP: 4,
+VR/AR: 8,
+Data Science: 5,
+AI/ML: 7,
+Cybersecurity: 1,
+Networking/IoT: 2,
+Mobile Application: 6
+}
+
+Relevant Knowledge and Skills: 
+{
+COMP1531, COMP3231, COMP6441, COMP6447
+Interests: Cybersecurity, Digital Forensics, OS, Network, Incident response
+Python, C, Team management, Docker, Git
+} 
+
+
+
 
 ### Theo
 
