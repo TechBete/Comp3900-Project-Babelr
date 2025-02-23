@@ -206,3 +206,5 @@ COMP1531, COMP6080 (front end), COMP2511 (oop), COMP3311 (databases), COMP6841 (
 
 Final rankings: { P21: 8, P63: 5, P24: 1, P15: 2, P8 : 4, P66: 7, P26: 6, P19: 3 }
 
+Top 3 Categories (in order): [Web dev, cybersecurity, mobile application]
+
