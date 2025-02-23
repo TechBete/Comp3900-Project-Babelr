@@ -7,6 +7,9 @@ https://docs.google.com/document/d/1jHEY4-wd6vO66vtagbQ3v1HZqfNnaiVt-AmtthsYzgQ/
 ## Project Proposal
 https://docs.google.com/document/d/1522YLpjfrPRm5Js9LZ6pmliFpHtviaqjNw6lVLXeGDM/edit?usp=sharing
 
+## Project Preference Justifications
+https://docs.google.com/document/d/1qMiaMPBGLGVdCk_7eZkDoUsZVZQ4GWnBJ8motjwiZ3E/edit?usp=sharing
+
 
 
 
