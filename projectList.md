@@ -21,7 +21,7 @@ Note: Both are pretty AI heavy.
 1.  P24 - Online Audio Quality Rating System
 2.  P26 - Web Platform for Microservices and APIs
 
-### Jeremy (Backup)
+### Jeremy (TechBete)
 1. P21
 2. P19
 3. P24
