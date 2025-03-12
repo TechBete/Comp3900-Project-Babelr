@@ -1,0 +1,66 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background-image: url('../images/babelr_logo.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.reset-container {
+    background-color: #fff;
+    padding: 50px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    width: 350px;
+    text-align: center;
+}
+
+#reset-header {
+    font-size: 32px;
+    margin-bottom: 25px;
+}
+
+.reset-form {
+    display: flex;
+    flex-direction: column;
+}
+
+.reset-form-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.reset-form-group label {
+    font-size: 20px;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.reset-form-group input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.reset-button {
+    background-color: #007bff;
+    color: white;
+    margin-top: 10px;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 20px;
+}
+
+.reset-button:hover {
+    background-color: #0056b3;
+}
