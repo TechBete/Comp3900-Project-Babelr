@@ -14,12 +14,16 @@ from typing import override
 
 
 class PasswordHash:
+    value: str
+
     def __init__(self, value: str) -> None:
         # TODO: Put `value` through the argon2id hashing algorithm
         self.value = value
 
     @override
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, PasswordHash):
+            return NotImplemented
         return self.value == other.value
 
     @override
