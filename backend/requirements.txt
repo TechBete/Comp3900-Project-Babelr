@@ -1,0 +1,6 @@
+flask                   # handles web requests
+flask-cors              # handles CORS requests
+flask-restful           # handles RESTful API requests
+flask-sqlalchemy        # handles database requests
+psycopg2-binary         # change this to full psycopg2 library for prod
+python-dotenv           # handles environment variables
