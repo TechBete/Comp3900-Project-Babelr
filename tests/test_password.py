@@ -40,13 +40,13 @@ def test_passwordhash_inequality_different_value(passwords):
     hashTwo = PasswordHash(passwordTwo)
     assert hashOne != hashTwo
 
-@given(st.one_of(st.integers(), st.floats(), st.booleans(), st.lists(st.integers())))
-def test_passwordhash_comparison_different_type(password: str):
+@given(st.text(min_size = 1), st.one_of(st.integers(), st.floats(), st.booleans(), st.lists(st.integers())))
+def test_passwordhash_comparison_different_type(password: str, notPassword):
     """
     Test that comparing a PasswordHash instance to any other type returns False.
     """
     hash = PasswordHash(password)
-    assert hash != password
+    assert hash != notPassword
 
 @given(st.text())
 def test_passwordhash_cannot_be_empty(password: str):
