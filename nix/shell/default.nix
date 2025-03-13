@@ -1,6 +1,6 @@
 pkgs:
 pkgs.mkShell {
-  name = "Poincare";
+  name = "Babelr";
   packages = with pkgs; [
     nixd
     alejandra
@@ -13,10 +13,11 @@ pkgs.mkShell {
         passlib
         hypothesis
         pytest
+        argon2-cffi
+        argon2-cffi-bindings
       ]))
   ];
   shellHook = ''
-    export PYTHONPATH=$(pwd)
-    echo "PYTHONPATH set to $(pwd)"
+    export PYTHONPATH=$(pwd):$PYTHONPATH
   '';
 }
