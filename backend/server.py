@@ -13,13 +13,38 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # model
-class User(db.Model):
-    __tablename__ = 'users'
+class userListener(db.Model):
+    __tablename__ = 'Listener'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50))
     email = db.Column(db.String(50))
+    Role = db.Column(db.String(50))
+
+class userResearcher(db.Model):
+    __tablename__ = 'Researcher'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50))
+    email = db.Column(db.String(50))
+    Role = db.Column(db.String(50))
     
-@app.route('/addusers', methods=['POST'])
+@app.route('/registerListener', methods=['POST'])
+def create_user():
+    data = request.json
+    user = userListener(name=data['name'], email=data['email'], Role = 'Listener')
+    db.session.add(user)
+    db.session.commit()
+    return jsonify({"Message: User id": user.id})    
+    
+@app.route('/registerResearcher', methods=['POST'])
+def create_user():
+    data = request.json
+    user = userResearcher(name=data['name'], email=data['email'], Role = 'Researcher')
+    db.session.add(user)
+    db.session.commit()
+    return jsonify({"Message: User id": user.id})
+
+    
+@app.route('/addusers', methods=['POST']) # testing route for registering users in database
 def create_user():
     data = request.json
     user = User(name=data['name'], email=data['email'])
@@ -27,12 +52,17 @@ def create_user():
     db.session.commit()
     return jsonify({"Message: User id": user.id})
 
-@app.route('/getusers', methods=['GET'])
+@app.route('/getListeners', methods=['GET'])
 def get_users():
     users = User.query.all()
     return jsonify([{"id": user.id, "name": user.name, "email": user.email} for user in users])
 
-@app.route('/')
+@app.route('/getResearchers', methods=['GET'])
+def get_users():
+    users = User.query.all()
+    return jsonify([{"id": user.id, "name": user.name, "email": user.email} for user in users])
+
+@app.route('/') # testing route to render HTML form; remove once frontend is inplace
 def index():
     return render_template_string('''
     <!DOCTYPE html>
@@ -82,12 +112,6 @@ def index():
     </body>
     </html>
     ''')
-
-# print the environment variables for debugging
-print(f"POSTGRES_USER: {os.getenv('POSTGRES_USER')}")
-print(f"POSTGRES_PASSWORD: {os.getenv('POSTGRES_PASSWORD')}")
-print(f"POSTGRES_HOST: {os.getenv('POSTGRES_HOST')}")
-print(f"POSTGRES_DB: {os.getenv('POSTGRES_DB')}")
 
 if __name__ == '__main__':
     with app.app_context():
