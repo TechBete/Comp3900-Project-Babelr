@@ -15,4 +15,8 @@ pkgs.mkShell {
         pytest
       ]))
   ];
+  shellHook = ''
+    export PYTHONPATH=$(pwd)
+    echo "PYTHONPATH set to $(pwd)"
+  '';
 }
