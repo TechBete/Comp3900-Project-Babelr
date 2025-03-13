@@ -12,7 +12,6 @@ Some relevant reading: https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t
 
 from typing import override
 
-
 class PasswordHash:
     value: str
 
@@ -22,6 +21,9 @@ class PasswordHash:
 
     @override
     def __eq__(self, other: object) -> bool:
+        """
+        Check if two instances of PasswordHash are equal.
+        """
         if not isinstance(other, PasswordHash):
             return NotImplemented
         return self.value == other.value

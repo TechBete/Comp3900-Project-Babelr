@@ -8,5 +8,11 @@ pkgs.mkShell {
     deadnix
     black
     pyright
+    (python3.withPackages (p:
+      with p; [
+        passlib
+        hypothesis
+        pytest
+      ]))
   ];
 }
