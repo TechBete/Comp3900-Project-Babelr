@@ -6,7 +6,7 @@ pkgs.mkShell {
     alejandra
     statix
     deadnix
-		black
-		basedpyright
+    black
+    pyright
   ];
 }
