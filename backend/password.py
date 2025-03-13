@@ -38,13 +38,16 @@ class PasswordHash:
         return ALGO.verify(password, self.value)
 
     @override
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other) -> bool:
         """
         Check if two instances of PasswordHash are equal.
         """
-        if not isinstance(other, PasswordHash):
-            return NotImplemented
-        return self.value == other.value
+        if isinstance(other, PasswordHash):
+            return self.value == other.value
+        if isinstance (other, str):
+            return self.verify(other)
+        return NotImplemented
+
 
     @override
     def __str__(self) -> str:

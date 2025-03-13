@@ -17,7 +17,7 @@ def test_passwordhash_verify_same_password(password: str):
     Test that the `PasswordHash verifies the original password.`
     """
     hash = PasswordHash(password)
-    assert hash.verify(password)
+    assert hash == password 
 
 @given(st.text( min_size = 1 ), st.text( min_size = 1 ))
 def test_passwordhash_deny_different_password(password: str, notPassword: str):
@@ -26,7 +26,7 @@ def test_passwordhash_deny_different_password(password: str, notPassword: str):
     """
     assume(password != notPassword)
     hash = PasswordHash(password)
-    assert (hash.verify(notPassword) != True)
+    assert (hash != notPassword)
 
 @given(st.tuples(st.text(min_size = 1), st.text(min_size = 1)))
 def test_passwordhash_inequality_different_value(passwords):
@@ -40,10 +40,10 @@ def test_passwordhash_inequality_different_value(passwords):
     hashTwo = PasswordHash(passwordTwo)
     assert hashOne != hashTwo
 
-@given(st.text(min_size = 1))
+@given(st.one_of(st.integers(), st.floats(), st.booleans(), st.lists(st.integers())))
 def test_passwordhash_comparison_different_type(password: str):
     """
-    Test that comparing a PasswordHash instance to a plain string returns False.
+    Test that comparing a PasswordHash instance to any other type returns False.
     """
     hash = PasswordHash(password)
     assert hash != password
