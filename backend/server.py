@@ -31,6 +31,7 @@ def createListener():
     validation_error = validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
+
     # Validate and process languages_proficiency
     valid_proficiency_levels = [level.value for level in ProficiencyLevel]
     if 'languages_proficiency' in data:
@@ -43,21 +44,26 @@ def createListener():
 
         # Convert valid strings to ProficiencyLevel enum values
         data['languages_proficiency'] = [
-            proficiency_level_enum(proficiency)
+            ProficiencyLevel(proficiency).value  # Ensure it remains a list of strings
             for proficiency in data['languages_proficiency']
         ]
+    
+    print(data['pw'])
+    
     user = Listener(
         id=data.get('id', uuid.uuid4()),  # generate a random uuid if not provided
         first_name=data['first_name'],
         last_name=data['last_name'],
         email=data['email'],
         pw_hash=PasswordHash.hash_password(str(data['pw'])),
-        permission=permission_level_enum.LISTENER,
+        permission=PermissionLevel.listener,
         background_info=data.get('background_info', ''),
         reward_points=0,
         languages_list=data.get('languages_list', []),
         languages_proficiency=data.get('languages_proficiency', [])
     )
+    print(data['pw'])
+    PasswordHash.hash_password(str(data['pw']))
     try:
         db.session.add(user)
         db.session.commit()
@@ -67,8 +73,10 @@ def createListener():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
-    return jsonify({"Registration Successful"})    
-    
+
+    # Ensure languages_proficiency is serialized as a list
+    return jsonify({"message": "Registration Successful"})
+
 @app.route('/registerResearcher', methods=['POST'])
 def createResearcher():
     data = request.json
@@ -82,7 +90,7 @@ def createResearcher():
         last_name=data['last_name'],
         email=data['email'],
         pw_hash=PasswordHash.hash_password(str(data['pw'])),
-        permission=permission_level_enum.RESEARCHER,
+        permission=PermissionLevel.researcher,
         organisation=data.get('organisation', ''),
         uploaded_video=data.get('uploaded_video', [])
     )
@@ -98,57 +106,83 @@ def createResearcher():
     return jsonify({"Registration Successful"})
 
 
-
 # Define the enum type creation SQL 
 #create_proficiencylevel_enum = DDL(
 #    "CREATE TYPE proficiencylevel AS ENUM ('elementary', 'limited_working', 'professional', 'native', 'bilingual');"
 #)
 
+# ========== 1. Python Enums ==========
 class PermissionLevel(enum.Enum):
-    ADMIN = "admin"
-    LISTENER = "listener"
-    RESEARCHER = "researcher"
+    admin = "admin"
+    listener = "listener"
+    researcher = "researcher"
 
 class ProficiencyLevel(enum.Enum):
-    ELEMENTARY = "elementary"
-    LIMITED = "limited_working"
-    PROFESSIONAL = "professional"
-    NATIVE = "native"
-    BILINGUAL = "bilingual"
+    elementary = "elementary"
+    limited_working = "limited_working"
+    professional = "professional"
+    native = "native"
+    bilingual = "bilingual"
 
 
 class Gender(enum.Enum):
-    MALE = "male"
-    FEMALE = "female"
-    OTHER = "other"
+    male = "male"
+    female = "female"
+    other = "other"
 
 # Define enums using postgresql.ENUM with create_type=True
-proficiency_level_enum = ENUM(
-    ProficiencyLevel,
-    name='proficiencylevel',
-    create_type=True
+# ========== 2. SQLAlchemy Enums ==========
+proficiency_level_enum = ENUM(ProficiencyLevel, name='proficiencylevel', create_type=True)
+permission_level_enum = ENUM(PermissionLevel, name='permissionlevel', create_type=True)
+gender_enum = ENUM(Gender, name='gender', create_type=True)
+
+# Create the enum types in the SQL database
+event.listen(
+    db.metadata, 'before_create',
+    DDL("""
+    DO $$
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'proficiencylevel') THEN
+            CREATE TYPE proficiencylevel AS ENUM ('elementary', 'limited_working', 'professional', 'native', 'bilingual');
+        END IF;
+    END $$;
+    """)
 )
 
-permission_level_enum = ENUM(
-    PermissionLevel,
-    name='permissionlevel',
-    create_type=True
+event.listen(
+    db.metadata, 'before_create',
+    DDL("""
+    DO $$
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'permissionlevel') THEN
+            CREATE TYPE permissionlevel AS ENUM ('admin', 'listener', 'researcher');
+        END IF;
+    END $$;
+    """)
 )
-gender_enum = ENUM(
-    Gender,
-    name='gender',
-    create_type=True
-    )
 
+event.listen(
+    db.metadata, 'before_create',
+    DDL("""
+    DO $$
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'gender') THEN
+            CREATE TYPE gender AS ENUM ('male', 'female', 'other');
+        END IF;
+    END $$;
+    """)
+)
+
+# ========== 3. SQL DB Models ==========
 class Researcher(db.Model):
     __tablename__ = "researchers"
     id = db.Column(UUID(as_uuid=True), primary_key=True, nullable=False)
     first_name = db.Column(db.String(30), nullable=False)
-    last_name = db.Column(db.String(30))
-    email = db.Column(db.String(30))
-    pw_hash = db.Column(db.String(128)) # Argon2 hash string is 97 char long, 
+    last_name = db.Column(db.String(30), nullable=False)
+    email = db.Column(db.String(30), nullable=False)
+    pw_hash = db.Column(db.String(128)) # Argon2 hash string is 97 char long currently, needs a trim to only store password 
     permission = db.Column(permission_level_enum, nullable=False)
-    organisation = db.Column(db.String(30))
+    organisation = db.Column(db.String(60))
     uploaded_video = db.Column(ARRAY(db.String(68))) # 68 char length file ID array
     gender = db.Column(gender_enum)
 
@@ -158,7 +192,7 @@ class Listener(db.Model):
     first_name = db.Column(db.String(30), nullable=False)
     last_name = db.Column(db.String(30), nullable=False)
     email = db.Column(db.String(30), nullable=False)
-    pw_hash = db.Column(db.String(128), nullable=False) # Argon2 hash string is 97 char long
+    pw_hash = db.Column(db.String(128), nullable=False) # Argon2 hash string is 97 char long currently, needs a trim to only store password
     permission = db.Column(permission_level_enum, nullable=False)
     background_info = db.Column(db.String(100))
     reward_points = db.Column(db.Integer)
@@ -179,11 +213,21 @@ class Demographic(db.Model):
     address = db.Column(db.String(68), nullable=False)
     education = db.Column(db.String(68), nullable=False)
 
-
 @app.route('/getListeners', methods=['GET'])
 def getListeners():
     users = Listener.query.all()
-    return jsonify([user.__dict__ for user in users])
+    return jsonify([{
+        "Uuid": str(user.id),
+        "First Name": user.first_name,
+        "Last Name": user.last_name,
+        "Email": user.email,
+        "Password": user.pw_hash,
+        "permission": user.permission.value,  # Convert enum to string
+        "Background Info": user.background_info,
+        "Reward Points": user.reward_points,
+        "languages_list": user.languages_list,
+        "languages_proficiency": [lp.value for lp in user.languages_proficiency]  # Convert enum array
+    } for user in users])
 
 @app.route('/getResearchers', methods=['GET'])
 def getResearchers():
