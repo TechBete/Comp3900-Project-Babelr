@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, render_template_string # render_templ
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 import os
+import backend.password as hashword 
 
 app = Flask(__name__)
 load_dotenv()
@@ -12,6 +13,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
+hashword.PasswordHash(str('password'))
 # model
 class userListener(db.Model):
     __tablename__ = 'Listener'
