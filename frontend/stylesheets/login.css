@@ -6,19 +6,23 @@ body {
     align-items: center;
     height: 100vh;
     margin: 0;
-    background-image: url('../images/babelr_logo.png');
+    /* background-image: url('../images/babelr_logo.png');
     background-size: cover;
     background-position: center;
-    background-repeat: no-repeat;
+    background-repeat: no-repeat; */
+    background-color: #000026;
 }
 
 .login-container {
     background-color: #fff;
     padding: 50px;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border-radius: 20px;
     width: 350px;
     text-align: center;
+}
+#babelr-icon {
+    border-radius: 20%;
+    width: 100px;
 }
 
 #login-header {
@@ -52,7 +56,7 @@ body {
 
 
 .login-button {
-    background-color: #007bff;
+    background-color: #618f9e;
     color: white;
     margin-top: 10px;
     padding: 10px;
@@ -64,7 +68,7 @@ body {
 
 /* changes colour when hovering cursor on button */
 .login-button:hover {
-    background-color: #0056b3;
+    background-color: #2d3a4a;
 }
 
 .signup-link {
@@ -74,9 +78,9 @@ body {
 
 .signup-link a {
     color: #007bff;
-    text-decoration: none;
+    text-decoration: underline;
 }
 
 .signup-link a:hover {
-    text-decoration: underline;
+    text-decoration: none;
 }

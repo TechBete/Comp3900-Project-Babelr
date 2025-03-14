@@ -6,17 +6,13 @@ body {
     align-items: center;
     height: 100vh;
     margin: 0;
-    background-image: url('../images/babelr_logo.png');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
+    background-color: #000026;
 }
 
 .reset-container {
     background-color: #fff;
     padding: 50px;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border-radius: 20px;
     width: 350px;
     text-align: center;
 }
@@ -52,7 +48,7 @@ body {
 }
 
 .reset-button {
-    background-color: #007bff;
+    background-color: #618f9e;
     color: white;
     margin-top: 10px;
     margin-bottom: 30px;
@@ -64,5 +60,5 @@ body {
 }
 
 .reset-button:hover {
-    background-color: #0056b3;
+    background-color: #2d3a4a;
 }
