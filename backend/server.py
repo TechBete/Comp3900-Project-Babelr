@@ -48,22 +48,24 @@ def createListener():
             for proficiency in data['languages_proficiency']
         ]
     
-    print(data['pw'])
-    
+    full_hashed_password= PasswordHash.hash_password(str(data['pw']))
+    verify_password = PasswordHash.verify((data['pw']), full_hashed_password)
+    print(verify_password)
+
+
     user = Listener(
         id=data.get('id', uuid.uuid4()),  # generate a random uuid if not provided
         first_name=data['first_name'],
         last_name=data['last_name'],
         email=data['email'],
-        pw_hash=PasswordHash.hash_password(str(data['pw'])),
+        pw_hash=full_hashed_password,
         permission=PermissionLevel.listener,
         background_info=data.get('background_info', ''),
         reward_points=0,
         languages_list=data.get('languages_list', []),
         languages_proficiency=data.get('languages_proficiency', [])
     )
-    print(data['pw'])
-    PasswordHash.hash_password(str(data['pw']))
+
     try:
         db.session.add(user)
         db.session.commit()
