@@ -12,10 +12,11 @@ Some relevant reading: https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t
 
 from typing import override
 from passlib.hash import argon2
+import os
 
 ALGO = argon2.using(
-    type = "ID",
-    rounds = 8,
+    type=os.getenv("ARGON2_TYPE", "ID"),
+    rounds=int(os.getenv("ARGON2_ROUNDS", 8)),
 )
 
 class PasswordHash:
@@ -36,6 +37,12 @@ class PasswordHash:
         instance of `PasswordHash`.
         """
         return ALGO.verify(password, self.value)
+
+    @staticmethod
+    def hash_password(password: str) -> str:
+        if not password:
+            raise ValueError("Password cannot be empty")
+        return ALGO.hash(password)
 
     @override
     def __eq__(self, other) -> bool:

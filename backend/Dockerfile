@@ -15,6 +15,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the remaining files into container
 COPY . .
 
+# Set python path to include the working directory
+ENV PYTHONPATH=/usr/src/app
+
 # Expose Port
 EXPOSE 8016
 
