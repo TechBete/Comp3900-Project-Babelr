@@ -1,10 +1,11 @@
 from flask import Flask, request, jsonify, render_template_string # render_template_string is used to render HTML, can be removed once frontend is inplace
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.dialects.postgresql import ARRAY
 from dotenv import load_dotenv
-import os, enum
+import os
+from flask_cors import CORS
 
 app = Flask(__name__)
+cors = CORS()
 load_dotenv()
 
 # database config
@@ -12,71 +13,36 @@ app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{os.environ.get('POSTGRES
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
+cors.init_app(app)
 
-class PermissionLevel(enum.Enum):
-    ADMIN = "admin"
-    LISTENER = "listener"
-    RESEARCHER = "researcher"
-
-class ProficiencyLevel(enum.Enum):
-    ELEMENTRY = "elementry"
-    LIMITED = "limited_working"
-    PROFESSIONAL = "professional"
-    NATIVE = "native"
-    BILINGUAL = "bilingual"
-
-class Researcher(db.Model):
-    __tablename__ = "researchers"
-    id = db.Column(db.Integer, primary_key=True, nullable=False)
-    first_name = db.Column(db.String(30), nullable=False)
-    last_name = db.Column(db.String(30))
-    email = db.Column(db.String(30))
-    pw_hash = db.Column(db.String(68)) # Argon2, 64 bytes + 4 bytes of salt
-    permission = db.Column(db.Enum(PermissionLevel))
-    organisation = db.Column(db.String(30))
-    uploaded_video = db.Column(ARRAY(db.String(68))) # 68 char length file ID array
-
-class Listener(db.Model):
-    __tablename__ = "listeners"
-    id = db.Column(db.Integer, primary_key=True, nullable=False) # listener's uuid
-    first_name = db.Column(db.String(30), nullable=False)
-    last_name = db.Column(db.String(30), nullable=False)
-    email = db.Column(db.String(30), nullable=False)
-    pw_hash = db.Column(db.String(68), nullable=False) # Argon2, 64 bytes + 4 bytes of salt
-    permission = db.Column(db.Enum(PermissionLevel), nullable=False)
-    background_info = db.Column(db.String(100))
-    reward_points = db.Column(db.Integer)
-    languages_list = db.Column(ARRAY(db.String(3)))
-    laguages_proficiency = db.Column(ARRAY(db.Enum(ProficiencyLevel)))
-
-    # one-to-one relationship of listeners-demographics
-    demographic = db.relationship("Demographic", back_populates="listener", uselist=False)
-
-
-class Demographic(db.Model):
-    __tablename__ = "demographics"
-    id = db.Column(db.Integer, primary_key=True, nullable=False) # ID of demographic record
-    listener_id = db.Column(db.Integer, db.ForeignKey("listeners.id"))
-    listener = db.relationship("Listener", back_populates="demographic")
-    age = db.Column(db.Integer, nullable=False)
-    gender = db.Column(db.Integer, nullable=False)
-    country_of_residence = db.Column(db.String(30), nullable=False)
-    address = db.Column(db.String(68), nullable=False)
-    education = db.Column(db.String(68), nullable=False)
-
+# model
+class User(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50))
+    email = db.Column(db.String(50))
+    
 @app.route('/addusers', methods=['POST'])
 def create_user():
     data = request.json
     user = User(name=data['name'], email=data['email'])
     db.session.add(user)
     db.session.commit()
+
+    print('*********')
+    print('create user route was hit')
+
     return jsonify({"Message: User id": user.id})
 
 @app.route('/getusers', methods=['GET'])
 def get_users():
     users = User.query.all()
-    return jsonify([{"id": user.id, "name": user.name, "email": user.email} for user in users])@app.route('/')
 
+    print('get users route has been hit')
+
+    return jsonify([{"id": user.id, "name": user.name, "email": user.email} for user in users])
+
+@app.route('/')
 def index():
     return render_template_string('''
     <!DOCTYPE html>
@@ -108,7 +74,7 @@ def index():
                 fetch('http://localhost:8016/addusers', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({ name: name, email: email })
                 })
@@ -126,6 +92,7 @@ def index():
     </body>
     </html>
     ''')
+
 # print the environment variables for debugging
 print(f"POSTGRES_USER: {os.getenv('POSTGRES_USER')}")
 print(f"POSTGRES_PASSWORD: {os.getenv('POSTGRES_PASSWORD')}")
@@ -138,4 +105,3 @@ if __name__ == '__main__':
         db.create_all() 
     # host='0.0.0.0' to make the server accessible from outside the container
     app.run(debug=True, host='0.0.0.0', port=8016)
-
