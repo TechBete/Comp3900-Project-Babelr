@@ -271,6 +271,56 @@ def createResearcher():
         return jsonify({"error": str(e)}), 500
     return jsonify({"message": "Registration Successful"})
 
+@app.route('/resetPassword', methods=['POST'])
+def resetPassword():
+    data = request.json
+    required_fields = ['pw', 'pw_confirmation', 'id', 'email']
+    # validate field is not empty
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+    
+    # assign local variables to the data fields
+    password = data['pw']
+    password_confirmation = data['pw_confirmation']
+    user_id = data['id']
+    email = data['email']
+    
+    # check to see if password str is empty
+    if password == '' or password_confirmation == '':
+        return jsonify({"error": "Password cannot be empty"}), 400
+    
+    # check to see if password and password confirmation match
+    if password != password_confirmation:
+        return jsonify({"error": "Passwords do not match"}), 400
+    
+    # check to see if user exists
+    isListener = Listener.query.filter_by(id=user_id).first()
+    isResearcher = Researcher.query.filter_by(id=user_id).first()
+    
+    # Check if user is a listener or researcher, assign as existing_user
+    existing_user = isListener if isListener else isResearcher
+    if not existing_user:
+        return jsonify({"error": "User not Found"}), 404
+    
+    # Check if email matches the user
+    if existing_user.email != email:
+        return jsonify({"error": 
+            "Email does not match the one registered with the account"}), 400
+    
+    if existing_user:
+        hashed_password = hash_password(data)
+        pw_validated = validate_Password(data, existing_user.pw_hash)
+        if pw_validated:
+            return jsonify({"error": "Password cannot be the same as the previous password"}), 400
+        try:
+            existing_user.pw_hash = hashed_password.value
+            db.session.commit()
+            return jsonify({"message": "Password reset successful"})
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": "An error has occured while updating the password"}), 500
+
 # this may need to be changed to only return the 'listener' who is calling the route
 # will need more discussion on this 
 @app.route('/getListeners', methods=['GET'])
@@ -290,6 +340,26 @@ def getListeners():
         "languages_proficiency": [lp.value for lp in user.languages_proficiency] if user.languages_proficiency else []  # Convert enum array
     } for user in users])
 
+# test route to get a listener by id once listener cookie is implemented
+#@app.route('/getListener/<uuid:listener_id>', methods=['GET'])
+#def getListener(listener_id):
+#    user = Listener.query.get(listener_id)
+#    if user is None:
+#        return jsonify({"error": "Listener not found"}), 404
+#    return jsonify({
+#        "Uuid": str(user.id),
+#        "Demographic ID": user.demographic.id if user.demographic else None,
+#        "First Name": user.first_name,
+#        "Last Name": user.last_name,
+#        "Email": user.email,
+#        "Password": user.pw_hash,
+#        "Role": user.permission.value,  
+#        "Background Info": user.background_info,
+#        "Reward Points": user.reward_points,
+#        "languages_list": user.languages_list,
+#        "languages_proficiency": [lp.value for lp in user.languages_proficiency] if user.languages_proficiency else []  # Convert enum array
+#    })
+
 # this route may only be used by the admin to get all researchers
 @app.route('/getResearchers', methods=['GET'])
 def getResearchers():
@@ -306,8 +376,14 @@ def getResearchers():
         "Uploaded Audio Clips": [adc.value for adc in user.uploaded_video] if user.uploaded_video else [],
         "Gender": user.gender.value if user.gender is not None else None
     } for user in users])
-   
-@app.route('/') # testing route to render HTML form; remove once frontend is inplace
+
+# ======== TESTING ROUTES ========
+# These routes are for testing purposes only and should be removed once the frontend is in place
+# These routes are used to simulate the frontend form submissions
+# The frontend will make POST requests to these routes with the form data
+# The form data will be validated and then used to create a new user in the database
+
+@app.route('/') 
 def index():
     return render_template_string('''
     <!DOCTYPE html>
@@ -328,6 +404,7 @@ def index():
     </body>
     </html>
     ''')
+
 @app.route('/addListener', methods=['GET'])
 def addListener():
     return render_template_string('''
@@ -401,6 +478,46 @@ def addResearcher():
                 const formData = new FormData(e.target);
                 const jsonData = Object.fromEntries(formData);
                 fetch('/registerResearcher', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(jsonData)
+                }).then(response => response.json())
+                    .then(data => console.log(data));
+            });
+        </script>
+    </body>
+    </html>
+    ''')
+
+@app.route('/resetPassword', methods=['GET'])
+def resetPasswordForm():
+    return render_template_string('''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Reset Password</title>
+    </head>
+    <body>
+        <h1>Reset Password</h1>
+        <form action="/resetPassword" method="post">
+            <label for="id">User ID:</label><br>
+            <input type="text" id="id" name="id"><br>
+            <label for="email">Email:</label><br>
+            <input type="email" id="email" name="email"><br>
+            <label for="pw">New Password:</label><br>
+            <input type="password" id="pw" name="pw"><br>
+            <label for="pw_confirmation">Confirm Password:</label><br>
+            <input type="password" id="pw_confirmation" name="pw_confirmation"><br>
+            <button type="submit">Submit</button>
+        </form>
+        <script>
+            document.querySelector('form').addEventListener('submit', function (e) {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const jsonData = Object.fromEntries(formData);
+                fetch('/resetPassword', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(jsonData)
