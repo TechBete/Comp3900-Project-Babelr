@@ -29,6 +29,15 @@ def validate_required_fields(data, required_fields):
             return jsonify({"error": f"Missing field: {field}"}), 400
     return None
 
+def hash_password(data):
+    hashed_password = PasswordHash(data['pw'])
+    return hashed_password
+
+def validate_Password(data, hashed_password):
+    return PasswordHash.verify(data['pw'], hashed_password)
+
+# Create email validation function to ensure that email being entered is of proper email format
+# check if email proivider is real?
 
 # ========== 1. Python Enums ==========
 class PermissionLevel(enum.Enum):
@@ -102,7 +111,8 @@ class Researcher(db.Model):
     pw_hash = db.Column(db.String(128)) # Argon2 hash string is 97 char long
     permission = db.Column(permission_level_enum, nullable=False)
     organisation = db.Column(db.String(128))
-    uploaded_video = db.Column(ARRAY(db.String(128))) # 68 char length file ID array
+    project_list = db.Column(ARRAY(db.String(128))) # 128 char length array
+    uploaded_video = db.Column(ARRAY(db.String(128))) # 128 char length file ID array
     gender = db.Column(gender_enum)
 
 class Listener(db.Model):
@@ -167,18 +177,15 @@ def createListener():
     #        for proficiency in data['languages_proficiency']
     #    ]
     
-    # Hash the password
-    full_hashed_password = PasswordHash((data['pw']))
-    # Verify the password function is correct but not needed for current task
-    # verify_password = PasswordHash.verify(data['pw'], full_hashed_password.value)
-    
+    # Hash the user password
+    hashed_password = hash_password(data)
 
     user = Listener(
         id=data.get('id', uuid.uuid4()),  # generate a random uuid if not provided
         first_name=data['first_name'],
         last_name=data['last_name'],
         email=data['email'],
-        pw_hash=full_hashed_password.value,
+        pw_hash=hashed_password.value,
         permission=PermissionLevel.listener,
         background_info=data.get('background_info', ''),
         reward_points=0,
@@ -208,6 +215,9 @@ def createResearcher():
     if validation_error:
         return validation_error
     
+    # Hash the user password
+    hashed_password = hash_password(data)
+    
     # Check if email already exists
     existing_user = Researcher.query.filter_by(email=data['email']).first()
     if existing_user:
@@ -218,10 +228,9 @@ def createResearcher():
         first_name=data['first_name'],
         last_name=data['last_name'],
         email=data['email'],
-        pw_hash=PasswordHash.hash_password(str(data['pw'])),
+        pw_hash=hashed_password.value,
         permission=PermissionLevel.researcher,
         organisation=data.get('organisation', ''),
-        uploaded_video=data.get('uploaded_video', [])
     )
     try:
         db.session.add(user)
@@ -232,7 +241,7 @@ def createResearcher():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
-    return jsonify({"Registration Successful"})
+    return jsonify({"message": "Registration Successful"})
 
 # this may need to be changed to only return the 'listener' who is calling the route
 # will need more discussion on this 
@@ -241,11 +250,12 @@ def getListeners():
     users = Listener.query.all()
     return jsonify([{
         "Uuid": str(user.id),
+        "Demographic ID": user.demographic.id if user.demographic else None,
         "First Name": user.first_name,
         "Last Name": user.last_name,
         "Email": user.email,
         "Password": user.pw_hash,
-        "permission": user.permission.value,  # Convert enum to string
+        "Role": user.permission.value,  
         "Background Info": user.background_info,
         "Reward Points": user.reward_points,
         "languages_list": user.languages_list,
@@ -256,8 +266,19 @@ def getListeners():
 @app.route('/getResearchers', methods=['GET'])
 def getResearchers():
     users = Researcher.query.all()
-    return jsonify([user.__dict__ for user in users])
-
+    return jsonify([{
+        "Uuid": str(user.id),
+        "First Name": user.first_name,
+        "Last Name": user.last_name,
+        "Email": user.email,
+        "Password": user.pw_hash,
+        "Role": user.permission.value,  
+        "Organisation": user.organisation,
+        "Projects": user.project_list,
+        "Uploaded Audio Clips": [adc.value for adc in user.uploaded_video] if user.uploaded_video else [],
+        "Gender": user.gender.value if user.gender is not None else None
+    } for user in users])
+   
 @app.route('/') # testing route to render HTML form; remove once frontend is inplace
 def index():
     return render_template_string('''
@@ -301,10 +322,6 @@ def addListener():
             <input type="password" id="pw" name="pw"><br>
             <label for="background_info">Background Info:</label><br>
             <input type="text" id="background_info" name="background_info"><br>
-            <label for="languages_list">Languages List (comma-separated):</label><br>
-            <input type="text" id="languages_list" name="languages_list"><br>
-            <label for="languages_proficiency">Languages Proficiency (comma-separated):</label><br>
-            <input type="text" id="languages_proficiency" name="languages_proficiency"><br>
             <button type="submit">Submit</button>
         </form>
         <script>
@@ -312,13 +329,6 @@ def addListener():
                 e.preventDefault();
                 const formData = new FormData(e.target);
                 const jsonData = Object.fromEntries(formData);
-                jsonData.languages_list = jsonData.languages_list.split(',').map(item => item.trim());
-                const validProficiencyLevels = ["elementary", "limited_working", "professional", "native", "bilingual"];
-                jsonData.languages_proficiency = jsonData.languages_proficiency.split(',').map(item => item.trim());
-                if (!jsonData.languages_proficiency.every(level => validProficiencyLevels.includes(level))) {
-                    alert("Invalid proficiency level. Valid levels are: elementary, limited_working, professional, native, bilingual");
-                    return;
-                }
                 fetch('/registerListener', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -354,8 +364,6 @@ def addResearcher():
             <input type="password" id="pw" name="pw"><br>
             <label for="organisation">Organisation:</label><br>
             <input type="text" id="organisation" name="organisation"><br>
-            <label for="uploaded_video">Uploaded Video (comma-separated):</label><br>
-            <input type="text" id="uploaded_video" name="uploaded_video"><br>
             <button type="submit">Submit</button>
         </form>
         <script>
@@ -363,7 +371,6 @@ def addResearcher():
                 e.preventDefault();
                 const formData = new FormData(e.target);
                 const jsonData = Object.fromEntries(formData);
-                jsonData.uploaded_video = jsonData.uploaded_video.split(',').map(item => item.trim());
                 fetch('/registerResearcher', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
