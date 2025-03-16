@@ -28,6 +28,22 @@ services:
     depends_on:
       - Babelr_db
 
+  nextjs:
+    build: 
+      context: ./frontend/babelr
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ./frontend/babelr:/usr/src/app # hot reloading
+      - /usr/src/app/node_modules # download only once 
+    depends_on:
+      - web
+      - Babelr_db
+    command: "npm run start"
+
 volumes:
   postgres_data:
     driver: local
