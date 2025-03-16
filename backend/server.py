@@ -7,8 +7,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import DDL, event
 from dotenv import load_dotenv
 
-
 app = Flask(__name__)
+#cors = CORS()
 load_dotenv()
 
 # database config
@@ -16,8 +16,9 @@ app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{os.environ.get('POSTGRES
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
+#cors.init_app(app)
 
-
+# ========== 0. Helper Functions ==========
 def validate_required_fields(data, required_fields):
     for field in required_fields:
         if field not in data:
@@ -215,7 +216,9 @@ class Demographic(db.Model):
     address = db.Column(db.String(68), nullable=False)
     education = db.Column(db.String(68), nullable=False)
 
-@app.route('/getListeners', methods=['GET'])
+# this may need to be changed to only return the 'listener' who is calling the route
+# will need more discussion on this 
+@app.route('/getListeners', methods=['GET']) 
 def getListeners():
     users = Listener.query.all()
     return jsonify([{
@@ -231,6 +234,7 @@ def getListeners():
         "languages_proficiency": [lp.value for lp in user.languages_proficiency]  # Convert enum array
     } for user in users])
 
+# this route may only be used by the admin to get all researchers
 @app.route('/getResearchers', methods=['GET'])
 def getResearchers():
     users = Researcher.query.all()
@@ -364,4 +368,3 @@ if __name__ == '__main__':
         db.create_all() 
     # host='0.0.0.0' to make the server accessible from outside the container
     app.run(debug=True, host='0.0.0.0', port=8016)
-
