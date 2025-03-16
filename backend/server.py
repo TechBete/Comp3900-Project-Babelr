@@ -1,4 +1,6 @@
 import os, uuid, enum
+import logging  # remove for final production
+from flask_cors import CORS  # this should work, dont know why my vscode is throwing an error
 from flask import Flask, request, jsonify, render_template_string # render_template_string is used to render HTML, can be removed once frontend is inplace
 from password import PasswordHash
 from flask_sqlalchemy import SQLAlchemy
@@ -8,15 +10,17 @@ from sqlalchemy import DDL, event
 from dotenv import load_dotenv
 
 app = Flask(__name__)
-#cors = CORS()
+#cors = CORS() suppressing cors due to error thown by not in use
 load_dotenv()
+# Configure logging - remove for final production
+logging.basicConfig(level=logging.DEBUG)
 
 # database config
 app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{os.environ.get('POSTGRES_USER')}:{os.environ.get('POSTGRES_PASSWORD')}@{os.environ.get('POSTGRES_HOST')}/{os.environ.get('POSTGRES_DB')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
-#cors.init_app(app)
+#cors.init_app(app) suppressing cors due to error thown by not in use
 
 # ========== 0. Helper Functions ==========
 def validate_required_fields(data, required_fields):
@@ -24,95 +28,7 @@ def validate_required_fields(data, required_fields):
         if field not in data:
             return jsonify({"error": f"Missing field: {field}"}), 400
     return None
-    
-@app.route('/registerListener', methods=['POST'])
-def createListener():
-    data = request.json
-    required_fields = ['first_name', 'last_name', 'email', 'pw']
-    validation_error = validate_required_fields(data, required_fields)
-    if validation_error:
-        return validation_error
 
-    # Validate and process languages_proficiency
-    valid_proficiency_levels = [level.value for level in ProficiencyLevel]
-    if 'languages_proficiency' in data:
-        invalid_levels = [
-            proficiency for proficiency in data['languages_proficiency']
-            if proficiency not in valid_proficiency_levels
-        ]
-        if invalid_levels:
-            return jsonify({"error": f"Invalid proficiency levels: {', '.join(invalid_levels)}"}), 400
-
-        # Convert valid strings to ProficiencyLevel enum values
-        data['languages_proficiency'] = [
-            ProficiencyLevel(proficiency).value  # Ensure it remains a list of strings
-            for proficiency in data['languages_proficiency']
-        ]
-    
-    full_hashed_password= PasswordHash.hash_password(str(data['pw']))
-    verify_password = PasswordHash.verify((data['pw']), full_hashed_password)
-    print(verify_password)
-
-
-    user = Listener(
-        id=data.get('id', uuid.uuid4()),  # generate a random uuid if not provided
-        first_name=data['first_name'],
-        last_name=data['last_name'],
-        email=data['email'],
-        pw_hash=full_hashed_password,
-        permission=PermissionLevel.listener,
-        background_info=data.get('background_info', ''),
-        reward_points=0,
-        languages_list=data.get('languages_list', []),
-        languages_proficiency=data.get('languages_proficiency', [])
-    )
-
-    try:
-        db.session.add(user)
-        db.session.commit()
-    except IntegrityError as e:
-        db.session.rollback()
-        return jsonify({"error": "Database integrity error: " + str(e)}), 400
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
-
-    # Ensure languages_proficiency is serialized as a list
-    return jsonify({"message": "Registration Successful"})
-
-@app.route('/registerResearcher', methods=['POST'])
-def createResearcher():
-    data = request.json
-    required_fields = ['first_name', 'last_name', 'email', 'pw']
-    validation_error = validate_required_fields(data, required_fields)
-    if validation_error:
-        return validation_error
-    user = Researcher(
-        id=data.get('id', uuid.uuid4()),    # generate a random uuid if not provided
-        first_name=data['first_name'],
-        last_name=data['last_name'],
-        email=data['email'],
-        pw_hash=PasswordHash.hash_password(str(data['pw'])),
-        permission=PermissionLevel.researcher,
-        organisation=data.get('organisation', ''),
-        uploaded_video=data.get('uploaded_video', [])
-    )
-    try:
-        db.session.add(user)
-        db.session.commit()
-    except IntegrityError as e:
-        db.session.rollback()
-        return jsonify({"error": "Database integrity error: " + str(e)}), 400
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
-    return jsonify({"Registration Successful"})
-
-
-# Define the enum type creation SQL 
-#create_proficiencylevel_enum = DDL(
-#    "CREATE TYPE proficiencylevel AS ENUM ('elementary', 'limited_working', 'professional', 'native', 'bilingual');"
-#)
 
 # ========== 1. Python Enums ==========
 class PermissionLevel(enum.Enum):
@@ -180,26 +96,26 @@ event.listen(
 class Researcher(db.Model):
     __tablename__ = "researchers"
     id = db.Column(UUID(as_uuid=True), primary_key=True, nullable=False)
-    first_name = db.Column(db.String(30), nullable=False)
-    last_name = db.Column(db.String(30), nullable=False)
-    email = db.Column(db.String(30), nullable=False)
-    pw_hash = db.Column(db.String(128)) # Argon2 hash string is 97 char long currently, needs a trim to only store password 
+    first_name = db.Column(db.String(128), nullable=False)
+    last_name = db.Column(db.String(128), nullable=False)
+    email = db.Column(db.String(128), nullable=False, unique=True)
+    pw_hash = db.Column(db.String(128)) # Argon2 hash string is 97 char long
     permission = db.Column(permission_level_enum, nullable=False)
-    organisation = db.Column(db.String(60))
-    uploaded_video = db.Column(ARRAY(db.String(68))) # 68 char length file ID array
+    organisation = db.Column(db.String(128))
+    uploaded_video = db.Column(ARRAY(db.String(128))) # 68 char length file ID array
     gender = db.Column(gender_enum)
 
 class Listener(db.Model):
     __tablename__ = "listeners"
     id = db.Column(UUID(as_uuid=True), primary_key=True, nullable=False) # listener's uuid
-    first_name = db.Column(db.String(30), nullable=False)
-    last_name = db.Column(db.String(30), nullable=False)
-    email = db.Column(db.String(30), nullable=False)
-    pw_hash = db.Column(db.String(128), nullable=False) # Argon2 hash string is 97 char long currently, needs a trim to only store password
+    first_name = db.Column(db.String(128), nullable=False)
+    last_name = db.Column(db.String(128), nullable=False)
+    email = db.Column(db.String(128), nullable=False, unique=True)
+    pw_hash = db.Column(db.String(128), nullable=False) # Argon2 hash string is 97 char long 
     permission = db.Column(permission_level_enum, nullable=False)
-    background_info = db.Column(db.String(100))
+    background_info = db.Column(db.String(512))
     reward_points = db.Column(db.Integer)
-    languages_list = db.Column(ARRAY(db.String(8)))
+    languages_list = db.Column(ARRAY(db.String(128)))
     languages_proficiency = db.Column(ARRAY(proficiency_level_enum))
 
     # one-to-one relationship of listeners-demographics
@@ -213,8 +129,110 @@ class Demographic(db.Model):
     age = db.Column(db.Integer, nullable=False)
     gender = db.Column(gender_enum)
     country_of_residence = db.Column(db.String(30), nullable=False)
-    address = db.Column(db.String(68), nullable=False)
-    education = db.Column(db.String(68), nullable=False)
+    address = db.Column(db.String(128), nullable=False)
+    education = db.Column(db.String(128), nullable=False)
+
+
+# ========== 4. Server Endpoint Routes ==========
+@app.route('/registerListener', methods=['POST'])
+def createListener():
+    data = request.json
+    required_fields = ['first_name', 'last_name', 'email', 'pw']
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+
+    # Check if email already exists
+    existing_user = Listener.query.filter_by(email=data['email']).first()
+    if existing_user:
+        return jsonify({"error": "Email already registered"}), 400
+
+    # ===== validation of languages to be moved to add languages task ===== 
+    # Validate and process languages_proficiency
+    # this check should be refactored to a separate function for register language & proficiency
+    # route. code works correctly
+    # validate in languages task
+    #valid_proficiency_levels = [level.value for level in ProficiencyLevel]
+    #if 'languages_proficiency' in data:
+    #    invalid_levels = [
+    #        proficiency for proficiency in data['languages_proficiency']
+    #        if proficiency not in valid_proficiency_levels
+    #    ]
+    #    if invalid_levels:
+    #        return jsonify({"error": f"Invalid proficiency levels: {', '.join(invalid_levels)}"}), 400
+    #
+    #    # Convert valid strings to ProficiencyLevel enum values
+    #    data['languages_proficiency'] = [
+    #        ProficiencyLevel(proficiency).value  # Ensure it remains a list of strings
+    #        for proficiency in data['languages_proficiency']
+    #    ]
+    
+    # Hash the password
+    full_hashed_password = PasswordHash((data['pw']))
+    # Verify the password function is correct but not needed for current task
+    # verify_password = PasswordHash.verify(data['pw'], full_hashed_password.value)
+    
+
+    user = Listener(
+        id=data.get('id', uuid.uuid4()),  # generate a random uuid if not provided
+        first_name=data['first_name'],
+        last_name=data['last_name'],
+        email=data['email'],
+        pw_hash=full_hashed_password.value,
+        permission=PermissionLevel.listener,
+        background_info=data.get('background_info', ''),
+        reward_points=0,
+    #    ==== languages to be set in different task, remove and add to task ======
+    #    languages_list=data.get('languages_list', []),
+    #    languages_proficiency=data.get('languages_proficiency', []) 
+    )
+
+    try:
+        db.session.add(user)
+        db.session.commit()
+    except IntegrityError as e:
+        db.session.rollback()
+        return jsonify({"error": "Database integrity error: " + str(e)}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+    # Ensure languages_proficiency is serialized as a list
+    return jsonify({"message": "Registration Successful"})
+
+@app.route('/registerResearcher', methods=['POST'])
+def createResearcher():
+    data = request.json
+    required_fields = ['first_name', 'last_name', 'email', 'pw']
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+    
+    # Check if email already exists
+    existing_user = Researcher.query.filter_by(email=data['email']).first()
+    if existing_user:
+        return jsonify({"error": "Email already registered"}), 400   
+    
+    user = Researcher(
+        id=data.get('id', uuid.uuid4()),    # generate a random uuid if not provided
+        first_name=data['first_name'],
+        last_name=data['last_name'],
+        email=data['email'],
+        pw_hash=PasswordHash.hash_password(str(data['pw'])),
+        permission=PermissionLevel.researcher,
+        organisation=data.get('organisation', ''),
+        uploaded_video=data.get('uploaded_video', [])
+    )
+    try:
+        db.session.add(user)
+        db.session.commit()
+    except IntegrityError as e:
+        db.session.rollback()
+        return jsonify({"error": "Database integrity error: " + str(e)}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+    return jsonify({"Registration Successful"})
 
 # this may need to be changed to only return the 'listener' who is calling the route
 # will need more discussion on this 
@@ -231,7 +249,7 @@ def getListeners():
         "Background Info": user.background_info,
         "Reward Points": user.reward_points,
         "languages_list": user.languages_list,
-        "languages_proficiency": [lp.value for lp in user.languages_proficiency]  # Convert enum array
+        "languages_proficiency": [lp.value for lp in user.languages_proficiency] if user.languages_proficiency else []  # Convert enum array
     } for user in users])
 
 # this route may only be used by the admin to get all researchers

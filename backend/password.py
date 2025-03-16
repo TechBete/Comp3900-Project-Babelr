@@ -37,13 +37,7 @@ class PasswordHash:
         instance of `PasswordHash`.
         """
         return ALGO.verify(password, hashed_password)
-
-    @staticmethod
-    def hash_password(password: str) -> str:
-        if not password:
-            raise ValueError("Password cannot be empty")
-        return ALGO.hash(password)
-
+    
     @override
     def __eq__(self, other) -> bool:
         """

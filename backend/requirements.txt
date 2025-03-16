@@ -12,4 +12,5 @@ flask-mail              # handles email sending
 flask-jwt-extended      # handles JWT token generation
 hypothesis              # handles testing
 pytest                  # handles testing
-argon2_cffi            # handles password hashing
+argon2_cffi             # handles password hashing
+logging                 # handles logging - remove for prod
