@@ -68,7 +68,7 @@ export default function RegisterListener() {
         <div className={styles["login-container"]}>
             <Image className={styles["babelr-icon"]} src="/babelr_icon.png" alt="icon" width={100} height={100} />
             
-            <h2 className={styles["login-header"]}>User Register</h2>
+            <h2 className={styles["login-header"]}>Researcher Register</h2>
             <form className={styles["login-form"]} method="post" onSubmit={handleSubmit}>
                 <div className={styles["login-form-details"]}>
                     <label htmlFor="email" className={emailError ? styles["invalid-label"] : ""}>

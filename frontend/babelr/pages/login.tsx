@@ -5,10 +5,8 @@ import styles from "../stylesheets/login.module.css";
 import { useRouter } from 'next/router'
 
 export default function Login() {
-    // const [email, setEmail] = useState('');
-    // const [password, setPassword] = useState('');
     const router = useRouter()
-    const [selectedOption, setSelectedOption] = useState("");
+    const [selectedOption, setSelectedOption] = useState("/register_listener");
 
 
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
