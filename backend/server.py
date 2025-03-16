@@ -1,48 +1,285 @@
+import os, uuid, enum
+import logging  # remove for final production
+from flask_cors import CORS  # this should work, dont know why my vscode is throwing an error
 from flask import Flask, request, jsonify, render_template_string # render_template_string is used to render HTML, can be removed once frontend is inplace
+from password import PasswordHash
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.dialects.postgresql import ARRAY, UUID, ENUM
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy import DDL, event
 from dotenv import load_dotenv
-import os
-from flask_cors import CORS
 
 app = Flask(__name__)
-cors = CORS()
+#cors = CORS() suppressing cors due to error thown by not in use
 load_dotenv()
+# Configure logging - remove for final production
+logging.basicConfig(level=logging.DEBUG)
 
 # database config
 app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{os.environ.get('POSTGRES_USER')}:{os.environ.get('POSTGRES_PASSWORD')}@{os.environ.get('POSTGRES_HOST')}/{os.environ.get('POSTGRES_DB')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
-cors.init_app(app)
+#cors.init_app(app) suppressing cors due to error thown by not in use
 
-# model
-class User(db.Model):
-    __tablename__ = 'users'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50))
-    email = db.Column(db.String(50))
+# ========== 0. Helper Functions ==========
+def validate_required_fields(data, required_fields):
+    for field in required_fields:
+        if field not in data:
+            return jsonify({"error": f"Missing field: {field}"}), 400
+    return None
+
+def hash_password(data):
+    hashed_password = PasswordHash(data['pw'])
+    return hashed_password
+
+def validate_Password(data, hashed_password):
+    return PasswordHash.verify(data['pw'], hashed_password)
+
+# Create email validation function to ensure that email being entered is of proper email format
+# check if email proivider is real?
+
+# ========== 1. Python Enums ==========
+class PermissionLevel(enum.Enum):
+    admin = "admin"
+    listener = "listener"
+    researcher = "researcher"
+
+class ProficiencyLevel(enum.Enum):
+    elementary = "elementary"
+    limited_working = "limited_working"
+    professional = "professional"
+    native = "native"
+    bilingual = "bilingual"
+
+
+class Gender(enum.Enum):
+    male = "male"
+    female = "female"
+    other = "other"
+
+# Define enums using postgresql.ENUM with create_type=True
+# ========== 2. SQLAlchemy Enums ==========
+proficiency_level_enum = ENUM(ProficiencyLevel, name='proficiencylevel', create_type=True)
+permission_level_enum = ENUM(PermissionLevel, name='permissionlevel', create_type=True)
+gender_enum = ENUM(Gender, name='gender', create_type=True)
+
+# Create the enum types in the SQL database
+event.listen(
+    db.metadata, 'before_create',
+    DDL("""
+    DO $$
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'proficiencylevel') THEN
+            CREATE TYPE proficiencylevel AS ENUM ('elementary', 'limited_working', 'professional', 'native', 'bilingual');
+        END IF;
+    END $$;
+    """)
+)
+
+event.listen(
+    db.metadata, 'before_create',
+    DDL("""
+    DO $$
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'permissionlevel') THEN
+            CREATE TYPE permissionlevel AS ENUM ('admin', 'listener', 'researcher');
+        END IF;
+    END $$;
+    """)
+)
+
+event.listen(
+    db.metadata, 'before_create',
+    DDL("""
+    DO $$
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'gender') THEN
+            CREATE TYPE gender AS ENUM ('male', 'female', 'other');
+        END IF;
+    END $$;
+    """)
+)
+
+# ========== 3. SQL DB Models ==========
+class Researcher(db.Model):
+    __tablename__ = "researchers"
+    id = db.Column(UUID(as_uuid=True), primary_key=True, nullable=False)
+    first_name = db.Column(db.String(128), nullable=False)
+    last_name = db.Column(db.String(128), nullable=False)
+    email = db.Column(db.String(128), nullable=False, unique=True)
+    pw_hash = db.Column(db.String(128)) # Argon2 hash string is 97 char long
+    permission = db.Column(permission_level_enum, nullable=False)
+    organisation = db.Column(db.String(128))
+    project_list = db.Column(ARRAY(db.String(128))) # 128 char length array
+    uploaded_video = db.Column(ARRAY(db.String(128))) # 128 char length file ID array
+    gender = db.Column(gender_enum)
+
+class Listener(db.Model):
+    __tablename__ = "listeners"
+    id = db.Column(UUID(as_uuid=True), primary_key=True, nullable=False) # listener's uuid
+    first_name = db.Column(db.String(128), nullable=False)
+    last_name = db.Column(db.String(128), nullable=False)
+    email = db.Column(db.String(128), nullable=False, unique=True)
+    pw_hash = db.Column(db.String(128), nullable=False) # Argon2 hash string is 97 char long 
+    permission = db.Column(permission_level_enum, nullable=False)
+    background_info = db.Column(db.String(512))
+    reward_points = db.Column(db.Integer)
+    languages_list = db.Column(ARRAY(db.String(128)))
+    languages_proficiency = db.Column(ARRAY(proficiency_level_enum))
+
+    # one-to-one relationship of listeners-demographics
+    demographic = db.relationship("Demographic", back_populates="listener", uselist=False)
     
-@app.route('/addusers', methods=['POST'])
-def create_user():
+class Demographic(db.Model):
+    __tablename__ = "demographics"
+    id = db.Column(db.Integer, primary_key=True, nullable=False) # ID of demographic record
+    listener_id = db.Column(UUID(as_uuid=True), db.ForeignKey("listeners.id"))
+    listener = db.relationship("Listener", back_populates="demographic")
+    age = db.Column(db.Integer, nullable=False)
+    gender = db.Column(gender_enum)
+    country_of_residence = db.Column(db.String(30), nullable=False)
+    address = db.Column(db.String(128), nullable=False)
+    education = db.Column(db.String(128), nullable=False)
+
+
+# ========== 4. Server Endpoint Routes ==========
+@app.route('/registerListener', methods=['POST'])
+def createListener():
     data = request.json
-    user = User(name=data['name'], email=data['email'])
-    db.session.add(user)
-    db.session.commit()
+    required_fields = ['first_name', 'last_name', 'email', 'pw']
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
 
-    print('*********')
-    print('create user route was hit')
+    # Check if email already exists
+    existing_user = Listener.query.filter_by(email=data['email']).first()
+    if existing_user:
+        return jsonify({"error": "Email already registered"}), 400
 
-    return jsonify({"Message: User id": user.id})
+    # ===== validation of languages to be moved to add languages task ===== 
+    # Validate and process languages_proficiency
+    # this check should be refactored to a separate function for register language & proficiency
+    # route. code works correctly
+    # validate in languages task
+    #valid_proficiency_levels = [level.value for level in ProficiencyLevel]
+    #if 'languages_proficiency' in data:
+    #    invalid_levels = [
+    #        proficiency for proficiency in data['languages_proficiency']
+    #        if proficiency not in valid_proficiency_levels
+    #    ]
+    #    if invalid_levels:
+    #        return jsonify({"error": f"Invalid proficiency levels: {', '.join(invalid_levels)}"}), 400
+    #
+    #    # Convert valid strings to ProficiencyLevel enum values
+    #    data['languages_proficiency'] = [
+    #        ProficiencyLevel(proficiency).value  # Ensure it remains a list of strings
+    #        for proficiency in data['languages_proficiency']
+    #    ]
+    
+    # Hash the user password
+    hashed_password = hash_password(data)
 
-@app.route('/getusers', methods=['GET'])
-def get_users():
-    users = User.query.all()
+    user = Listener(
+        id=data.get('id', uuid.uuid4()),  # generate a random uuid if not provided
+        first_name=data['first_name'],
+        last_name=data['last_name'],
+        email=data['email'],
+        pw_hash=hashed_password.value,
+        permission=PermissionLevel.listener,
+        background_info=data.get('background_info', ''),
+        reward_points=0,
+    #    ==== languages to be set in different task, remove and add to task ======
+    #    languages_list=data.get('languages_list', []),
+    #    languages_proficiency=data.get('languages_proficiency', []) 
+    )
 
-    print('get users route has been hit')
+    try:
+        db.session.add(user)
+        db.session.commit()
+    except IntegrityError as e:
+        db.session.rollback()
+        return jsonify({"error": "Database integrity error: " + str(e)}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
-    return jsonify([{"id": user.id, "name": user.name, "email": user.email} for user in users])
+    # Ensure languages_proficiency is serialized as a list
+    return jsonify({"message": "Registration Successful"})
 
-@app.route('/')
+@app.route('/registerResearcher', methods=['POST'])
+def createResearcher():
+    data = request.json
+    required_fields = ['first_name', 'last_name', 'email', 'pw']
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+    
+    # Hash the user password
+    hashed_password = hash_password(data)
+    
+    # Check if email already exists
+    existing_user = Researcher.query.filter_by(email=data['email']).first()
+    if existing_user:
+        return jsonify({"error": "Email already registered"}), 400   
+    
+    user = Researcher(
+        id=data.get('id', uuid.uuid4()),    # generate a random uuid if not provided
+        first_name=data['first_name'],
+        last_name=data['last_name'],
+        email=data['email'],
+        pw_hash=hashed_password.value,
+        permission=PermissionLevel.researcher,
+        organisation=data.get('organisation', ''),
+    )
+    try:
+        db.session.add(user)
+        db.session.commit()
+    except IntegrityError as e:
+        db.session.rollback()
+        return jsonify({"error": "Database integrity error: " + str(e)}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+    return jsonify({"message": "Registration Successful"})
+
+# this may need to be changed to only return the 'listener' who is calling the route
+# will need more discussion on this 
+@app.route('/getListeners', methods=['GET']) 
+def getListeners():
+    users = Listener.query.all()
+    return jsonify([{
+        "Uuid": str(user.id),
+        "Demographic ID": user.demographic.id if user.demographic else None,
+        "First Name": user.first_name,
+        "Last Name": user.last_name,
+        "Email": user.email,
+        "Password": user.pw_hash,
+        "Role": user.permission.value,  
+        "Background Info": user.background_info,
+        "Reward Points": user.reward_points,
+        "languages_list": user.languages_list,
+        "languages_proficiency": [lp.value for lp in user.languages_proficiency] if user.languages_proficiency else []  # Convert enum array
+    } for user in users])
+
+# this route may only be used by the admin to get all researchers
+@app.route('/getResearchers', methods=['GET'])
+def getResearchers():
+    users = Researcher.query.all()
+    return jsonify([{
+        "Uuid": str(user.id),
+        "First Name": user.first_name,
+        "Last Name": user.last_name,
+        "Email": user.email,
+        "Password": user.pw_hash,
+        "Role": user.permission.value,  
+        "Organisation": user.organisation,
+        "Projects": user.project_list,
+        "Uploaded Audio Clips": [adc.value for adc in user.uploaded_video] if user.uploaded_video else [],
+        "Gender": user.gender.value if user.gender is not None else None
+    } for user in users])
+   
+@app.route('/') # testing route to render HTML form; remove once frontend is inplace
 def index():
     return render_template_string('''
     <!DOCTYPE html>
@@ -50,58 +287,109 @@ def index():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Add User</title>
+        <title>Index Page</title>
     </head>
     <body>
-        <h1>Add User</h1>
-        <form id="userForm">
-            <label for="name">Name:</label>
-            <input type="text" id="name" name="name" required>
-            <br>
-            <label for="email">Email:</label>
-            <input type="email" id="email" name="email" required>
-            <br>
-            <button type="submit">Add User</button>
+        <h1>Welcome to the User Management System</h1>
+        <p>Use the links below to register a Listener or a Researcher:</p>
+        <ul>
+            <li><a href="/addListener">Register Listener</a></li>
+            <li><a href="/addResearcher">Register Researcher</a></li>
+        </ul>
+    </body>
+    </html>
+    ''')
+@app.route('/addListener', methods=['GET'])
+def addListener():
+    return render_template_string('''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Add Listener</title>
+    </head>
+    <body>
+        <h1>Add Listener</h1>
+        <form action="/registerListener" method="post">
+            <label for="first_name">First Name:</label><br>
+            <input type="text" id="first_name" name="first_name"><br>
+            <label for="last_name">Last Name:</label><br>
+            <input type="text" id="last_name" name="last_name"><br>
+            <label for="email">Email:</label><br>
+            <input type="email" id="email" name="email"><br>
+            <label for="pw">Password:</label><br>
+            <input type="password" id="pw" name="pw"><br>
+            <label for="background_info">Background Info:</label><br>
+            <input type="text" id="background_info" name="background_info"><br>
+            <button type="submit">Submit</button>
         </form>
-
         <script>
-            document.getElementById('userForm').addEventListener('submit', function(event) {
-                event.preventDefault();
-
-                const name = document.getElementById('name').value;
-                const email = document.getElementById('email').value;
-
-                fetch('http://localhost:8016/addusers', {
+            document.querySelector('form').addEventListener('submit', function (e) {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const jsonData = Object.fromEntries(formData);
+                fetch('/registerListener', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ name: name, email: email })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Success:', data);
-                    alert('User added successfully!');
-                })
-                .catch((error) => {
-                    console.error('Error:', error);
-                    alert('Failed to add user.');
-                });
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(jsonData)
+                }).then(response => response.json())
+                  .then(data => console.log(data));
             });
         </script>
     </body>
     </html>
     ''')
 
-# print the environment variables for debugging
-print(f"POSTGRES_USER: {os.getenv('POSTGRES_USER')}")
-print(f"POSTGRES_PASSWORD: {os.getenv('POSTGRES_PASSWORD')}")
-print(f"POSTGRES_HOST: {os.getenv('POSTGRES_HOST')}")
-print(f"POSTGRES_DB: {os.getenv('POSTGRES_DB')}")
+@app.route('/addResearcher', methods=['GET'])
+def addResearcher():
+    return render_template_string('''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Add Researcher</title>
+    </head>
+    <body>
+        <h1>Add Researcher</h1>
+        <form action="/registerResearcher" method="post">
+            <label for="first_name">First Name:</label><br>
+            <input type="text" id="first_name" name="first_name"><br>
+            <label for="last_name">Last Name:</label><br>
+            <input type="text" id="last_name" name="last_name"><br>
+            <label for="email">Email:</label><br>
+            <input type="email" id="email" name="email"><br>
+            <label for="pw">Password:</label><br>
+            <input type="password" id="pw" name="pw"><br>
+            <label for="organisation">Organisation:</label><br>
+            <input type="text" id="organisation" name="organisation"><br>
+            <button type="submit">Submit</button>
+        </form>
+        <script>
+            document.querySelector('form').addEventListener('submit', function (e) {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const jsonData = Object.fromEntries(formData);
+                fetch('/registerResearcher', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(jsonData)
+                }).then(response => response.json())
+                    .then(data => console.log(data));
+            });
+        </script>
+    </body>
+    </html>
+    ''')
 
 if __name__ == '__main__':
+    # The db.create_all() call is inside the if __name__ == '__main__': block,
+    # which means it will only run when the script is executed directly.
+    # This can cause issues when deploying the application in a production environment.
+    # find a way to resolve if necessary.
     with app.app_context():
-        # intialize the database
+        # initialize the database
         db.create_all() 
     # host='0.0.0.0' to make the server accessible from outside the container
     app.run(debug=True, host='0.0.0.0', port=8016)

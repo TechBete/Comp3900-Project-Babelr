@@ -4,3 +4,13 @@ flask-restful           # handles RESTful API requests
 flask-sqlalchemy        # handles database requests
 psycopg2-binary         # change this to full psycopg2 library for prod
 python-dotenv           # handles environment variables
+typing                  # handles type hinting
+passlib                 # handles password hashing
+uuid                    # handles UUID generation
+jinja2                  # handles HTML templating
+flask-mail              # handles email sending
+flask-jwt-extended      # handles JWT token generation
+hypothesis              # handles testing
+pytest                  # handles testing
+argon2_cffi             # handles password hashing
+logging                 # handles logging - remove for prod
