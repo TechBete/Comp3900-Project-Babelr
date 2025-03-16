@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 
 app = Flask(__name__)
 #cors = CORS() suppressing cors due to error thown by not in use
+CORS(app) # FOR FRONTEND TESTING, CHANGE LATER
 load_dotenv()
 # Configure logging - remove for final production
 logging.basicConfig(level=logging.DEBUG)
