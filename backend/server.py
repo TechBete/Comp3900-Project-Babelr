@@ -1,7 +1,7 @@
 import os, uuid, enum
 import logging  # remove for final production
 from flask_cors import CORS  # this should work, dont know why my vscode is throwing an error
-from flask import Flask, request, jsonify, render_template_string # render_template_string is used to render HTML, can be removed once frontend is inplace
+from flask import Flask, request, jsonify, render_template_string, render_template, redirect, url_for # render_template_string is used to render HTML, can be removed once frontend is inplace
 from password import PasswordHash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.postgresql import ARRAY, UUID, ENUM
@@ -144,6 +144,32 @@ class Demographic(db.Model):
 
 
 # ========== 4. Server Endpoint Routes ==========
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.json
+    required_fields = ['email', 'pw']
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return jsonify({"error": "validation error"}), 400
+    
+    existing_listener = Listener.query.filter_by(email=data['email']).first()
+    existing_researcher = Researcher.query.filter_by(email=data['email']).first()
+    
+    if not existing_listener and not existing_researcher:
+        return jsonify({"error": "Invalid email-password combination"}), 401
+    
+    hashed_password = existing_listener.pw_hash
+
+    if validate_Password(data, hashed_password):
+        # TODO: remember that user is logged in
+        return jsonify({"message": "Listener is successfully logged in"}), 200
+
+    return jsonify({"error": "Invalid email-password combination"}), 403
+
+@app.route('/loginPage', methods=['GET'])
+def loginPage():
+    return render_template('login.html')
+
 @app.route('/registerListener', methods=['POST'])
 def createListener():
     data = request.json
@@ -156,6 +182,8 @@ def createListener():
     existing_user = Listener.query.filter_by(email=data['email']).first()
     if existing_user:
         return jsonify({"error": "Email already registered"}), 400
+    
+    hashed_password = hash_password(data)
 
     # ===== validation of languages to be moved to add languages task ===== 
     # Validate and process languages_proficiency
@@ -191,7 +219,7 @@ def createListener():
         reward_points=0,
     #    ==== languages to be set in different task, remove and add to task ======
     #    languages_list=data.get('languages_list', []),
-    #    languages_proficiency=data.get('languages_proficiency', []) 
+    #    languages_proficiency=data.get('languages_proficiency', [])
     )
 
     try:
@@ -221,7 +249,7 @@ def createResearcher():
     # Check if email already exists
     existing_user = Researcher.query.filter_by(email=data['email']).first()
     if existing_user:
-        return jsonify({"error": "Email already registered"}), 400   
+        return jsonify({"error": "Email already registered"}), 400
     
     user = Researcher(
         id=data.get('id', uuid.uuid4()),    # generate a random uuid if not provided
@@ -245,7 +273,7 @@ def createResearcher():
 
 # this may need to be changed to only return the 'listener' who is calling the route
 # will need more discussion on this 
-@app.route('/getListeners', methods=['GET']) 
+@app.route('/getListeners', methods=['GET'])
 def getListeners():
     users = Listener.query.all()
     return jsonify([{
@@ -295,6 +323,7 @@ def index():
         <ul>
             <li><a href="/addListener">Register Listener</a></li>
             <li><a href="/addResearcher">Register Researcher</a></li>
+            <li><a href="/loginPage">Login Page</a></li>
         </ul>
     </body>
     </html>
