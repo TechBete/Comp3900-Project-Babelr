@@ -2,6 +2,7 @@ import os, uuid, enum, time
 import logging  # remove for final production
 from flask_cors import CORS  # this should work, dont know why my vscode is throwing an error
 from flask import Flask, request, jsonify, render_template_string # render_template_string is used to render HTML, can be removed once frontend is inplace
+from flask import send_from_directory, send_file # this is for accessing files from a directory
 from password import PasswordHash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.postgresql import ARRAY, UUID, ENUM
