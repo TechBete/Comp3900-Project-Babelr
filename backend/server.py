@@ -4,7 +4,9 @@ from flask_cors import CORS  # this should work, dont know why my vscode is thro
 from flask import Flask, request, jsonify, render_template_string # render_template_string is used to render HTML, can be removed once frontend is inplace
 from flask import send_from_directory, send_file # this is for accessing files from a directory
 from password import PasswordHash
+from email_validator import validate_email, EmailNotValidError
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.dialects.postgresql import ARRAY, UUID, ENUM
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy import DDL, event
@@ -28,7 +30,7 @@ db = SQLAlchemy(app)
 def validate_required_fields(data, required_fields):
     for field in required_fields:
         if field not in data:
-            return jsonify({"error": f"Missing field: {field}"}), 400
+            return jsonify({"error": "Missing field: {}".format(field)}), 400
     return None
 
 def hash_password(data):
@@ -113,8 +115,8 @@ class Researcher(db.Model):
     pw_hash = db.Column(db.String(128)) # Argon2 hash string is 97 char long
     permission = db.Column(permission_level_enum, nullable=False)
     organisation = db.Column(db.String(128))
-    project_list = db.Column(ARRAY(db.String(128))) # 128 char length array
-    uploaded_video = db.Column(ARRAY(db.String(128))) # 128 char length file ID array
+    project_list = db.Column(db.JSON, default=[]) # 128 char length array
+    uploaded_video = db.Column(db.JSON, default=[]) # 128 char length file ID array
     gender = db.Column(gender_enum)
 
 class Listener(db.Model):
@@ -125,10 +127,10 @@ class Listener(db.Model):
     email = db.Column(db.String(128), nullable=False, unique=True)
     pw_hash = db.Column(db.String(128), nullable=False) # Argon2 hash string is 97 char long 
     permission = db.Column(permission_level_enum, nullable=False)
-    background_info = db.Column(db.String(512))
+    background_info = db.Column(db.String(1024), default="") # 1024 char length string
     reward_points = db.Column(db.Integer)
-    languages_list = db.Column(ARRAY(db.String(128)))
-    languages_proficiency = db.Column(ARRAY(proficiency_level_enum))
+    languages_list = db.Column(db.JSON, default=[]) # 128 char length array
+    languages_proficiency = db.Column(db.JSON, default=[]) # proficiency level array
 
     # one-to-one relationship of listeners-demographics
     demographic = db.relationship("Demographic", back_populates="listener", uselist=False)
@@ -154,11 +156,18 @@ def createListener():
     if validation_error:
         return validation_error
 
+    Email = data['email']
     # Check if email already exists
-    existing_user = Listener.query.filter_by(email=data['email']).first()
+    existing_user = Listener.query.filter_by(email=Email).first()
     if existing_user:
         return jsonify({"error": "Email already registered"}), 400
-
+    
+    # check if email is structured correctly
+    try:
+        validate_email(Email)
+    except EmailNotValidError as e:
+        return jsonify({"Email entered is not of proper format. Email": str(Email)}), 400
+    
     # ===== validation of languages to be moved to add languages task ===== 
     # Validate and process languages_proficiency
     # this check should be refactored to a separate function for register language & proficiency
@@ -201,10 +210,12 @@ def createListener():
         db.session.commit()
     except IntegrityError as e:
         db.session.rollback()
-        return jsonify({"error": "Database integrity error: " + str(e)}), 400
+        logging.debug(e)
+        return jsonify({"error": "Database integrity error: 400"}), 400
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        logging.debug(e)
+        return jsonify({"error": "Error Code: 500"}), 500
 
     # Ensure languages_proficiency is serialized as a list
     return jsonify({"message": "Registration Successful"})
@@ -217,13 +228,21 @@ def createResearcher():
     if validation_error:
         return validation_error
     
+    Email = data['email']
+    
     # Hash the user password
     hashed_password = hash_password(data)
     
     # Check if email already exists
-    existing_user = Researcher.query.filter_by(email=data['email']).first()
+    existing_user = Researcher.query.filter_by(email=Email).first()
     if existing_user:
         return jsonify({"error": "Email already registered"}), 400   
+    
+    # check if email is structured correctly
+    try:
+        validate_email(Email)
+    except EmailNotValidError as e:
+        return jsonify({"Email entered is not of proper format. Email": str(Email)}), 400
     
     user = Researcher(
         id=data.get('id', uuid.uuid4()),    # generate a random uuid if not provided
@@ -239,10 +258,12 @@ def createResearcher():
         db.session.commit()
     except IntegrityError as e:
         db.session.rollback()
-        return jsonify({"error": "Database integrity error: " + str(e)}), 400
+        logging.debug(e)
+        return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        logging.debug(e)
+        return jsonify({"error": "Error Code: 500"}), 500 
     return jsonify({"message": "Registration Successful"})
 
 @app.route('/resetPassword', methods=['POST'])
@@ -275,25 +296,26 @@ def resetPassword():
     # Check if user is a listener or researcher, assign as existing_user
     existing_user = isListener if isListener else isResearcher
     if not existing_user:
-        return jsonify({"error": "User not Found"}), 404
+        return jsonify({"error": "Error: 404, User not Found"}), 404
     
     # Check if email matches the user
     if existing_user.email != email:
         return jsonify({"error": 
-            "Email does not match the one registered with the account"}), 400
+            "Error: 400, Email does not match the one registered with the account"}), 400
     
     if existing_user:
         hashed_password = hash_password(data)
         pw_validated = validate_Password(data, existing_user.pw_hash)
         if pw_validated:
-            return jsonify({"error": "Password cannot be the same as the previous password"}), 400
+            return jsonify({"error": "Error: Password cannot be the same as the previous password"}), 400
         try:
             existing_user.pw_hash = hashed_password.value
             db.session.commit()
             return jsonify({"message": "Password reset successful"})
         except Exception as e:
             db.session.rollback()
-            return jsonify({"error": "An error has occured while updating the password"}), 500
+            logging.debug(e)
+            return jsonify({"error": "Error: 500, An error has occured while updating the password"}), 500
 
 # this may need to be changed to only return the 'listener' who is calling the route
 # will need more discussion on this 
@@ -310,7 +332,7 @@ def getListeners():
         "Role": user.permission.value,  
         "Background Info": user.background_info,
         "Reward Points": user.reward_points,
-        "languages_list": user.languages_list,
+        "languages_list": [lang for lang in user.languages_list] if user.languages_list else [], # list of languages user speaks
         "languages_proficiency": [lp.value for lp in user.languages_proficiency] if user.languages_proficiency else []  # Convert enum array
     } for user in users])
 
@@ -346,10 +368,72 @@ def getResearchers():
         "Password": user.pw_hash,
         "Role": user.permission.value,  
         "Organisation": user.organisation,
-        "Projects": user.project_list,
-        "Uploaded Audio Clips": [adc.value for adc in user.uploaded_video] if user.uploaded_video else [],
+        "Projects": [
+                    {"name": project.get("name"), "path": project.get("path")}
+                    for project in (user.project_list if user.project_list is not None else [])
+                    if isinstance(project, dict) and "name" in project and "path" in project
+                ],  # list of projects user is working on
+        "Uploaded Audio Clips": [uac.value for uac in user.uploaded_video] if user.uploaded_video else [], # list of audio clips user has uploaded
         "Gender": user.gender.value if user.gender is not None else None
     } for user in users])
+
+@app.route('/createProject', methods=['POST'])
+def createProject():
+    data = request.json
+    required_fields = ['project_name', 'researcher_id']
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+
+    projectName = data['project_name']
+    researcherId = data['researcher_id']
+
+    # Check if researcher exists
+    researcher = Researcher.query.filter_by(id=researcherId).first()
+    if not researcher:
+        return jsonify({"error": "Researcher not found"}), 404
+
+    # Ensure project list is not empty
+    if researcher.project_list is None:
+        researcher.project_list = []
+        
+    # ensure project name is not empty
+    if projectName == '':
+        return jsonify({"error": "Project name cannot be empty"}), 400
+    
+    # use a transaction to ensure that the project is only created if the project list is updated successfully
+    try:
+        with db.session.begin_nested():
+            # Check if project already exists
+            # Check if project already exists
+            if any(project.get("name") == projectName for project in researcher.project_list):
+                return jsonify({"error": "Project already exists"}), 400
+
+            # create directory for project files in backend and docker.
+            projectOwner = str(researcherId)
+            projectPath = os.path.join("/app", "audioData")
+            researcherPath = os.path.join(projectPath, projectOwner)
+            projectDir = os.path.join(researcherPath, projectName)
+            if not os.path.exists(projectDir):
+                os.makedirs(projectDir)
+            else:
+                return jsonify({"error": "Project already exists"}), 400
+            # update Researcher project list with project name
+            researcher.project_list.append({"name": projectName, "path": projectDir})
+            
+            flag_modified(researcher, "project_list")
+    
+            logging.debug(f"Current project_list before commit: {researcher.project_list}")
+            db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Project was unable to be created"}), 500
+
+    return jsonify({"message": "Project created successfully"})
+    
+
+
 
 # ======== TESTING ROUTES ========
 # These routes are for testing purposes only and should be removed once the frontend is in place
@@ -378,29 +462,23 @@ def index():
     </html>
     ''')
 
-@app.route('/addListener', methods=['GET'])
-def addListener():
+@app.route('/createProject', methods=['GET'])
+def createProjectForm():
     return render_template_string('''
     <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Add Listener</title>
+        <title>Create Project</title>
     </head>
     <body>
-        <h1>Add Listener</h1>
-        <form action="/registerListener" method="post">
-            <label for="first_name">First Name:</label><br>
-            <input type="text" id="first_name" name="first_name"><br>
-            <label for="last_name">Last Name:</label><br>
-            <input type="text" id="last_name" name="last_name"><br>
-            <label for="email">Email:</label><br>
-            <input type="email" id="email" name="email"><br>
-            <label for="pw">Password:</label><br>
-            <input type="password" id="pw" name="pw"><br>
-            <label for="background_info">Background Info:</label><br>
-            <input type="text" id="background_info" name="background_info"><br>
+        <h1>Create Proejct </h1>
+        <form action="/createProject" method="post">
+            <label for="project_name">Project Name:</label><br>
+            <input type="text" id="project_name" name="project_name"><br>
+            <label for="researcher_id">Researcher ID:</label><br>
+            <input type="text" id="researcher_id" name="researcher_id"><br>
             <button type="submit">Submit</button>
         </form>
         <script>
@@ -408,49 +486,7 @@ def addListener():
                 e.preventDefault();
                 const formData = new FormData(e.target);
                 const jsonData = Object.fromEntries(formData);
-                fetch('/registerListener', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(jsonData)
-                }).then(response => response.json())
-                  .then(data => console.log(data));
-            });
-        </script>
-    </body>
-    </html>
-    ''')
-
-@app.route('/addResearcher', methods=['GET'])
-def addResearcher():
-    return render_template_string('''
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Add Researcher</title>
-    </head>
-    <body>
-        <h1>Add Researcher</h1>
-        <form action="/registerResearcher" method="post">
-            <label for="first_name">First Name:</label><br>
-            <input type="text" id="first_name" name="first_name"><br>
-            <label for="last_name">Last Name:</label><br>
-            <input type="text" id="last_name" name="last_name"><br>
-            <label for="email">Email:</label><br>
-            <input type="email" id="email" name="email"><br>
-            <label for="pw">Password:</label><br>
-            <input type="password" id="pw" name="pw"><br>
-            <label for="organisation">Organisation:</label><br>
-            <input type="text" id="organisation" name="organisation"><br>
-            <button type="submit">Submit</button>
-        </form>
-        <script>
-            document.querySelector('form').addEventListener('submit', function (e) {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                const jsonData = Object.fromEntries(formData);
-                fetch('/registerResearcher', {
+                fetch('/createProject', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(jsonData)
@@ -460,8 +496,8 @@ def addResearcher():
         </script>
     </body>
     </html>
-    ''')
-
+''')
+    
 @app.route('/resetPassword', methods=['GET'])
 def resetPasswordForm():
     return render_template_string('''
