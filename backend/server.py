@@ -1,11 +1,11 @@
-import os, uuid, enum
+import os, uuid, enum, time
 import logging  # remove for final production
 from flask_cors import CORS  # this should work, dont know why my vscode is throwing an error
 from flask import Flask, request, jsonify, render_template_string # render_template_string is used to render HTML, can be removed once frontend is inplace
 from password import PasswordHash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.postgresql import ARRAY, UUID, ENUM
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy import DDL, event
 from dotenv import load_dotenv
 
@@ -502,12 +502,17 @@ def resetPasswordForm():
     ''')
 
 if __name__ == '__main__':
-    # The db.create_all() call is inside the if __name__ == '__main__': block,
-    # which means it will only run when the script is executed directly.
-    # This can cause issues when deploying the application in a production environment.
-    # find a way to resolve if necessary.
-    with app.app_context():
-        # initialize the database
-        db.create_all() 
+    for _ in range(5):
+        try:
+            with app.app_context():
+            # initialize the database
+                db.create_all()
+            break
+        except OperationalError as e:
+            print("Database not ready yet, retrying...")
+            time.sleep(5)   
+    else:
+        print("Database failed to initialize, exiting...")
+        exit(1)
     # host='0.0.0.0' to make the server accessible from outside the container
     app.run(debug=True, host='0.0.0.0', port=8016)
