@@ -28,6 +28,16 @@ services:
     depends_on:
       - Babelr_db
 
+  frontend:
+    build: ./frontend/babelr
+    ports:
+      - "3000:3000"
+    depends_on:
+      - web
+    environment:
+      - NEXT_PUBLIC_BACKEND_URL=http://localhost:8016
+
+
 volumes:
   postgres_data:
     driver: local
