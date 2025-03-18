@@ -3,23 +3,51 @@ import styles from "../stylesheets/projects_list.module.css"
 import Navbar from "../components/nav_bar";
 import Sidebar from "../components/side_bar";
 import Modal from "../components/popout_modal";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 
-// function Projects({}) {
-//     return (
-//     <tr className={styles["tr"]}>
-//         <td className={styles["td"]}><Link className={styles["projects-link"]} href="/Project1">Project 1</Link></td>
-//         <td className={styles["td"]}><span className={`${styles.status} ${styles["in-progress"]}`}>In Progress</span></td>
-//         <td className={styles["td"]}>Dr Bryan</td>
-//     </tr>
-//     );
-// }
+
+function Project({ name, path, status, creator } : { name: string; path: string; status: string; creator: string }) {
+    
+    const StatusStyle = () => {
+        if (status == "in-progress") {
+            return <td className={styles["td"]}><span className={`${styles.status} ${styles["in-progress"]}`}>In Progress</span></td>
+        } else if (status == "complete") {
+            return <td className={styles["td"]}><span className={`${styles.status} ${styles["complete"]}`}>Complete</span></td>
+        } else if (status == "Draft") {
+            return <td className={styles["td"]}><span className={`${styles.status} ${styles["draft"]}`}>Draft</span></td>
+        }
+    };
+
+    return (
+        <tr className={styles["tr"]}>
+            <td className={styles["td"]}><Link className={styles["projects-link"]} href={path}>{name}</Link></td>
+            {StatusStyle()}
+            <td className={styles["td"]}>{creator}</td>
+        </tr>
+    );
+}
+
+function ProjectList({ projects }: { projects: { name: string; path: string; status: string; creator: string }[] }) {
+    return (
+        <tbody>
+            {projects.map((project_dict, index) => (
+                <Project key={index} {...project_dict} />
+            ))}
+        </tbody>
+    );
+}
 
 export default function MainScreen() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [projectName, setProjectName] = useState("Project_4");
     const [createError, setCreateError] = useState("");
+    const [projectsData, setProjectData] = useState([]);
+
+    useEffect(() => {
+        setProjectData([]);
+    }, [])
+
 
     async function handleCreate(event: FormEvent<HTMLFormElement>) {
         event.preventDefault()
@@ -33,8 +61,10 @@ export default function MainScreen() {
             })
         
             if (response.ok) {
-				console.log("OK");
-                console.log(JSON.stringify({"project_name": projectName, "researcher_id": "1"}));
+				const data = await response.json();
+                console.log(data.message);
+                console.log(data.projects_list);
+                setProjectData(data.projects_list);
 			} else {
                 const error = await response.json()
                 console.log(JSON.stringify({"project_name": projectName, "researcher_id": "1"}));
@@ -53,7 +83,7 @@ export default function MainScreen() {
                 <Sidebar/>
                 <div className={styles["main-content"]}>
                     <h2 className={styles["projects-h2"]}>Projects</h2>
-                    <table className={styles["table"]}>
+                    <table className={styles["table"]} >
                         <thead className={styles["thead"]}>
                             <tr className={styles["tr"]}>
                                 <th className={styles["th"]}>Name</th>
@@ -62,23 +92,7 @@ export default function MainScreen() {
                                 <th className={styles["th"]}></th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr className={styles["tr"]}>
-                                <td className={styles["td"]}><Link className={styles["projects-link"]} href="/Project1">Project 1</Link></td>
-                                <td className={styles["td"]}><span className={`${styles.status} ${styles["in-progress"]}`}>In Progress</span></td>
-                                <td className={styles["td"]}>Dr Bryan</td>
-                            </tr>
-                            <tr className={styles["tr"]}>
-                                <td className={styles["td"]}><Link className={styles["projects-link"]} href="/Project2">Project 2</Link></td>
-                                <td className={styles["td"]}><span className={`${styles.status} ${styles["complete"]}`}>Complete</span></td>
-                                <td className={styles["td"]}>Bill</td>
-                            </tr>
-                            <tr className={styles["tr"]}>
-                                <td className={styles["td"]}><Link className={styles["projects-link"]} href="/Project3">Project 3</Link></td>
-                                <td className={styles["td"]}><span className={`${styles.status} ${styles["draft"]}`}>Draft</span></td>
-                                <td className={styles["td"]}>Bob</td>
-                            </tr>
-                        </tbody>
+                        <ProjectList projects={projectsData}/>
                     </table>
 
                     <button className={styles["add-project-btn"]} onClick={() => setIsModalOpen(true)}> + </button>

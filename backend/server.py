@@ -595,7 +595,7 @@ def createProject():
             else:
                 return jsonify({"error": "Project already exists"}), 400
             # update Researcher project list with project name
-            researcher.project_list.append({"name": projectName, "path": projectDir})
+            researcher.project_list.append({"name": projectName, "path": projectDir, "status": "Draft", "creator": researcher.first_name}) #added placeholder status and creator some stuff so i can display
             
             flag_modified(researcher, "project_list")
     
@@ -606,7 +606,7 @@ def createProject():
         logging.debug(e)
         return jsonify({"error": "Project was unable to be created"}), 500
 
-    return jsonify({"message": "Project created successfully"})
+    return jsonify({"message": "Project created successfully", "projects_list": researcher.project_list}) ## probably should not send back project list but for simplicities sake
     
 
 
