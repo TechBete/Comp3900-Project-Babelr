@@ -36,7 +36,7 @@ export default function RegisterListener() {
 		}
 
 		try {
-			const response = await fetch('http://127.0.0.1:8016/registerResearcher', {
+			const response = await fetch('http://localhost:8016/registerResearcher', {
 			method:"POST",
 			headers: {'Content-Type': 'application/json'},
 			body: JSON.stringify({        
