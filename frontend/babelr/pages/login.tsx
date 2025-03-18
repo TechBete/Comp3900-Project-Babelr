@@ -31,7 +31,7 @@ export default function Login() {
                     localStorage.setItem("accessToken", data.access_token);
                 }
 
-                router.push("/login");
+                router.push("/project_list");
                 setLoginError("");
             } else {
                 const error = await response.json();
