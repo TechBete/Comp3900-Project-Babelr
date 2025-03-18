@@ -2,8 +2,31 @@ import Link from "next/link";
 import styles from "../stylesheets/projects_list.module.css"
 import Navbar from "../components/nav_bar";
 import Sidebar from "../components/side_bar";
+import Modal from "../components/popout_modal";
+import { FormEvent, useState } from "react";
+
+
+// function Projects({}) {
+//     return (
+//     <tr className={styles["tr"]}>
+//         <td className={styles["td"]}><Link className={styles["projects-link"]} href="/Project1">Project 1</Link></td>
+//         <td className={styles["td"]}><span className={`${styles.status} ${styles["in-progress"]}`}>In Progress</span></td>
+//         <td className={styles["td"]}>Dr Bryan</td>
+//     </tr>
+//     );
+// }
 
 export default function MainScreen() {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [projectName, setProjectName] = useState("Project_4");
+
+    async function handleCreate(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault()
+		// const formData = new FormData(event.currentTarget);
+        const jwttoken = localStorage.getItem('access_token');
+        console.log(jwttoken);
+    }
+
     return (
         <div className={styles["project-body"]}>
             < Navbar/>
@@ -39,7 +62,27 @@ export default function MainScreen() {
                         </tbody>
                     </table>
 
-                    <button className={styles["add-project-btn"]}> + </button>
+                    <button className={styles["add-project-btn"]} onClick={() => setIsModalOpen(true)}> + </button>
+                    <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} hasCloseBtn>
+                        <h2 className={styles.modalTitle}>New Project</h2>
+
+                        <form onSubmit={handleCreate}>
+                            <label htmlFor="projectName" className={styles.formLabel}>
+                                Project Name
+                            </label>
+                            <input
+                                id="projectName"
+                                type="text"
+                                value={projectName}
+                                onChange={(e) => setProjectName(e.target.value)}
+                                className={styles.inputField}
+                            />
+
+                            <button type="submit" className={styles.submitButton}>
+                                Create Project
+                            </button>
+                        </form>
+                    </Modal>
                 </div>
             </div>
         </div>
