@@ -8,6 +8,7 @@ from sqlalchemy.dialects.postgresql import ARRAY, UUID, ENUM
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import DDL, event
 from dotenv import load_dotenv
+from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, JWTManager
 
 app = Flask(__name__)
 #cors = CORS() suppressing cors due to error thown by not in use
@@ -19,6 +20,8 @@ logging.basicConfig(level=logging.DEBUG)
 # database config
 app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{os.environ.get('POSTGRES_USER')}:{os.environ.get('POSTGRES_PASSWORD')}@{os.environ.get('POSTGRES_HOST')}/{os.environ.get('POSTGRES_DB')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config["JWT_SECRET_KEY"] = 'secret'
+jwt = JWTManager(app)
 
 db = SQLAlchemy(app)
 #cors.init_app(app) suppressing cors due to error thown by not in use
@@ -149,6 +152,7 @@ class Demographic(db.Model):
 def login():
     data = request.json
     required_fields = ['email', 'pw']
+
     validation_error = validate_required_fields(data, required_fields)
     if validation_error:
         return jsonify({"error": "validation error"}), 400
@@ -162,18 +166,16 @@ def login():
     hashed_password = existing_listener.pw_hash
 
     if validate_Password(data, hashed_password):
-        # TODO: remember that user is logged in
-        return jsonify({"message": "Listener is successfully logged in"}), 200
+        token = create_access_token(identity=data['email'])
 
-    return jsonify({"error": "Invalid email-password combination"}), 403
+        return jsonify(access_token=token), 200
 
-@app.route('/loginPage', methods=['GET'])
-def loginPage():
-    return render_template('login.html')
+    return jsonify({"error": "Invalid email-password combination"}), 401
 
 @app.route('/registerListener', methods=['POST'])
 def createListener():
     data = request.json
+
     required_fields = ['first_name', 'last_name', 'email', 'pw']
     validation_error = validate_required_fields(data, required_fields)
     if validation_error:
