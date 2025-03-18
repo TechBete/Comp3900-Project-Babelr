@@ -1,13 +1,14 @@
 import os, uuid, enum
 import logging  # remove for final production
 from flask_cors import CORS  # this should work, dont know why my vscode is throwing an error
-from flask import Flask, request, jsonify, render_template_string # render_template_string is used to render HTML, can be removed once frontend is inplace
+from flask import Flask, request, jsonify, render_template_string, render_template, redirect, url_for # render_template_string is used to render HTML, can be removed once frontend is inplace
 from password import PasswordHash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.postgresql import ARRAY, UUID, ENUM
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import DDL, event
 from dotenv import load_dotenv
+from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, JWTManager
 
 app = Flask(__name__)
 #cors = CORS() suppressing cors due to error thown by not in use
@@ -19,6 +20,8 @@ logging.basicConfig(level=logging.DEBUG)
 # database config
 app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{os.environ.get('POSTGRES_USER')}:{os.environ.get('POSTGRES_PASSWORD')}@{os.environ.get('POSTGRES_HOST')}/{os.environ.get('POSTGRES_DB')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config["JWT_SECRET_KEY"] = 'secret'
+jwt = JWTManager(app)
 
 db = SQLAlchemy(app)
 #cors.init_app(app) suppressing cors due to error thown by not in use
@@ -145,9 +148,34 @@ class Demographic(db.Model):
 
 
 # ========== 4. Server Endpoint Routes ==========
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.json
+    required_fields = ['email', 'pw']
+
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return jsonify({"error": "validation error"}), 400
+    
+    existing_listener = Listener.query.filter_by(email=data['email']).first()
+    existing_researcher = Researcher.query.filter_by(email=data['email']).first()
+    
+    if not existing_listener and not existing_researcher:
+        return jsonify({"error": "Invalid email-password combination"}), 401
+    
+    hashed_password = existing_listener.pw_hash
+
+    if validate_Password(data, hashed_password):
+        token = create_access_token(identity=data['email'])
+
+        return jsonify(access_token=token), 200
+
+    return jsonify({"error": "Invalid email-password combination"}), 401
+
 @app.route('/registerListener', methods=['POST'])
 def createListener():
     data = request.json
+
     required_fields = ['first_name', 'last_name', 'email', 'pw']
     validation_error = validate_required_fields(data, required_fields)
     if validation_error:
@@ -157,6 +185,8 @@ def createListener():
     existing_user = Listener.query.filter_by(email=data['email']).first()
     if existing_user:
         return jsonify({"error": "Email already registered"}), 400
+    
+    hashed_password = hash_password(data)
 
     # ===== validation of languages to be moved to add languages task ===== 
     # Validate and process languages_proficiency
@@ -192,7 +222,7 @@ def createListener():
         reward_points=0,
     #    ==== languages to be set in different task, remove and add to task ======
     #    languages_list=data.get('languages_list', []),
-    #    languages_proficiency=data.get('languages_proficiency', []) 
+    #    languages_proficiency=data.get('languages_proficiency', [])
     )
 
     try:
@@ -222,7 +252,7 @@ def createResearcher():
     # Check if email already exists
     existing_user = Researcher.query.filter_by(email=data['email']).first()
     if existing_user:
-        return jsonify({"error": "Email already registered"}), 400   
+        return jsonify({"error": "Email already registered"}), 400
     
     user = Researcher(
         id=data.get('id', uuid.uuid4()),    # generate a random uuid if not provided
@@ -296,7 +326,7 @@ def resetPassword():
 
 # this may need to be changed to only return the 'listener' who is calling the route
 # will need more discussion on this 
-@app.route('/getListeners', methods=['GET']) 
+@app.route('/getListeners', methods=['GET'])
 def getListeners():
     users = Listener.query.all()
     return jsonify([{
@@ -372,6 +402,7 @@ def index():
         <ul>
             <li><a href="/addListener">Register Listener</a></li>
             <li><a href="/addResearcher">Register Researcher</a></li>
+            <li><a href="/loginPage">Login Page</a></li>
         </ul>
     </body>
     </html>

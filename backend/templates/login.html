@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+</head>
+<body>
+    <h1>Login</h1>
+    <form action="/login" method="post">
+        <label for="email">Email:</label><br>
+        <input type="email" id="email" name="email"><br>
+        <label for="pw">Password:</label><br>
+        <input type="password" id="pw" name="pw"><br>
+        <button type="submit">Submit</button>
+    </form>
+    <script>
+        document.querySelector('form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const jsonData = Object.fromEntries(formData);
+            fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(jsonData)
+            }).then(response => response.json())
+                .then(data => console.log(data));
+        });
+    </script>
+</body>
+</html>
