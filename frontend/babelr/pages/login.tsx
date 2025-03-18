@@ -14,22 +14,35 @@ export default function Login() {
     
         const formData = new FormData(event.currentTarget);
         const email = formData.get("email")
-        const password = formData.get("password")
+        const pw = formData.get("password")
 
-        const response = await fetch('http://127.0.0.1:8016/login', {
-            method:"POST",
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({email, password}),
-        })
+        try {
+            const formJson = Object.fromEntries(formData.entries());
+            console.log(formJson);
+            const response = await fetch('http://127.0.0.1:8016/login', {
+                method:"POST",
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email, pw}),
+                credentials: 'include'
+            })
 
-        if (response.ok) {
-            router.push('/login')
-          } else {
-            console.log(response.json())
+            if (response.ok) {
+                // adding jwt to local storage
+                const data = await response.json();
+                if (data.access_token) {
+                    localStorage.setItem("accessToken", data.access_token);
+                }
+
+                router.push('/login')
+            } else {
+                console.log(response.json())
+            }
+
+            // const formJson = Object.fromEntries(formData.entries());
+            // console.log(formJson);
+        } catch {
+
         }
-
-        const formJson = Object.fromEntries(formData.entries());
-        console.log(formJson);
     }
 
     function handleUserChange(event: React.ChangeEvent<HTMLSelectElement>) {
@@ -48,11 +61,11 @@ export default function Login() {
                 <form className={styles["login-form"]} method="post" onSubmit={handleSubmit}>
                     <div className={styles["login-form-details"]}>
                         <label htmlFor="email">Email</label>
-                        <input type="email" id="email" name="username" required />
+                        <input type="email" id="email" name="email" required />
                     </div>
 
                     <div className={styles["login-form-details"]}>
-                        <label htmlFor="password">Password</label> <span><Link href={"/reset_confirm"}>Forgot your Password?</Link></span>
+                        <label htmlFor="pw">Password</label> <span><Link href={"/reset_password"}>Forgot your Password?</Link></span>
                         <input type="password" id="password" name="password" required />
                     </div>
 
@@ -61,7 +74,7 @@ export default function Login() {
                     </button>
                 </form>
 
-                <p className={styles["signup-link"]}>
+                <div className={styles["signup-link"]}>
                     Don&apos;t have an account? <Link href={selectedOption}>Sign up</Link>
                         <div>
                             <select name="Sign up as" value={selectedOption} onChange={handleUserChange}>
@@ -69,10 +82,8 @@ export default function Login() {
                                 <option value={"/register_researcher"}>Researcher</option>
                             </select>
                         </div>
-                </p>
+                </div>
             </div>
         </div>
     );
 }
-
-{/* <Link href="/register_listener">Sign up</Link> */}

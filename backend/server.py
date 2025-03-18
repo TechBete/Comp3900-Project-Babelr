@@ -1,10 +1,11 @@
 import os, uuid, enum, time
 import logging  # remove for final production
-from flask_cors import CORS  # this should work, dont know why my vscode is throwing an error
-from flask import Flask, request, jsonify, render_template_string # render_template_string is used to render HTML, can be removed once frontend is inplace
-from flask import send_from_directory, send_file # this is for accessing files from a directory
-from password import PasswordHash
+from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, JWTManager, decode_token, set_access_cookies, unset_jwt_cookies
+from flask import Flask, request, jsonify, render_template_string, render_template, redirect, url_for # render_template_string is used to render HTML, can be removed once frontend is inplace
 from email_validator import validate_email, EmailNotValidError
+from flask import send_from_directory, send_file # this is for accessing files from a directory
+from flask_cors import CORS  # this should work, dont know why my vscode is throwing an error
+from password import PasswordHash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.dialects.postgresql import ARRAY, UUID, ENUM
@@ -13,8 +14,7 @@ from sqlalchemy import DDL, event
 from dotenv import load_dotenv
 
 app = Flask(__name__)
-#cors = CORS() suppressing cors due to error thown by not in use
-CORS(app) # FOR FRONTEND TESTING, CHANGE LATER
+CORS(app, supports_credentials=True, origins=["http://localhost:3000", "http://localhost:8016"])  # Set CORS policy to allow requests from the frontend to the backend
 load_dotenv()
 # Configure logging - remove for final production
 logging.basicConfig(level=logging.DEBUG)
@@ -22,6 +22,16 @@ logging.basicConfig(level=logging.DEBUG)
 # database config
 app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{os.environ.get('POSTGRES_USER')}:{os.environ.get('POSTGRES_PASSWORD')}@{os.environ.get('POSTGRES_HOST')}/{os.environ.get('POSTGRES_DB')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config["JWT_SECRET_KEY"] = 'Babelrec'  # Change this in production
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 86400  # 24 hours
+app.config["JWT_TOKEN_LOCATION"] = ["headers", "cookies"]
+app.config["JWT_COOKIE_SECURE"] = False  # Change to True in production
+app.config["JWT_COOKIE_CSRF_PROTECT"] = False  # Change to True in production
+app.config["JWT_COOKIE_SAMESITE"] = None  # Change to "None" in production
+app.config["JWT_COOKIE_DOMAIN"] = None  # Change to your domain in production
+app.config["JWT_COOKIE_PATH"] = "/"
+app.config["JWT_COOKIE_HTTPONLY"] = False # this will allow the cookie to be accessed by javascript, set to True in production to prevent XSS attacks
+jwt = JWTManager(app)
 
 db = SQLAlchemy(app)
 #cors.init_app(app) suppressing cors due to error thown by not in use
@@ -64,7 +74,7 @@ class Gender(enum.Enum):
 
 # Define enums using postgresql.ENUM with create_type=True
 # ========== 2. SQLAlchemy Enums ==========
-proficiency_level_enum = ENUM(ProficiencyLevel, name='proficiencylevel', create_type=True)
+proficiency_level_enum = ENUM(ProficiencyLevel, name='proficiencylevel', create_type=True)  # remove if necessary but otherwise keep to enforce enum in postgres
 permission_level_enum = ENUM(PermissionLevel, name='permissionlevel', create_type=True)
 gender_enum = ENUM(Gender, name='gender', create_type=True)
 
@@ -118,6 +128,8 @@ class Researcher(db.Model):
     project_list = db.Column(db.JSON, default=[]) # 128 char length array
     uploaded_video = db.Column(db.JSON, default=[]) # 128 char length file ID array
     gender = db.Column(gender_enum)
+    jti = db.Column(db.String(36))  # JWT ID to store in the database to prevent reuse and duplicate active tokens
+    blindlogin = db.Column(UUID(as_uuid=True)) # generate a random uuid for blind login
 
 class Listener(db.Model):
     __tablename__ = "listeners"
@@ -131,6 +143,8 @@ class Listener(db.Model):
     reward_points = db.Column(db.Integer)
     languages_list = db.Column(db.JSON, default=[]) # 128 char length array
     languages_proficiency = db.Column(db.JSON, default=[]) # proficiency level array
+    jti = db.Column(db.String(36))  # JWT ID to store in the database to prevent reuse and duplicate active tokens
+    blindlogin = db.Column(UUID(as_uuid=True)) # generate a random uuid for blind login
 
     # one-to-one relationship of listeners-demographics
     demographic = db.relationship("Demographic", back_populates="listener", uselist=False)
@@ -148,9 +162,87 @@ class Demographic(db.Model):
 
 
 # ========== 4. Server Endpoint Routes ==========
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.json
+    required_fields = ['email', 'pw']
+
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return jsonify({"error": "validation error"}), 400
+    
+    password = data['pw']
+    Email = data['email']
+    
+    # do checks for empty strings
+    if password == '' or Email == '':
+        return jsonify({"error": "Email or Password cannot be empty"}), 400
+    
+    # add password length and format check in later iteration
+    
+    # check if email is structured correctly
+    try:
+        validate_email(Email)
+    except EmailNotValidError as e:
+        return jsonify({"Email entered is not of proper format. Email": str(Email)}), 400
+    
+    existing_listener = Listener.query.filter_by(email=Email).first()
+    existing_researcher = Researcher.query.filter_by(email=Email).first()
+    
+    if not existing_listener and not existing_researcher:
+        return jsonify({"error": "Invalid email-password combination"}), 401
+    
+    # updated for researcher login; check if user is a listener or researcher, 
+    # updated token id as uuid for validation in backend routes.
+    # added email and permissions to additioanl_claims for validation in backend routes.
+    if existing_researcher:
+        hashed_password = existing_researcher.pw_hash
+        if validate_Password(data, hashed_password):
+            token = create_access_token(identity=existing_researcher.id, additional_claims={"email": str(existing_researcher.email)})
+            
+            # get JTI from token and update the database
+            decodeToken = decode_token(token)
+            jti = decodeToken.get('jti')
+            
+            # update the listener's jti in the database
+            existing_researcher.jti = jti
+            
+            # update the database atomically
+            db.session.add(existing_researcher)
+            db.session.commit()
+            
+            # set the access token as a cookie in the response
+            response = jsonify({"Login": "Successful"})
+            set_access_cookies(response,token)
+
+            return response
+    else:
+        hashed_password = existing_listener.pw_hash
+        if validate_Password(data, hashed_password):
+            token = create_access_token(identity=existing_listener.id, additional_claims={"email": str(existing_listener.email)})
+            
+            # get JTI from token and update the database
+            decodeToken = decode_token(token)
+            jti = decodeToken.get('jti')
+            
+            # update the listener's jti in the database
+            existing_listener.jti = jti
+            
+            # update the database atomically
+            db.session.add(existing_listener)
+            db.session.commit()
+            
+            # set the access token as a cookie in the response
+            response = jsonify({"Login": "Successful"})
+            set_access_cookies(response,token)
+
+            return response
+    return jsonify({"error": "Failed Login. Either Email or password was incorrect"}), 401   # update frontend for error message popup
+
 @app.route('/registerListener', methods=['POST'])
 def createListener():
     data = request.json
+
     required_fields = ['first_name', 'last_name', 'email', 'pw']
     validation_error = validate_required_fields(data, required_fields)
     if validation_error:
@@ -202,7 +294,7 @@ def createListener():
         reward_points=0,
     #    ==== languages to be set in different task, remove and add to task ======
     #    languages_list=data.get('languages_list', []),
-    #    languages_proficiency=data.get('languages_proficiency', []) 
+    #    languages_proficiency=data.get('languages_proficiency', [])
     )
 
     try:
@@ -236,7 +328,7 @@ def createResearcher():
     # Check if email already exists
     existing_user = Researcher.query.filter_by(email=Email).first()
     if existing_user:
-        return jsonify({"error": "Email already registered"}), 400   
+        return jsonify({"error": "Email already registered"}), 400
     
     # check if email is structured correctly
     try:
@@ -266,7 +358,7 @@ def createResearcher():
         return jsonify({"error": "Error Code: 500"}), 500 
     return jsonify({"message": "Registration Successful"})
 
-@app.route('/resetPassword', methods=['POST'])
+@app.route('/userResetPassword', methods=['POST'])
 def resetPassword():
     data = request.json
     required_fields = ['pw', 'pw_confirmation', 'id', 'email']
@@ -319,7 +411,7 @@ def resetPassword():
 
 # this may need to be changed to only return the 'listener' who is calling the route
 # will need more discussion on this 
-@app.route('/getListeners', methods=['GET']) 
+@app.route('/getListeners', methods=['GET'])
 def getListeners():
     users = Listener.query.all()
     return jsonify([{
@@ -457,6 +549,7 @@ def index():
         <ul>
             <li><a href="/addListener">Register Listener</a></li>
             <li><a href="/addResearcher">Register Researcher</a></li>
+            <li><a href="/loginPage">Login Page</a></li>
         </ul>
     </body>
     </html>

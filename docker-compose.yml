@@ -49,6 +49,8 @@ services:
       - NEXT_PUBLIC_BACKEND_URL=http://localhost:8016
     env_file:
       - .env
+    networks:
+      - app_network
 
 volumes:
   postgres_data:
@@ -56,3 +58,4 @@ volumes:
 
 networks:
   app_network:
+    driver: bridge

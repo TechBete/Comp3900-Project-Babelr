@@ -41,6 +41,7 @@ once the server is up and running you should be able to connect to the frontend 
 
 Backend routes can be connected to directly by navigating to:
 
+```localhost:8016/login                 (User login)```
 ```localhost:8016/registerListener      (registers a listener)```
 ```localhost:8016/registerResearcher    (registers a researcher)```
 ```localhost:8016/getListeners          (display Listeners in the database)```
@@ -50,5 +51,6 @@ Backend routes can be connected to directly by navigating to:
 
 ####  Connected Routes:
 
+User Login
 Register Researcher
 Register Listener
