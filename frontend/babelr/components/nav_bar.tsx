@@ -1,5 +1,6 @@
 import styles from "../stylesheets/nav_bar.module.css"
 import HomeIcon from "../components/homeicon"
+import Link from "next/link"
 
 export default function Navbar() {
     return ( 
@@ -11,7 +12,7 @@ export default function Navbar() {
                 </div>
                 <div className={styles["profile-options"]}>
                     <span>My Profile</span>
-                    <span>Logout</span>
+                    <span><Link href='/login'>Logout</Link></span>
                 </div>
             </div>
         </div>
