@@ -19,12 +19,31 @@ import { FormEvent, useState } from "react";
 export default function MainScreen() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [projectName, setProjectName] = useState("Project_4");
+    const [createError, setCreateError] = useState("");
 
     async function handleCreate(event: FormEvent<HTMLFormElement>) {
         event.preventDefault()
 		// const formData = new FormData(event.currentTarget);
-        const jwttoken = localStorage.getItem('access_token');
-        console.log(jwttoken);
+        try {
+            const response = await fetch('http://localhost:8016/createProject', {
+                method:"POST",
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({"project_name": projectName}),
+                credentials: 'include'
+            })
+        
+            if (response.ok) {
+				console.log("OK");
+                console.log(JSON.stringify({"project_name": projectName, "researcher_id": "1"}));
+			} else {
+                const error = await response.json()
+                console.log(JSON.stringify({"project_name": projectName, "researcher_id": "1"}));
+				console.log("NOT OK");
+                console.log(error.error);
+			}
+        } catch {
+            setCreateError("Network Error: Fetch Request Failed");
+        }
     }
 
     return (
@@ -67,12 +86,13 @@ export default function MainScreen() {
                         <h2 className={styles.modalTitle}>New Project</h2>
 
                         <form onSubmit={handleCreate}>
-                            <label htmlFor="projectName" className={styles.formLabel}>
+                            <label htmlFor="project_name" className={styles.formLabel}>
                                 Project Name
                             </label>
                             <input
-                                id="projectName"
+                                id="project_name"
                                 type="text"
+                                name="project_name"
                                 value={projectName}
                                 onChange={(e) => setProjectName(e.target.value)}
                                 className={styles.inputField}
@@ -81,6 +101,9 @@ export default function MainScreen() {
                             <button type="submit" className={styles.submitButton}>
                                 Create Project
                             </button>
+                            <div className={styles["invalid-label"]}>
+                            { createError !== "" && <div>{createError}</div>}
+                            </div>
                         </form>
                     </Modal>
                 </div>

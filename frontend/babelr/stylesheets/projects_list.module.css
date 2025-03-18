@@ -149,3 +149,8 @@
 .submitButton:hover {
     background: #218838;
 }
+
+.invalid-label {
+    color: red;
+    /* font-weight: bold; */
+}

@@ -25,9 +25,9 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config["JWT_SECRET_KEY"] = 'Babelrec'  # Change this in production
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 86400  # 24 hours
 app.config["JWT_TOKEN_LOCATION"] = ["headers", "cookies"]
-app.config["JWT_COOKIE_SECURE"] = False  # Change to True in production
+app.config["JWT_COOKIE_SECURE"] = True  # Change to True in production
 app.config["JWT_COOKIE_CSRF_PROTECT"] = False  # Change to True in production
-app.config["JWT_COOKIE_SAMESITE"] = None  # Change to "None" in production
+app.config["JWT_COOKIE_SAMESITE"] = None;  # Change to "None" in production
 app.config["JWT_COOKIE_DOMAIN"] = None  # Change to your domain in production
 app.config["JWT_COOKIE_PATH"] = "/"
 app.config["JWT_COOKIE_HTTPONLY"] = False # this will allow the cookie to be accessed by javascript, set to True in production to prevent XSS attacks
@@ -214,7 +214,7 @@ def login():
             # set the access token as a cookie in the response
             response = jsonify({"Login": "Successful"})
             set_access_cookies(response,token)
-
+            response.set_cookie("accesstoken", token, samesite="None")
             return response
     else:
         hashed_password = existing_listener.pw_hash
@@ -544,15 +544,25 @@ def getResearchers():
     } for user in users])
 
 @app.route('/createProject', methods=['POST'])
+@jwt_required()
 def createProject():
     data = request.json
-    required_fields = ['project_name', 'researcher_id']
+    required_fields = ['project_name']
     validation_error = validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
+    # # FOR FRONTEND TESTING PART
+    researcher_id = get_jwt_identity()
+    researcher_id = uuid.UUID(researcher_id)
+    required_fields = ['researcher_id'] 
+    validation_error = validate_required_fields({'researcher_id': researcher_id}, required_fields)
+    if validation_error:
+        return validation_error
+    # END OF FRONTEND TESTING PART
 
     projectName = data['project_name']
-    researcherId = data['researcher_id']
+    # researcherId = data['researcher_id']
+    researcherId = researcher_id   #FRONTEND TESTING
 
     # Check if researcher exists
     researcher = Researcher.query.filter_by(id=researcherId).first()
