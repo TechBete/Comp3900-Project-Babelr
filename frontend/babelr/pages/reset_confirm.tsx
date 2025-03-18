@@ -2,8 +2,9 @@ import styles from "../stylesheets/reset_confirm.module.css";
 
 export default function ResetConfirmEmail() {
     return (
+        <div className={styles["reset-body"]}>
             <div className={styles["reset-container"]}>
-                <h2 id="reset-header">Enter a new password</h2>
+                <h2 className={styles["reset-header"]}>Enter a new password</h2>
                 <form className={styles["reset-form"]}>
                     <div className={styles["reset-form-group"]}>
                         <label htmlFor="new-password">New Password</label>
@@ -16,7 +17,6 @@ export default function ResetConfirmEmail() {
                     <button type="submit" className={styles["reset-button"]}>Update Password</button>
                 </form>
             </div>
-
-
+        </div>
     );
 }

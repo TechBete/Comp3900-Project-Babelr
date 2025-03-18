@@ -1,0 +1,103 @@
+.project-body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    height: 100vh;
+}
+
+.search-bar input {
+    border: none;
+    background: none;
+    outline: none;
+    padding: 5px;
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+}
+
+.main-content {
+    flex: 1;
+    padding: 20px;
+}
+
+.projects-h2 {
+    margin-bottom: 15px;
+    font-size: larger;
+    font-weight: bold;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+.thead {
+    background: #eee;
+}
+
+.td {
+    padding: 10px;
+    text-align: left;
+}
+
+.th {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 2px solid #ccc;
+}
+
+.tr {
+    border-bottom: 1px solid #ddd;
+}
+
+.tr:hover {
+    background: #f9f9f9;
+}
+
+.status {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.in-progress {
+    background: #ffeb99;
+    color: #856404;
+}
+
+.complete {
+    background: #c3e6cb;
+    color: #155724;
+}
+
+.draft {
+    background: #d6d8db;
+    color: #383d41;
+}
+
+.add-project-btn {
+    position: fixed;
+    bottom: 5%;
+    right: 5%;
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 30px;
+    border-radius:50%;
+    font-size: large;
+    cursor: pointer;
+}
+
+.add-project-btn:hover {
+    background: #0056b3;
+}
+
+.projects-link {
+    text-decoration: underline;
+}
