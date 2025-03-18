@@ -29,7 +29,7 @@ Once the software has completed building and is up and running, users can being 
 
 <u><h3> Currently in Development: </h3></u> 
 
-#### FRONTEND - Completed Routes
+#### FRONTEND - Implemented Routes
 
 once the server is up and running you should be able to connect to the frontend through a web browser by inserting the following addresses: 
 
@@ -37,16 +37,18 @@ once the server is up and running you should be able to connect to the frontend 
 ```localhost:3000/register_listener     (register user page)```
 ```localhost:3000/register_researcher   (register researcher page)```
 
-#### BACKEND - Completed Routes
+#### BACKEND - Implemented Routes
 
 Backend routes can be connected to directly by navigating to:
 
 ```localhost:8016/login                 (User login)```
-```localhost:8016/registerListener      (registers a listener)```
-```localhost:8016/registerResearcher    (registers a researcher)```
-```localhost:8016/getListeners          (display Listeners in the database)```
-```localhost:8016/getResearchers        (display Researchers in the database)```
-```localhost:8016/resetPassword         (reset User Password)```
+```localhost:8016/registerListener      (Registers a listener)```
+```localhost:8016/registerResearcher    (Registers a researcher)```
+```localhost:8016/getListeners          (Display Listeners in the database)```
+```localhost:8016/getResearchers        (Display Researchers in the database)```
+```localhost:8016/userResetPassword     (Reset User Password)```
+```localhost:8016/blindEmailParse       (Email parse for password reset.)```
+```localhost:8016/blindPasswordReset    (Reset password if User password was Forgotten)```
 ```localhost:8016/createProject         (creates a project for a Researcher)```
 
 ####  Connected Routes:

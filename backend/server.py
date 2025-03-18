@@ -359,7 +359,7 @@ def createResearcher():
     return jsonify({"message": "Registration Successful"})
 
 @app.route('/userResetPassword', methods=['POST'])
-def resetPassword():
+def userResetPassword():
     data = request.json
     required_fields = ['pw', 'pw_confirmation', 'id', 'email']
     # validate field is not empty
@@ -408,6 +408,80 @@ def resetPassword():
             db.session.rollback()
             logging.debug(e)
             return jsonify({"error": "Error: 500, An error has occured while updating the password"}), 500
+
+@app.route('/blindEmailParse', methods=['POST'])
+def blindEmailParse():
+    data = request.json
+    required_fields = ['email']
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+    
+    email = data['email']
+    
+    # check if email is structured correctly
+    try:
+        validate_email(email)
+    except EmailNotValidError as e:
+        return jsonify({"Email entered is not of proper format. Email": str(email)}), 400
+    
+    # check if email is in the database
+    existing_listener = Listener.query.filter_by(email=email).first()
+    existing_researcher = Researcher.query.filter_by(email=email).first()
+    
+    if not existing_listener and not existing_researcher:
+        return jsonify({"error": "Email not found"}), 404
+    
+    # return blind login uuid
+    if existing_listener:
+        existing_listener.blindlogin = uuid.uuid4()
+        db.session.commit() # update the database with the new blind login uuid, atomic commit
+        return jsonify({"listener id": str(existing_listener.blindlogin), "email": str(existing_listener.email)})
+    else:
+        existing_researcher.blindlogin = uuid.uuid4()
+        db.session.commit() # update the database with the new blind login uuid, atomic commit
+        return jsonify({"researcher id": str(existing_researcher.blindlogin), "email": str(existing_researcher.email)})   
+
+@app.route('/blindPasswordReset', methods=['POST'])
+def blindPasswordReset():
+    data = request.json
+    required_fields = ['pw', 'pw_confirmation', 'id']
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+    
+    # assign local variables to the data fields
+    password = data['pw']
+    password_confirmation = data['pw_confirmation']
+    blindId = data['id']    
+    # check to see if password str is empty
+    if password == '' or password_confirmation == '':
+        return jsonify({"error": "Password cannot be empty"}), 400
+    
+    # check to see if password and password confirmation match
+    if password != password_confirmation:
+        return jsonify({"error": "Passwords do not match"}), 400
+    
+    # check to see if user exists
+    isListener = Listener.query.filter_by(blindlogin=blindId).first()
+    isResearcher = Researcher.query.filter_by(blindlogin=blindId).first()
+    
+    # Check if user is a listener or researcher, assign as existing_user
+    existing_user = isListener if isListener else isResearcher
+    if not existing_user:
+        return jsonify({"error": "Error: 404, User not Found"}), 404
+    
+    if existing_user:
+        hashed_password = hash_password(data)
+        try:
+            existing_user.pw_hash = hashed_password.value
+            db.session.commit()
+            return jsonify({"message": "Password reset successful"})
+        except Exception as e:
+            db.session.rollback()
+            logging.debug(e)
+            return jsonify({"error": "Error: 500, An error has occured while updating the password"}), 500
+
 
 # this may need to be changed to only return the 'listener' who is calling the route
 # will need more discussion on this 
@@ -591,8 +665,8 @@ def createProjectForm():
     </html>
 ''')
     
-@app.route('/resetPassword', methods=['GET'])
-def resetPasswordForm():
+@app.route('/userResetPassword', methods=['GET'])
+def userResetPasswordForm():
     return render_template_string('''
     <!DOCTYPE html>
     <html lang="en">
@@ -603,7 +677,7 @@ def resetPasswordForm():
     </head>
     <body>
         <h1>Reset Password</h1>
-        <form action="/resetPassword" method="post">
+        <form action="/userResetPassword" method="post">
             <label for="id">User ID:</label><br>
             <input type="text" id="id" name="id"><br>
             <label for="email">Email:</label><br>
@@ -619,7 +693,79 @@ def resetPasswordForm():
                 e.preventDefault();
                 const formData = new FormData(e.target);
                 const jsonData = Object.fromEntries(formData);
-                fetch('/resetPassword', {
+                fetch('/userResetPassword', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(jsonData)
+                }).then(response => response.json())
+                    .then(data => console.log(data));
+            });
+        </script>
+    </body>
+    </html>
+    ''')
+    
+@app.route('/blindEmailParse', methods=['GET'])
+def blindEmailParseForm():
+    return render_template_string('''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Blind Email Parse</title>
+    </head>
+    <body>
+        <h1>Blind Email Parse</h1>
+        <form action="/blindEmailParse" method="post">
+            <label for="email">Email:</label><br>
+            <input type="email" id="email" name="email"><br>
+            <button type="submit">Submit</button>
+        </form>
+        <script>
+            document.querySelector('form').addEventListener('submit', function (e) {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const jsonData = Object.fromEntries(formData);
+                fetch('/blindEmailParse', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(jsonData)
+                }).then(response => response.json())
+                    .then(data => console.log(data));
+            });
+        </script>
+    </body>
+    </html>
+    ''')
+    
+@app.route('/blindPasswordReset', methods=['GET'])
+def blindPasswordResetForm():
+    return render_template_string('''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Blind Password Reset</title>
+    </head>
+    <body>
+        <h1>Blind Password Reset</h1>
+        <form action="/blindPasswordReset" method="post">
+            <label for="id">Blind ID:</label><br>
+            <input type="text" id="id" name="id"><br>
+            <label for="pw">New Password:</label><br>
+            <input type="password" id="pw" name="pw"><br>
+            <label for="pw_confirmation">Confirm Password:</label><br>
+            <input type="password" id="pw_confirmation" name="pw_confirmation"><br>
+            <button type="submit">Submit</button>
+        </form>
+        <script>
+            document.querySelector('form').addEventListener('submit', function (e) {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const jsonData = Object.fromEntries(formData);
+                fetch('/blindPasswordReset', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(jsonData)
