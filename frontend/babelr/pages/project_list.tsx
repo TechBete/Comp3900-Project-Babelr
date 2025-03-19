@@ -45,9 +45,28 @@ export default function MainScreen() {
     const [projectsData, setProjectData] = useState([]);
 
     useEffect(() => {
-        setProjectData([]);
+        intialBoot()
     }, [])
 
+    async function intialBoot() {
+        try {
+            const response = await fetch('http://localhost:8016/createProject' , {
+                method:"POST",
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({"project_name": ''}),
+                credentials: 'include'
+            })
+            if (response.ok) {
+                return
+            } else {
+                const error = await response.json()
+                setProjectData(error.projects_list);
+                console.log(error)
+            }
+        } catch {
+
+        }
+    } 
 
     async function handleCreate(event: FormEvent<HTMLFormElement>) {
         event.preventDefault()

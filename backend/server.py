@@ -575,7 +575,7 @@ def createProject():
         
     # ensure project name is not empty
     if projectName == '':
-        return jsonify({"error": "Project name cannot be empty"}), 400
+        return jsonify({"error": "Project name cannot be empty", "projects_list": researcher.project_list}), 400
     
     # use a transaction to ensure that the project is only created if the project list is updated successfully
     try:
