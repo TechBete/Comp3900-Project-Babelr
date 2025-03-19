@@ -8,14 +8,34 @@ export default function ResetConfirmEmail() {
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault()
 
-        // const formData = new FormData(event.currentTarget);
-        // const email = formData.get("email")
-        // const response = fetch() send email fetch response etc
+        const formData = new FormData(event.currentTarget);
+        const email = formData.get("email")
+        try{
+			const response = await fetch('http://localhost:8016/blindEmailParse', {
+				method:"POST",
+				headers: {'Content-Type': 'application/json'},
+				body: JSON.stringify({email}), 
+			})
 
-        const response = true; 
-        if (response) {
-            router.push('/reset_confirm');
-        }
+			if (response.ok) {
+                const data = await response.json();
+                console.log(data);
+                if (data.listener_id) {
+                    localStorage.setItem("id", data.listener_id);
+                } else if (data.researcher_id) {
+                    localStorage.setItem("id", data.researcher_id);
+                }
+				router.push("/reset_confirm"); // login for now change to verification later
+			} else {
+				const error = await response.json();
+				console.log(error.error);
+			}
+
+			const formJson = Object.fromEntries(formData.entries());
+			console.log(formJson);
+		} catch {
+			console.log("Network Error: Fetch Request Failed")
+    	}
         
     }
 

@@ -436,11 +436,11 @@ def blindEmailParse():
     if existing_listener:
         existing_listener.blindlogin = uuid.uuid4()
         db.session.commit() # update the database with the new blind login uuid, atomic commit
-        return jsonify({"listener id": str(existing_listener.blindlogin), "email": str(existing_listener.email)})
+        return jsonify({"listener_id": str(existing_listener.blindlogin), "email": str(existing_listener.email)}) # added underscore for my sanity
     else:
         existing_researcher.blindlogin = uuid.uuid4()
         db.session.commit() # update the database with the new blind login uuid, atomic commit
-        return jsonify({"researcher id": str(existing_researcher.blindlogin), "email": str(existing_researcher.email)})   
+        return jsonify({"researcher_id": str(existing_researcher.blindlogin), "email": str(existing_researcher.email)})   # added underscore for my sanity
 
 @app.route('/blindPasswordReset', methods=['POST'])
 def blindPasswordReset():
