@@ -25,9 +25,9 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config["JWT_SECRET_KEY"] = 'Babelrec'  # Change this in production
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 86400  # 24 hours
 app.config["JWT_TOKEN_LOCATION"] = ["headers", "cookies"]
-app.config["JWT_COOKIE_SECURE"] = False  # Change to True in production
+app.config["JWT_COOKIE_SECURE"] = True  # Change to True in production
 app.config["JWT_COOKIE_CSRF_PROTECT"] = False  # Change to True in production
-app.config["JWT_COOKIE_SAMESITE"] = None  # Change to "None" in production
+app.config["JWT_COOKIE_SAMESITE"] = None;  # Change to "None" in production
 app.config["JWT_COOKIE_DOMAIN"] = None  # Change to your domain in production
 app.config["JWT_COOKIE_PATH"] = "/"
 app.config["JWT_COOKIE_HTTPONLY"] = False # this will allow the cookie to be accessed by javascript, set to True in production to prevent XSS attacks
@@ -214,7 +214,7 @@ def login():
             # set the access token as a cookie in the response
             response = jsonify({"Login": "Successful"})
             set_access_cookies(response,token)
-
+            response.set_cookie("accesstoken", token, samesite="None")
             return response
     else:
         hashed_password = existing_listener.pw_hash
@@ -436,11 +436,11 @@ def blindEmailParse():
     if existing_listener:
         existing_listener.blindlogin = uuid.uuid4()
         db.session.commit() # update the database with the new blind login uuid, atomic commit
-        return jsonify({"listener id": str(existing_listener.blindlogin), "email": str(existing_listener.email)})
+        return jsonify({"listener_id": str(existing_listener.blindlogin), "email": str(existing_listener.email)}) # added underscore for my sanity
     else:
         existing_researcher.blindlogin = uuid.uuid4()
         db.session.commit() # update the database with the new blind login uuid, atomic commit
-        return jsonify({"researcher id": str(existing_researcher.blindlogin), "email": str(existing_researcher.email)})   
+        return jsonify({"researcher_id": str(existing_researcher.blindlogin), "email": str(existing_researcher.email)})   # added underscore for my sanity
 
 @app.route('/blindPasswordReset', methods=['POST'])
 def blindPasswordReset():
@@ -544,15 +544,25 @@ def getResearchers():
     } for user in users])
 
 @app.route('/createProject', methods=['POST'])
+@jwt_required()
 def createProject():
     data = request.json
-    required_fields = ['project_name', 'researcher_id']
+    required_fields = ['project_name']
     validation_error = validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
+    # # FOR FRONTEND TESTING PART
+    researcher_id = get_jwt_identity()
+    researcher_id = uuid.UUID(researcher_id)
+    required_fields = ['researcher_id'] 
+    validation_error = validate_required_fields({'researcher_id': researcher_id}, required_fields)
+    if validation_error:
+        return validation_error
+    # END OF FRONTEND TESTING PART
 
     projectName = data['project_name']
-    researcherId = data['researcher_id']
+    # researcherId = data['researcher_id']
+    researcherId = researcher_id   #FRONTEND TESTING
 
     # Check if researcher exists
     researcher = Researcher.query.filter_by(id=researcherId).first()
@@ -565,7 +575,7 @@ def createProject():
         
     # ensure project name is not empty
     if projectName == '':
-        return jsonify({"error": "Project name cannot be empty"}), 400
+        return jsonify({"error": "Project name cannot be empty", "projects_list": researcher.project_list}), 400
     
     # use a transaction to ensure that the project is only created if the project list is updated successfully
     try:
@@ -585,7 +595,7 @@ def createProject():
             else:
                 return jsonify({"error": "Project already exists"}), 400
             # update Researcher project list with project name
-            researcher.project_list.append({"name": projectName, "path": projectDir})
+            researcher.project_list.append({"name": projectName, "path": projectDir, "status": "Draft", "creator": researcher.first_name}) #added placeholder status and creator some stuff so i can display
             
             flag_modified(researcher, "project_list")
     
@@ -596,7 +606,7 @@ def createProject():
         logging.debug(e)
         return jsonify({"error": "Project was unable to be created"}), 500
 
-    return jsonify({"message": "Project created successfully"})
+    return jsonify({"message": "Project created successfully", "projects_list": researcher.project_list}) ## probably should not send back project list but for simplicities sake
     
 
 

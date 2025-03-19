@@ -1,0 +1,97 @@
+.modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 20rem;
+    padding: 2rem;
+    border: 0;
+    border-radius: 0.5rem;
+    box-shadow: 0 0 0.5rem 0.25rem hsl(0 0% 0% / 10%);
+    background: white;
+    z-index: 1000;
+}
+
+.modal-close-btn {
+    font-size: .75em;
+    position: absolute;
+    top: .25em;
+    right: .25em;
+}
+
+.button {
+    padding: 0.5em;
+    font: inherit;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.modal::backdrop {
+    background: hsl(0 0% 0% / 50%);
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    text-align: center;
+}
+
+/* Close Button */
+.modal-close-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+/* Form Styles */
+.modal form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Label */
+.modal label {
+    display: block;
+    text-align: left;
+    width: 100%;
+    margin-bottom: 5px;
+    font-size: 14px;
+    color: #333;
+    font-weight: bold;
+}
+
+/* Input Field */
+.modal input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+    outline: none;
+}
+
+.modal input:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+/* Submit Button */
+.modal button[type="submit"] {
+    margin-top: 10px;
+    width: 100%;
+    padding: 10px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.modal button[type="submit"]:hover {
+    background: #218838;
+}
