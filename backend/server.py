@@ -1,4 +1,4 @@
-import os, uuid, enum
+import os, uuid, enum, smtplib
 import logging  # remove for final production
 from flask_cors import CORS  # this should work, dont know why my vscode is throwing an error
 from flask import Flask, request, jsonify, render_template_string, render_template, redirect, url_for # render_template_string is used to render HTML, can be removed once frontend is inplace
@@ -9,10 +9,14 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import DDL, event
 from dotenv import load_dotenv
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, JWTManager
+from flask_mail import Mail, Message
+from itsdangerous import URLSafeTimedSerializer
+from email.mime.text import MIMEText
+
+import smtplib
 
 app = Flask(__name__)
-#cors = CORS() suppressing cors due to error thown by not in use
-CORS(app) # FOR FRONTEND TESTING, CHANGE LATER
+
 load_dotenv()
 # Configure logging - remove for final production
 logging.basicConfig(level=logging.DEBUG)
@@ -21,10 +25,17 @@ logging.basicConfig(level=logging.DEBUG)
 app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{os.environ.get('POSTGRES_USER')}:{os.environ.get('POSTGRES_PASSWORD')}@{os.environ.get('POSTGRES_HOST')}/{os.environ.get('POSTGRES_DB')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config["JWT_SECRET_KEY"] = 'secret'
-jwt = JWTManager(app)
 
+# Mail server configuration (use your actual email service settings)
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USE_SSL'] = False
+
+mail = Mail(app)
+jwt = JWTManager(app)
 db = SQLAlchemy(app)
-#cors.init_app(app) suppressing cors due to error thown by not in use
+
+cors = CORS()
+cors.init_app(app) # suppressing cors due to error thown by not in use
 
 # ========== 0. Helper Functions ==========
 def validate_required_fields(data, required_fields):
@@ -39,6 +50,42 @@ def hash_password(data):
 
 def validate_Password(data, hashed_password):
     return PasswordHash.verify(data['pw'], hashed_password)
+
+def generate_verification_token(email):
+    # serializer = URLSafeTimedSerializer(app.secret_key)
+    serializer = URLSafeTimedSerializer("app . secrete")
+    return serializer.dumps(email, salt='email-confirm-salt')
+
+def verify_token(token, expiration=3600):  # Token expires in 1 hour
+    serializer = URLSafeTimedSerializer('app . secrete') # app.secret_key)
+    try:
+        email = serializer.loads(token, salt='email-confirm-salt', max_age=expiration)
+        return email
+    except:
+        return None
+
+def send_verification_email(email, verification_url):
+    receiver_email = email
+
+    subject = "Flask Email Test == Upgraded"
+    body = f'Click the link to verify your email: {verification_url}'
+    
+    # Create email message
+    msg = MIMEText(body, "plain")
+    msg["From"] = os.getenv('MAIL_USERNAME')
+    msg["To"] = receiver_email
+    msg["Subject"] = subject
+
+    try:
+        # Connect to SMTP server and send email
+        server = smtplib.SMTP('smtp.mail.yahoo.com', 587)
+        server.starttls()
+        server.login(os.getenv('MAIL_USERNAME'), os.getenv('MAIL_PASSWORD'))
+        server.sendmail(os.getenv('MAIL_USERNAME'), receiver_email, msg.as_string())
+        server.quit()
+        return "Email sent successfully!"
+    except Exception as e:
+        return f"Error: {e}"
 
 # Create email validation function to ensure that email being entered is of proper email format
 # check if email proivider is real?
@@ -118,6 +165,7 @@ class Researcher(db.Model):
     project_list = db.Column(ARRAY(db.String(128))) # 128 char length array
     uploaded_video = db.Column(ARRAY(db.String(128))) # 128 char length file ID array
     gender = db.Column(gender_enum)
+    is_verified = db.Column(db.Boolean, default=False, nullable=False)
 
 class Listener(db.Model):
     __tablename__ = "listeners"
@@ -131,6 +179,8 @@ class Listener(db.Model):
     reward_points = db.Column(db.Integer)
     languages_list = db.Column(ARRAY(db.String(128)))
     languages_proficiency = db.Column(ARRAY(proficiency_level_enum))
+    is_verified = db.Column(db.Boolean, nullable=False)
+    is_active = db.Column(db.Boolean, nullable = False)
 
     # one-to-one relationship of listeners-demographics
     demographic = db.relationship("Demographic", back_populates="listener", uselist=False)
@@ -148,6 +198,28 @@ class Demographic(db.Model):
 
 
 # ========== 4. Server Endpoint Routes ==========
+@app.route('/verify/<token>')
+def verify_email(token):
+    email = verify_token(token)
+
+    if not email:
+        # TODO: your token is invalid or expired message
+        return redirect(url_for('login')), 405
+
+    # Find user and mark as verified
+    listener = Listener.query.filter_by(email=email).first()
+    user = listener if listener else Researcher.query.filter_by(email=email).first()
+
+    if user and not user.is_verified:
+        user.is_verified = True
+        db.session.commit()     
+        # TODO: your email has been verified message
+    else:
+        pass
+        # TODO: your email has already been verified error message
+
+    return redirect(url_for('login'))
+
 @app.route('/login', methods=['POST'])
 def login():
     data = request.json
@@ -159,14 +231,21 @@ def login():
     
     existing_listener = Listener.query.filter_by(email=data['email']).first()
     existing_researcher = Researcher.query.filter_by(email=data['email']).first()
+    user = existing_listener if existing_listener else existing_researcher
     
-    if not existing_listener and not existing_researcher:
+    if not user:
         return jsonify({"error": "Invalid email-password combination"}), 401
     
-    hashed_password = existing_listener.pw_hash
+    hashed_password = user.pw_hash
 
     if validate_Password(data, hashed_password):
+        if not user.is_verified:
+            return jsonify({"error": "user has not verified account"}), 401
+        
         token = create_access_token(identity=data['email'])
+
+        user.is_active = True
+        db.session.commit()
 
         return jsonify(access_token=token), 200
 
@@ -220,6 +299,8 @@ def createListener():
         permission=PermissionLevel.listener,
         background_info=data.get('background_info', ''),
         reward_points=0,
+        is_verified=False,
+        is_active=False,
     #    ==== languages to be set in different task, remove and add to task ======
     #    languages_list=data.get('languages_list', []),
     #    languages_proficiency=data.get('languages_proficiency', [])
@@ -228,15 +309,18 @@ def createListener():
     try:
         db.session.add(user)
         db.session.commit()
-    except IntegrityError as e:
-        db.session.rollback()
-        return jsonify({"error": "Database integrity error: " + str(e)}), 400
+
+        # Generate token and send verification email
+        token = generate_verification_token(data['email'])
+        verification_url = url_for('verify_email', token=token, _external=True)
+
+        send_verification_email(data['email'], verification_url)
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
     # Ensure languages_proficiency is serialized as a list
-    return jsonify({"message": "Registration Successful"})
+    return jsonify({"message": "Registration Successful"}), 200
 
 @app.route('/registerResearcher', methods=['POST'])
 def createResearcher():
@@ -262,6 +346,7 @@ def createResearcher():
         pw_hash=hashed_password.value,
         permission=PermissionLevel.researcher,
         organisation=data.get('organisation', ''),
+        is_verified=False,
     )
     try:
         db.session.add(user)
@@ -308,7 +393,7 @@ def resetPassword():
     
     # Check if email matches the user
     if existing_user.email != email:
-        return jsonify({"error": 
+        return jsonify({"error":
             "Email does not match the one registered with the account"}), 400
     
     if existing_user:
@@ -330,6 +415,8 @@ def resetPassword():
 def getListeners():
     users = Listener.query.all()
     return jsonify([{
+        "is_verified": user.is_verified,
+        "is_active": user.is_active,
         "Uuid": str(user.id),
         "Demographic ID": user.demographic.id if user.demographic else None,
         "First Name": user.first_name,
