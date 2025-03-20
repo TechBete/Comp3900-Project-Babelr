@@ -64,12 +64,10 @@ def verify_token(token, expiration=3600):  # Token expires in 1 hour
     except:
         return None
 
-def send_verification_email(email, verification_url):
-    receiver_email = email
+def send_verification_email(receiver_email, verification_url):
+    subject = "Babelr Account Verification Email"
+    body = f'Click the link to verify your email to gain access to Babelr: {verification_url}'
 
-    subject = "Flask Email Test == Upgraded"
-    body = f'Click the link to verify your email: {verification_url}'
-    
     # Create email message
     msg = MIMEText(body, "plain")
     msg["From"] = os.getenv('MAIL_USERNAME')
@@ -78,9 +76,10 @@ def send_verification_email(email, verification_url):
 
     try:
         # Connect to SMTP server and send email
-        server = smtplib.SMTP('smtp.mail.yahoo.com', 587)
+        server = smtplib.SMTP(os.getenv('MAIL_SERVER'), 587)
         server.starttls()
         server.login(os.getenv('MAIL_USERNAME'), os.getenv('MAIL_PASSWORD'))
+
         server.sendmail(os.getenv('MAIL_USERNAME'), receiver_email, msg.as_string())
         server.quit()
         return "Email sent successfully!"
@@ -165,7 +164,8 @@ class Researcher(db.Model):
     project_list = db.Column(ARRAY(db.String(128))) # 128 char length array
     uploaded_video = db.Column(ARRAY(db.String(128))) # 128 char length file ID array
     gender = db.Column(gender_enum)
-    is_verified = db.Column(db.Boolean, default=False, nullable=False)
+    is_verified = db.Column(db.Boolean, nullable=False)
+    is_active = db.Column(db.Boolean, nullable=False)
 
 class Listener(db.Model):
     __tablename__ = "listeners"
@@ -204,7 +204,7 @@ def verify_email(token):
 
     if not email:
         # TODO: your token is invalid or expired message
-        return redirect(url_for('login')), 405
+        return redirect(url_for('login')), 404
 
     # Find user and mark as verified
     listener = Listener.query.filter_by(email=email).first()
@@ -212,7 +212,7 @@ def verify_email(token):
 
     if user and not user.is_verified:
         user.is_verified = True
-        db.session.commit()     
+        db.session.commit()
         # TODO: your email has been verified message
     else:
         pass
@@ -228,14 +228,14 @@ def login():
     validation_error = validate_required_fields(data, required_fields)
     if validation_error:
         return jsonify({"error": "validation error"}), 400
-    
+
     existing_listener = Listener.query.filter_by(email=data['email']).first()
     existing_researcher = Researcher.query.filter_by(email=data['email']).first()
     user = existing_listener if existing_listener else existing_researcher
-    
+
     if not user:
         return jsonify({"error": "Invalid email-password combination"}), 401
-    
+
     hashed_password = user.pw_hash
 
     if validate_Password(data, hashed_password):
@@ -313,7 +313,6 @@ def createListener():
         # Generate token and send verification email
         token = generate_verification_token(data['email'])
         verification_url = url_for('verify_email', token=token, _external=True)
-
         send_verification_email(data['email'], verification_url)
     except Exception as e:
         db.session.rollback()
@@ -347,10 +346,16 @@ def createResearcher():
         permission=PermissionLevel.researcher,
         organisation=data.get('organisation', ''),
         is_verified=False,
+        is_active=False,
     )
     try:
         db.session.add(user)
         db.session.commit()
+
+        # Generate token and send verification email
+        token = generate_verification_token(data['email'])
+        verification_url = url_for('verify_email', token=token, _external=True)
+        send_verification_email(data['email'], verification_url)
     except IntegrityError as e:
         db.session.rollback()
         return jsonify({"error": "Database integrity error: " + str(e)}), 400
@@ -455,12 +460,14 @@ def getListeners():
 def getResearchers():
     users = Researcher.query.all()
     return jsonify([{
+        "is_verified": user.is_verified,
+        "is_active": user.is_active,
         "Uuid": str(user.id),
         "First Name": user.first_name,
         "Last Name": user.last_name,
         "Email": user.email,
         "Password": user.pw_hash,
-        "Role": user.permission.value,  
+        "Role": user.permission.value,
         "Organisation": user.organisation,
         "Projects": user.project_list,
         "Uploaded Audio Clips": [adc.value for adc in user.uploaded_video] if user.uploaded_video else [],
