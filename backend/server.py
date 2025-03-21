@@ -609,6 +609,11 @@ def createProject():
                                             "path": projectDir,
                                             "status": "Draft",
                                             "tags": [],
+                                            "metrics": {
+                                                "Naturalness": 0,
+                                                "Intelligibility": 0,
+                                                "Clarity": 0
+                                            },
                                             "creator id": int(researcher.id),# updated to include creator id (researcher id) 
                                             "creator": researcher.first_name
                                             }) # updated to include creator name
@@ -644,7 +649,8 @@ def updateProject():
     try:
         with db.session.begin_nested():
             # Check if project exists
-            project = next((project for project in researcher.project_list if project.get("name") == projectName), None)
+            project_dict = {project["name"]: project for project in researcher.project_list}
+            project = project_dict.get(projectName)
             if project is None:
                 return jsonify({"error": "Project not found"}), 404 # disallow project update if project does not exist
             
@@ -700,7 +706,8 @@ def addProjectTags():
     try:
         with db.session.begin_nested():
             # Check if project exists
-            project = next((project for project in researcher.project_list if project.get("name") == projectName), None)
+            project_dict = {project["name"]: project for project in researcher.project_list}
+            project = project_dict.get(projectName)
             if project is None:
                 return jsonify({"error": "Project not found"}), 404 # disallow project update if project does not exist
             
@@ -748,7 +755,8 @@ def removeProjectTags():
     try:
         with db.session.begin_nested():
             # Check if project exists
-            project = next((project for project in researcher.project_list if project.get("name") == projectName), None)
+            project_dict = {project["name"]: project for project in researcher.project_list}
+            project = project_dict.get(projectName)
             if project is None:
                 return jsonify({"error": "Project not found"}), 404 # disallow project update if project does not exist
             
@@ -759,7 +767,7 @@ def removeProjectTags():
             if isinstance(remove_tags, str):
                 removed_tags = [tag.strip() for tag in remove_tags.split(',')]  # Split by ',' and remove extra spaces
             elif isinstance(remove_tags, list):
-                removed_tags = [str(tag).strip() for tag in remove_tags]
+                removed_tags = [str(tag).strip() for tag in removed_tags]
                 
             for tag in removed_tags:
                 if tag in project['tags']:
@@ -796,7 +804,8 @@ def updateProjectStatus():
     try:
         with db.session.begin_nested():
             # Check if project exists
-            project = next((project for project in researcher.project_list if project.get("name") == projectName), None)
+            project_dict = {project["name"]: project for project in researcher.project_list}
+            project = project_dict.get(projectName)
             if project is None:
                 return jsonify({"error": "Project not found"}), 404 # disallow project update if project does not exist
             
@@ -824,7 +833,7 @@ def getProjects():
     researcher_id = uuid.UUID(researcher_id)
     
     researcher = Researcher.query.filter_by(id=researcher_id).first()
-    if not researcher_id:
+    if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
     
     return jsonify({"projects_list": researcher.project_list})
@@ -849,7 +858,8 @@ def getProject():
     try:
         with db.session.begin_nested():
             # Check if project exists 
-            project = next((project for project in researcher_exists.project_list if project.get("name") == projectName), None)
+            project_dict = {project["name"]: project for project in researcher_exists.project_list}
+            project = project_dict.get(projectName)
             if project is None:
                 return jsonify({"error": "Project not found"}), 404 # disallow returning project if project does not exist
     except Exception as e:
@@ -881,7 +891,8 @@ def deleteProject():
     try:
         with db.session.begin_nested():
             # Check if project exists
-            project = next((project for project in researcher.project_list if project.get("name") == projectName), None)
+            project_dict = {project["name"]: project for project in researcher.project_list}
+            project = project_dict.get(projectName)
             if project is None:
                 return jsonify({"error": "Project not found"}), 404
             # Check if researcher owns project
@@ -900,7 +911,220 @@ def deleteProject():
         return jsonify({"error": "Project was unable to be deleted"}), 500
 
     return jsonify({"message": "Project deleted successfully", "projects_list": researcher.project_list})
+
+# update this route as we get more information on how the metrics should be stored
+# this route is to set the metrics for a project once a project has been created.
+@app.route('/setProjectMetricField', methods=['POST'])
+@jwt_required()
+def setProjectMetricsField():
+    data = request.json
+    required_fields = ['project_name', 'metrics']
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        logging.debug("Validation error: Missing required fields")
+        return validation_error
+
+    researcher_id = get_jwt_identity()
+    researcher_id = uuid.UUID(researcher_id)
+    logging.debug(f"Researcher ID: {researcher_id}")
+
+    researcher = Researcher.query.filter_by(id=researcher_id).first()
+    if not researcher:
+        logging.debug("Validation error: Researcher not found")
+        return jsonify({"error": "Researcher not found"}), 404
+
+    projectName = data['project_name']
+    logging.debug(f"Project Name: {projectName}")
+
+    try:
+        with db.session.begin_nested():
+            # Check if project exists
+            project_dict = {project["name"]: project for project in researcher.project_list}
+            project = project_dict.get(projectName)
+            logging.debug(f"Project: {project}")
+            if project is None:
+                return jsonify({"error": "Project not found"}), 404
+
+            # Process metrics from the frontend
+            frontend_metrics = data['metrics']
+            logging.debug(f"Frontend Metrics: {frontend_metrics}")
+            if not isinstance(frontend_metrics, dict):
+                return jsonify({"error": "Metrics must be a dictionary"}), 400
+
+            # Convert frontend metrics to a dictionary with integer values
+            metrics_dict = {metric: 0 for metric in frontend_metrics}
+
+            # Merge with existing metrics
+            existing_metrics = project.get('metrics', {})
+            if not isinstance(existing_metrics, dict):
+                logging.debug(f"Existing Metrics: {existing_metrics}")
+                return jsonify({"error": "Existing metrics are not in a valid format"}), 500
+            existing_metrics.update(metrics_dict)
+
+            # Update the project's metrics
+            project['metrics'] = existing_metrics
+
+            # Mark the project_list as modified and commit changes
+            flag_modified(researcher, "project_list")
+            db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(f"Error: {e}")
+        return jsonify({"error": "Error: 500, An error occurred while setting the project metrics"}), 500
+
+    return jsonify({"message": "Project metrics set successfully", "metrics": project['metrics']})
+
+@app.route('/getProjectMetrics', methods=['POST'])
+@jwt_required()
+def getProjectMetrics():
+    data = request.json
+    required_fields = ['project_name']
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+
+    researcher_id = get_jwt_identity()
+    researcher_id = uuid.UUID(researcher_id)
+    
+    researcher = Researcher.query.filter_by(id=researcher_id).first()
+    if not researcher:
+        return jsonify({"error": "Researcher not found"}), 404
+    
+    projectName = data['project_name']
+    try:
+        with db.session.begin_nested():
+            # Check if project exists
+            project_dict = {project["name"]: project for project in researcher.project_list}
+            project = project_dict.get(projectName)
+            if project is None:
+                return jsonify({"error": "Project not found"}), 404
+
+            # Return the project's metrics
+            metrics = project.get("metrics", {})
+    except Exception as e:
+        logging.debug(e)
+        return jsonify({"error": "Error: 500, An error occurred while retrieving the project metrics"}), 500
+    
+    return jsonify({"metrics": metrics})
+
+# this route is to update the project metrics
+# this will add values to each of the fields in the metrics dictionary
+# project metric values should be pulled directly from project data
+@app.route('/updateProjectMetrics', methods=['POST'])
+@jwt_required()
+def updateProjectMetrics():
+    data = request.json
+    required_fields = ['project_name', 'metrics']
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+
+    researcher_id = get_jwt_identity()
+    researcher_id = uuid.UUID(researcher_id)
+
+    # Validate researcher and project
+    researcher = Researcher.query.filter_by(id=researcher_id).first()
+    if not researcher:
+        return jsonify({"error": "Researcher not found"}), 404
+
+    projectName = data['project_name']
+    if not isinstance(projectName, str) or not projectName.strip():
+        return jsonify({"error": "Project name must be a non-empty string"}), 400
+
+    try:
+        with db.session.begin_nested():
+            # Check if project exists
+            project_dict = {project["name"]: project for project in researcher.project_list}
+            project = project_dict.get(projectName)
+            if project is None:
+                return jsonify({"error": "Project not found"}), 404
+
+            # Process metrics from the frontend
+            frontend_metrics = data['metrics']
+            if not isinstance(frontend_metrics, dict):
+                return jsonify({"error": "Metrics must be a dictionary of numeric values"}), 400
+
+            # Validate and update metrics
+            existing_metrics = project.get('metrics', {})
+            if not isinstance(existing_metrics, dict):
+                return jsonify({"error": "Existing metrics must be a dictionary"}), 500
+
+            updated_metrics = existing_metrics.copy()
+            for key, value in frontend_metrics.items():
+                if key in updated_metrics:
+                    if not isinstance(value, (int, float)):
+                        return jsonify({"error": f"Value for metric '{key}' must be a number"}), 400
+                    if not isinstance(updated_metrics[key], (int, float)):
+                        return jsonify({"error": "Existing value for metric " + str(key) + " is not numeric"}), 400
+                    updated_metrics[key] += value
+
+            # Apply updates
+            project['metrics'] = updated_metrics
+
+            # Mark the project_list as modified and commit changes
+            flag_modified(researcher, "project_list")
+            db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logging.error("An error occurred while updating project metrics")
+        return jsonify({"error": "Error: 500, An error occurred while updating the project metrics"}), 500
+
+    return jsonify({"message": "Project metrics updated successfully", "metrics": project['metrics']})
+
+# this route is to delete a specified metric in a project. 
+# this will remove the key value pair from the metrics dictionary
+# this can only be called when a project status is set to 'Draft'
+@app.route('/deleteProjectMetrics', methods=['POST'])
+@jwt_required()
+def deleteProjectMetrics():
+    data = request.json
+    required_fields = ['project_name', 'metric']
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+
+    researcher_id = get_jwt_identity()
+    researcher_id = uuid.UUID(researcher_id)
+    
+    researcher = Researcher.query.filter_by(id=researcher_id).first()
+    if not researcher:
+        return jsonify({"error": "Researcher not found"}), 404
+        
+    projectName = data['project_name']
+    
+    try:
+        with db.session.begin_nested():
+            # Check if project exists
+            project_dict = {project["name"]: project for project in researcher.project_list}
+            project = project_dict.get(projectName)
+            if project is None:
+                return jsonify({"error": "Project not found"}), 404
+
+            if project.status != 'Draft':
+                return jsonify({"error": "The Project status must be set to 'Draft' to delete metrics"}), 400
             
+            # check if mertics is a valid dictionary
+            if not isinstance(project['metrics'], dict):
+                return jsonify({"error": "Metrics are not in a valid format"}), 500
+            
+            # delete the metric from the project
+            metric = data['metric']
+            if metric not in project['metrics']:
+                return jsonify({"error": "Metric not found"}), 404
+            # Delete the metric from the project
+            del project['metrics'][metric]
+
+            # Mark the project_list as modified and commit changes
+            flag_modified(researcher, "project_list")
+            db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Error: 500, An error occurred while deleting the project metric"}), 500   
+    
+    return jsonify({"message": "Project metric deleted successfully", "metrics": project['metrics']})
+
+
 
 # ======== TESTING ROUTES ========
 # These routes are for testing purposes only and should be removed once the frontend is in place
@@ -922,17 +1146,21 @@ def index():
         <h1>Welcome to the User Management System</h1>
         <p>Use the links below to register a Listener or a Researcher:</p>
         <ul>
-            <li><a href="/userResetPassword">Reset Password</a></li>
-            <li><a href="/blindEmailParse">Blind Email Parse</a></li>
-            <li><a href="/blindPasswordReset">Blind Password Reset</a></li>
-            <li><a href="/createProject">Create Project</a></li>
-            <li><a href="/updateProjectName">Update Project Name</a></li>
-            <li><a href="/addProjectTags">Add Project Tags</a></li>
-            <li><a href="/removeProjectTags">Remove Project Tags</a></li>
-            <li><a href="/updateProjectStatus">Update Project Status</a></li>
-            <li><a href="/getProjects">Get Projects</a></li>
-            <li><a href="/getProject">Get Project</a></li>
-            <li><a href="/deleteProject">Delete Project</a></li>
+            <li><a href="/userResetPassword">Reset User Password #w orking</a></li>
+            <li><a href="/blindEmailParse">Blind Email Parse # working</a></li>
+            <li><a href="/blindPasswordReset">Blind Password Reset # working</a></li>
+            <li><a href="/createProject">Create Project # working</a></li>
+            <li><a href="/updateProjectName">Update Project Name # working</a></li>
+            <li><a href="/addProjectTags">Add Project Tags # working</a></li>
+            <li><a href="/removeProjectTags">Remove Project Tags # working</a></li>
+            <li><a href="/updateProjectStatus">Update Project Status # working</a></li>
+            <li><a href="/getProjects">Get Projects # working</a></li>
+            <li><a href="/getProject">Get Project # working</a></li>
+            <li><a href="/deleteProject">Delete Project # working</a></li>
+            <li><a href="/setProjectMetricField">Set Project Metrics Field # working</a></li>
+            <li><a href="/getProjectMetrics">Get Project Metrics # working</a></li>
+            <li><a href="/updateProjectMetrics">Update Project Metrics</a></li>
+            <li><a href="/deleteProjectMetrics">Delete Project Metrics # working</a></li>
         </ul>
     </body>
     </html>
@@ -1294,30 +1522,76 @@ def deleteProjectForm():
     </body>
     </html>
     ''')
-
-@app.route('/createProject', methods=['GET'])
-def createProjectv1Form():
+@app.route('/setProjectMetricField', methods=['GET'])
+def setProjectMetricFieldForm():
     return render_template_string('''
     <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Create Project</title>
+        <title>Set Project Metrics</title>
+        <style>
+            .metric-input { margin-bottom: 10px; }
+        </style>
     </head>
     <body>
-        <h1>Create Project</h1>
-        <form action="/createProject" method="post">
+        <h1>Set Project Metrics</h1>
+        <form id="metricsForm" action="/setProjectMetricField" method="post">
             <label for="project_name">Project Name:</label><br>
-            <input type="text" id="project_name" name="project_name"><br>
+            <input type="text" id="project_name" name="project_name" required><br><br>
+            
+            <div id="metricsContainer">
+                <div class="metric-input">
+                    <label for="metric_1">Metric Name:</label>
+                    <input type="text" id="metric_1" name="metric_name_1" placeholder="Metric Name" required>
+                    <label for="value_1">Value:</label>
+                    <input type="number" id="value_1" name="metric_value_1" placeholder="Value" required>
+                </div>
+            </div>
+            
+            <button type="button" id="addMetric">Add Metric</button><br><br>
             <button type="submit">Submit</button>
         </form>
+        
         <script>
-            document.querySelector('form').addEventListener('submit', function (e) {
+            let metricCount = 1;
+
+            // Add a new metric input field
+            document.getElementById('addMetric').addEventListener('click', function () {
+                metricCount++;
+                const metricsContainer = document.getElementById('metricsContainer');
+                const newMetricDiv = document.createElement('div');
+                newMetricDiv.className = 'metric-input';
+                newMetricDiv.innerHTML = `
+                    <label for="metric_${metricCount}">Metric Name:</label>
+                    <input type="text" id="metric_${metricCount}" name="metric_name_${metricCount}" placeholder="Metric Name" required>
+                    <label for="value_${metricCount}">Value:</label>
+                    <input type="number" id="value_${metricCount}" name="metric_value_${metricCount}" placeholder="Value" required>
+                `;
+                metricsContainer.appendChild(newMetricDiv);
+            });
+
+            // Handle form submission
+            document.getElementById('metricsForm').addEventListener('submit', function (e) {
                 e.preventDefault();
                 const formData = new FormData(e.target);
-                const jsonData = Object.fromEntries(formData);
-                fetch('/createProject', {
+
+                // Convert form data into JSON format
+                const jsonData = {};
+                const metrics = {};
+                for (const [key, value] of formData.entries()) {
+                    if (key.startsWith('metric_name_')) {
+                        const metricIndex = key.split('_')[2]; // Extract the index from the key
+                        metrics[formData.get(`metric_name_${metricIndex}`)] = parseFloat(formData.get(`metric_value_${metricIndex}`)) || 0;
+                    } else if (key !== `metric_value_${key.split('_')[2]}`) {
+                        jsonData[key] = value; // Add other fields like project_name
+                    }
+                }
+                jsonData.metrics = metrics;
+
+                // Send the data to the backend
+                fetch('/setProjectMetricField', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(jsonData)
@@ -1328,6 +1602,145 @@ def createProjectv1Form():
     </body>
     </html>
     ''')
+
+@app.route('/getProjectMetrics', methods=['GET'])
+def getProjectMetricsForm():
+    return render_template_string('''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Get Project Metrics</title>
+    </head>
+    <body>
+        <h1>Get Project Metrics</h1>
+        <form action="/getProjectMetrics" method="post">
+            <label for="project_name">Project Name:</label><br>
+            <input type="text" id="project_name" name="project_name"><br>
+            <button type="submit">Submit</button>
+        </form>
+        <script>
+            document.querySelector('form').addEventListener('submit', function (e) {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const jsonData = Object.fromEntries(formData);
+                fetch('/getProjectMetrics', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(jsonData)
+                }).then(response => response.json())
+                .then(data => console.log(data));
+            });
+        </script>
+    </body>
+    </html>
+    ''')
+    
+@app.route('/updateProjectMetrics', methods=['GET'])
+def updateProjectMetricsForm():
+    return render_template_string('''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Update Project Metrics</title>
+        <style>
+            .metric-input { margin-bottom: 10px; }
+        </style>
+    </head>
+    <body>
+        <h1>Update Project Metrics</h1>
+        <form id="metricsForm" action="/updateProjectMetrics" method="post">
+            <label for="project_name">Project Name:</label><br>
+            <input type="text" id="project_name" name="project_name" required><br><br>
+            
+            <div id="metricsContainer">
+                <div class="metric-input">
+                    <label for="metric_1">Metric Name:</label>
+                    <input type="text" id="metric_1" name="metrics[metric_1]" placeholder="Metric Name">
+                    <label for="value_1">Value:</label>
+                    <input type="number" id="value_1" name="metrics[value_1]" placeholder="Value">
+                </div>
+            </div>
+            
+            <button type="button" id="addMetric">Add Metric</button><br><br>
+            <button type="submit">Submit</button>
+        </form>
+        
+        <script>
+            let metricCount = 1;
+
+            // Add a new metric input field
+            document.getElementById('addMetric').addEventListener('click', function () {
+                metricCount++;
+                const metricsContainer = document.getElementById('metricsContainer');
+                const newMetricDiv = document.createElement('div');
+                newMetricDiv.className = 'metric-input';
+                newMetricDiv.innerHTML = `
+                    <label for="metric_${metricCount}">Metric Name:</label>
+                    <input type="text" id="metric_${metricCount}" name="metrics[metric_${metricCount}]" placeholder="Metric Name">
+                    <label for="value_${metricCount}">Value:</label>
+                    <input type="number" id="value_${metricCount}" name="metrics[value_${metricCount}]" placeholder="Value">
+                `;
+                metricsContainer.appendChild(newMetricDiv);
+            });
+
+            // Handle form submission
+            document.getElementById('metricsForm').addEventListener('submit',
+            function (e) {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const jsonData = Object.fromEntries(formData);
+                fetch('/updateProjectMetrics', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(jsonData)
+                }).then(response => response.json())
+                .then(data => console.log(data));
+            });
+        </script>
+    </body>
+    </html>
+    ''')
+
+@app.route('/deleteProjectMetrics', methods=['GET'])
+def deleteProjectMetricsForm():
+    return render_template_string('''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Delete Project Metrics</title>
+    </head>
+    <body>
+        <h1>Delete Project Metrics</h1>
+        <form action="/deleteProjectMetrics" method="post">
+            <label for="project_name">Project Name:</label><br>
+            <input type="text" id="project_name" name="project_name"><br>
+            <label for="metric">Metric:</label><br>
+            <input type="text" id="metric" name="metric"><br>
+            <button type="submit">Submit</button>
+        </form>
+        <script>
+            document.querySelector('form').addEventListener('submit', function (e) {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const jsonData = Object.fromEntries(formData);
+                fetch('/deleteProjectMetrics', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(jsonData)
+                }).then(response => response.json())
+                .then(data => console.log(data));
+            });
+        </script>
+    </body>
+    </html>
+    ''')
+
 
 
 # ======== END OF TESTING ROUTES ========
