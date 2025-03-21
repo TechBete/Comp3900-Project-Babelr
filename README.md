@@ -1,14 +1,58 @@
-# To Be Updated With Documentation for Software Operation.
+<h2><u> Babelr Software Development Documentation. </u></h2>
 
-## Database Setup
-in order to implement the database framework and the server framework that connects to it in docker
-you will need two terminals. 
-* In the first terminal, run docker compose up in the root directory.
-* In the second terminal, navigate to the backend server and run 
-```docker-compose up --build```
-once the server is up and running you should be able to connect to the backend on through a web browser by inserting the following address: 
-```localhost:8016``` 
-##### currently for development purposes: 
-you can connect to the backend routes by navigating directly
-```localhost:8016/  (Home/add user test)```
-```localhost:8016/getusers    (display users in the database)```
+<h3><u> Babelr Setup </u></h3>
+
+To correctly implement the software framework in docker the software user  will need use two terminals (Frontend/Backend). To make operation easier, shell scripts have been created for the user.
+
+> ```dockerRebuild.sh```
+
+This script will remove all volumes, containers, networks and saved data inside docker. The shell script will also create the overall framework. Use on initial boot up or if the user needs to reinitalize Babelr and its database.
+
+> ```dockerBoot.sh```
+
+This script will reboot docker. While this script does not remove any of the docker containers or volumes and should be used if the user has stopped Babelr and wants to restart it with data persistence.
+
+> ```bootup.sh```
+
+This script is found in the backend and is used to boot up the server.
+
+<h5><u> Usage: </u></h5>
+
+In order to initalize the software, the user will need two terminals.
+
+* In the first terminal, run the ```dockerRebuild.sh``` script in the root directory to build the software framework.
+* In the second terminal, navigate to the backend and run 
+```bootup.sh``` to initalize the backend server for the software.
+
+Once the software has completed building and is up and running, users can being interacting with the software through a web browser using the following route: 
+```localhost:3000``` 
+
+<u><h3> Currently in Development: </h3></u> 
+
+#### FRONTEND - Implemented Routes
+
+once the server is up and running you should be able to connect to the frontend through a web browser by inserting the following addresses: 
+
+```localhost:3000                       (takes user to login page)```
+```localhost:3000/register_listener     (register user page)```
+```localhost:3000/register_researcher   (register researcher page)```
+
+#### BACKEND - Implemented Routes
+
+Backend routes can be connected to directly by navigating to:
+
+```localhost:8016/login                 (User login)```
+```localhost:8016/registerListener      (Registers a listener)```
+```localhost:8016/registerResearcher    (Registers a researcher)```
+```localhost:8016/getListeners          (Display Listeners in the database)```
+```localhost:8016/getResearchers        (Display Researchers in the database)```
+```localhost:8016/userResetPassword     (Reset User Password)```
+```localhost:8016/blindEmailParse       (Email parse for password reset.)```
+```localhost:8016/blindPasswordReset    (Reset password if User password was Forgotten)```
+```localhost:8016/createProject         (creates a project for a Researcher)```
+
+####  Connected Routes:
+
+User Login
+Register Researcher
+Register Listener

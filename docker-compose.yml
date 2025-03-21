@@ -14,7 +14,9 @@ services:
       - postgres_data:/var/lib/postgresql/data  
       # Persists data even after container is stopped or removed by using docker commands
       # (persistence will work if using docker-compose down to remove containers)
-      # (persistence does not work if using docker-compose down -v)
+      # (persistence does not work if using docker-compose down -v; -v flag removes volumes)
+    networks:
+      - app_network
 
   web:
     build: ./backend
@@ -27,6 +29,15 @@ services:
       - "8016:8016"
     depends_on:
       - Babelr_db
+    env_file:
+      - .env
+    networks:
+      - app_network
+    volumes:
+      - ./audioData:/app/audioData:rw   
+      # Mounts the audioData folder to the container
+      # this can be updated to the proper method when integrating with a cloud storage service
+      # (e.g. AWS S3, Google Cloud Storage, Azure Blob Storage)   
 
   frontend:
     build: ./frontend/babelr
@@ -36,8 +47,15 @@ services:
       - web
     environment:
       - NEXT_PUBLIC_BACKEND_URL=http://localhost:8016
-
+    env_file:
+      - .env
+    networks:
+      - app_network
 
 volumes:
   postgres_data:
     driver: local
+
+networks:
+  app_network:
+    driver: bridge

@@ -7,7 +7,7 @@ import { useRouter } from 'next/router'
 export default function Login() {
     const router = useRouter()
     const [selectedOption, setSelectedOption] = useState("/register_listener");
-
+    const [loginError, setLoginError] = useState("");
 
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault()
@@ -17,12 +17,11 @@ export default function Login() {
         const pw = formData.get("password")
 
         try {
-            const formJson = Object.fromEntries(formData.entries());
-            console.log(formJson);
-            const response = await fetch('http://127.0.0.1:8016/login', {
+            const response = await fetch('http://localhost:8016/login', {
                 method:"POST",
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({email, pw}),
+                credentials: 'include'
             })
 
             if (response.ok) {
@@ -32,15 +31,15 @@ export default function Login() {
                     localStorage.setItem("accessToken", data.access_token);
                 }
 
-                router.push('/login')
+                router.push("/project_list");
+                setLoginError("");
             } else {
-                console.log(response.json())
+                const error = await response.json();
+				setLoginError(error.error);
             }
 
-            // const formJson = Object.fromEntries(formData.entries());
-            // console.log(formJson);
         } catch {
-
+            setLoginError("Network Error: Fetch Request Failed");
         }
     }
 
@@ -48,7 +47,7 @@ export default function Login() {
         setSelectedOption(event.target.value);
         console.log("Selected:", event.target.value);
     }
-  
+
 
     return (    
         <div className={styles["login-body"]}>
@@ -82,6 +81,9 @@ export default function Login() {
                             </select>
                         </div>
                 </div>
+                <div className={styles["invalid-label"]}>
+					{ loginError !== "" && <div>{loginError}</div>}
+				</div>
             </div>
         </div>
     );
