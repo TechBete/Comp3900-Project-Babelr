@@ -1,6 +1,6 @@
-import os, uuid, enum, time
+import os, uuid, enum, time, shutil
 import logging  # remove for final production
-from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, JWTManager, decode_token, set_access_cookies, unset_jwt_cookies
+from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, JWTManager, decode_token, set_access_cookies, unset_jwt_cookies, get_jwt
 from flask import Flask, request, jsonify, render_template_string, render_template, redirect, url_for # render_template_string is used to render HTML, can be removed once frontend is inplace
 from email_validator import validate_email, EmailNotValidError
 from flask import send_from_directory, send_file # this is for accessing files from a directory
@@ -358,10 +358,12 @@ def createResearcher():
         return jsonify({"error": "Error Code: 500"}), 500 
     return jsonify({"message": "Registration Successful"})
 
+# this route is to reset a user's password
 @app.route('/userResetPassword', methods=['POST'])
+@jwt_required()
 def userResetPassword():
     data = request.json
-    required_fields = ['pw', 'pw_confirmation', 'id', 'email']
+    required_fields = ['pw', 'pw_confirmation']
     # validate field is not empty
     validation_error = validate_required_fields(data, required_fields)
     if validation_error:
@@ -370,8 +372,10 @@ def userResetPassword():
     # assign local variables to the data fields
     password = data['pw']
     password_confirmation = data['pw_confirmation']
-    user_id = data['id']
-    email = data['email']
+    user_id = get_jwt_identity()
+    user_id = uuid.UUID(user_id) # ensure type consistency
+    email = get_jwt().get('email') # get email from jwt claims
+
     
     # check to see if password str is empty
     if password == '' or password_confirmation == '':
@@ -409,6 +413,8 @@ def userResetPassword():
             logging.debug(e)
             return jsonify({"error": "Error: 500, An error has occured while updating the password"}), 500
 
+# this route is to reset a user's password if they have forgotten thier password
+# this is to be updated to use email user verification
 @app.route('/blindEmailParse', methods=['POST'])
 def blindEmailParse():
     data = request.json
@@ -442,6 +448,7 @@ def blindEmailParse():
         db.session.commit() # update the database with the new blind login uuid, atomic commit
         return jsonify({"researcher_id": str(existing_researcher.blindlogin), "email": str(existing_researcher.email)})   # added underscore for my sanity
 
+# this route is to reset a user's password if they have forgotten thier password after email verification 
 @app.route('/blindPasswordReset', methods=['POST'])
 def blindPasswordReset():
     data = request.json
@@ -484,7 +491,7 @@ def blindPasswordReset():
 
 
 # this may need to be changed to only return the 'listener' who is calling the route
-# will need more discussion on this 
+# this route may only be used by the admin to get all listeners
 @app.route('/getListeners', methods=['GET'])
 def getListeners():
     users = Listener.query.all()
@@ -523,6 +530,7 @@ def getListeners():
 #    })
 
 # this route may only be used by the admin to get all researchers
+# update to only allow admin to access this route once single researcher recall route has been implemented
 @app.route('/getResearchers', methods=['GET'])
 def getResearchers():
     users = Researcher.query.all()
@@ -535,7 +543,10 @@ def getResearchers():
         "Role": user.permission.value,  
         "Organisation": user.organisation,
         "Projects": [
-                    {"name": project.get("name"), "path": project.get("path")}
+                    {"name": project.get("name"), 
+                     "path": project.get("path"),
+                     "status": project.get("status"),
+                     "tags": project.get("tags", [])}
                     for project in (user.project_list if user.project_list is not None else [])
                     if isinstance(project, dict) and "name" in project and "path" in project
                 ],  # list of projects user is working on
@@ -553,21 +564,20 @@ def createProject():
         return validation_error
     # # FOR FRONTEND TESTING PART
     researcher_id = get_jwt_identity()
-    researcher_id = uuid.UUID(researcher_id)
+    researcher_id = uuid.UUID(researcher_id) # ensure type consistency   
     required_fields = ['researcher_id'] 
-    validation_error = validate_required_fields({'researcher_id': researcher_id}, required_fields)
+    validation_error = validate_required_fields({'researcher_id': researcher_id}, required_fields) # validate researcher_id
     if validation_error:
         return validation_error
     # END OF FRONTEND TESTING PART
 
     projectName = data['project_name']
-    # researcherId = data['researcher_id']
     researcherId = researcher_id   #FRONTEND TESTING
 
     # Check if researcher exists
     researcher = Researcher.query.filter_by(id=researcherId).first()
     if not researcher:
-        return jsonify({"error": "Researcher not found"}), 404
+        return jsonify({"error": "Researcher not found"}), 404  # disallow project creation if researcher does not exist
 
     # Ensure project list is not empty
     if researcher.project_list is None:
@@ -595,11 +605,16 @@ def createProject():
             else:
                 return jsonify({"error": "Project already exists"}), 400
             # update Researcher project list with project name
-            researcher.project_list.append({"name": projectName, "path": projectDir, "status": "Draft", "creator": researcher.first_name}) #added placeholder status and creator some stuff so i can display
+            researcher.project_list.append({"name": projectName,
+                                            "path": projectDir,
+                                            "status": "Draft",
+                                            "tags": [],
+                                            "creator id": int(researcher.id),# updated to include creator id (researcher id) 
+                                            "creator": researcher.first_name
+                                            }) # updated to include creator name
             
             flag_modified(researcher, "project_list")
-    
-            logging.debug(f"Current project_list before commit: {researcher.project_list}")
+
             db.session.commit()
     except Exception as e:
         db.session.rollback()
@@ -607,9 +622,283 @@ def createProject():
         return jsonify({"error": "Project was unable to be created"}), 500
 
     return jsonify({"message": "Project created successfully", "projects_list": researcher.project_list}) ## probably should not send back project list but for simplicities sake
+
+# this route is to update the project name
+@app.route('/updateProjectName', methods=['POST'])
+@jwt_required()
+def updateProject():
+    data = request.json
+    required_fields = ['project_name']
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
     
+    researcher_id = get_jwt_identity()
+    researcher_id = uuid.UUID(researcher_id)
+    
+    researcher = Researcher.query.filter_by(id=researcher_id).first()
+    if not researcher:
+        return jsonify({"error": "Researcher not found"}), 404
+    
+    projectName = data['project_name']
+    try:
+        with db.session.begin_nested():
+            # Check if project exists
+            project = next((project for project in researcher.project_list if project.get("name") == projectName), None)
+            if project is None:
+                return jsonify({"error": "Project not found"}), 404 # disallow project update if project does not exist
+            
+            # update project name
+            if 'new_project_name' in data:
+                new_project_name = data['new_project_name']
+                if new_project_name == '':
+                    return jsonify({"error": "Project name cannot be empty"}), 400
+            
+                # Check if project already exists
+                if any(project.get("name") == new_project_name for project in researcher.project_list):
+                    return jsonify({"error": "Project name already exists"}), 400
+                
+                # create directory for project files in backend and docker.
+                projectOwner = str(researcher_id)
+                projectPath = os.path.join("/app", "audioData")
+                researcherPath = os.path.join(projectPath, projectOwner)
+                projectDir = os.path.join(researcherPath, projectName)
+                if os.path.exists(projectDir):
+                    os.rename(projectDir, os.path.join(researcherPath, new_project_name))
+                    project['name'] = new_project_name
+                else:
+                    return jsonify({"error": "Project already exists"}), 400       
+                        
+            flag_modified(researcher, "project_list")
+            
+            db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Project was unable to be updated"}), 500
+    
+    return jsonify({"message": "Project updated successfully", "projects_list": researcher.project_list})
 
+# The route is to add tags to a project
+@app.route('/addProjectTags', methods=['POST'])
+@jwt_required()
+def addProjectTags():
+    data = request.json
+    required_fields = ['project_name', 'tags']
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+    
+    researcher_id = get_jwt_identity()
+    researcher_id = uuid.UUID(researcher_id)
+    
+    researcher = Researcher.query.filter_by(id=researcher_id).first()
+    if not researcher:
+        return jsonify({"error": "Researcher not found"}), 404
+    
+    projectName = data['project_name']
+    try:
+        with db.session.begin_nested():
+            # Check if project exists
+            project = next((project for project in researcher.project_list if project.get("name") == projectName), None)
+            if project is None:
+                return jsonify({"error": "Project not found"}), 404 # disallow project update if project does not exist
+            
+            add_tags = data['tags']
+                                    
+            # add tags to the project
+            #If tags is a string, split it into a list
+            if isinstance(add_tags, str):
+                added_tags = [tag.strip() for tag in add_tags.split(',')]  # Split by ',' and remove extra spaces
+            elif isinstance(add_tags, list):
+                added_tags = [str(tag).strip() for tag in add_tags]
+                
+            for tag in added_tags:
+                if tag not in project['tags']:
+                    project['tags'].append(tag) # append tags to the project
+                    
+            flag_modified(researcher, "project_list")
+            
+            db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Project was unable to be updated"}), 500
+    
+    return jsonify({"message": "Tags added successfully.", "projects_list": researcher.project_list})
 
+# The route is to remove tags from a project
+@app.route('/removeProjectTags', methods=['POST'])
+@jwt_required()
+def removeProjectTags():
+    data = request.json
+    required_fields = ['project_name', 'tags']
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+    
+    researcher_id = get_jwt_identity()
+    researcher_id = uuid.UUID(researcher_id)
+    
+    researcher = Researcher.query.filter_by(id=researcher_id).first()
+    if not researcher:
+        return jsonify({"error": "Researcher not found"}), 404
+    
+    projectName = data['project_name']
+    try:
+        with db.session.begin_nested():
+            # Check if project exists
+            project = next((project for project in researcher.project_list if project.get("name") == projectName), None)
+            if project is None:
+                return jsonify({"error": "Project not found"}), 404 # disallow project update if project does not exist
+            
+            remove_tags = data['tags']
+            
+            # remove tages
+            #If tags is a string, split it into a list
+            if isinstance(remove_tags, str):
+                removed_tags = [tag.strip() for tag in remove_tags.split(',')]  # Split by ',' and remove extra spaces
+            elif isinstance(remove_tags, list):
+                removed_tags = [str(tag).strip() for tag in remove_tags]
+                
+            for tag in removed_tags:
+                if tag in project['tags']:
+                    project['tags'].remove(tag) # remove tags from the project
+                    
+            flag_modified(researcher, "project_list")
+            
+            db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Project was unable to be updated"}), 500
+    
+    return jsonify({"message": "Tags removed successfully.", "projects_list": researcher.project_list})
+
+# this route is to update the project status
+@app.route('/updateProjectStatus', methods=['POST'])
+@jwt_required()
+def updateProjectStatus():
+    data = request.json
+    required_fields = ['project_name', 'status']
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+    
+    researcher_id = get_jwt_identity()
+    researcher_id = uuid.UUID(researcher_id)
+    
+    researcher = Researcher.query.filter_by(id=researcher_id).first()
+    if not researcher:
+        return jsonify({"error": "Researcher not found"}), 404
+    
+    projectName = data['project_name']
+    try:
+        with db.session.begin_nested():
+            # Check if project exists
+            project = next((project for project in researcher.project_list if project.get("name") == projectName), None)
+            if project is None:
+                return jsonify({"error": "Project not found"}), 404 # disallow project update if project does not exist
+            
+            new_status = data['status']
+            if new_status == '':
+                return jsonify({"error": "Status cannot be empty"}), 400
+            
+            project['status'] = new_status
+            
+            flag_modified(researcher, "project_list")
+            
+            db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e) # remove in production
+        return jsonify({"error": "Project was unable to be updated"}), 500  
+    
+    return jsonify({"message": "Project status updated successfully.", "projects_list": researcher.project_list})
+
+# this route is to get all the projects of a researcher
+@app.route('/getProjects', methods=['GET'])
+@jwt_required()
+def getProjects():
+    researcher_id = get_jwt_identity()
+    researcher_id = uuid.UUID(researcher_id)
+    
+    researcher = Researcher.query.filter_by(id=researcher_id).first()
+    if not researcher_id:
+        return jsonify({"error": "Researcher not found"}), 404
+    
+    return jsonify({"projects_list": researcher.project_list})
+
+@app.route('/getProject' , methods=['GET'])
+@jwt_required()
+def getProject():
+    data = request.json
+    required_fields = ['project_name']
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+    
+    researcher_id = get_jwt_identity()
+    researcher_id = uuid.UUID(researcher_id)
+    
+    Researcher = Researcher.query.filter_by(id=researcher_id).first()
+    if not Researcher:
+        return jsonify({"error": "Researcher not found"}), 404
+    
+    projectName = data['project_name']
+    try:
+        with db.session.begin_nested():
+            # Check if project exists 
+            project = next((project for project in Researcher.project_list if project.get("name") == projectName), None)
+            if project is None:
+                return jsonify({"error": "Project not found"}), 404 # disallow returning project if project does not exist
+    except Exception as e:
+        logging.debug(e)
+        return jsonify({"error": "Error: 500, An error has occured while retrieving the project"}), 500
+    
+    return jsonify({"project": project})
+
+# this route is to delete a project
+@app.route('/deleteProject', methods=['POST'])
+@jwt_required()
+def deleteProject():
+    data = request.json
+    required_fields = ['project_name']
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+    
+    researcher_id = get_jwt_identity()
+    researcher_id = uuid.UUID(researcher_id)
+    
+    researcher = Researcher.query.filter_by(id=researcher_id).first()
+    if not researcher:
+        return jsonify({"error": "Researcher not found"}), 404
+    
+    projectName = data['project_name']
+    try:
+        with db.session.begin_nested():
+            # Check if project exists
+            project = next((project for project in researcher.project_list if project.get("name") == projectName), None)
+            if project is None:
+                return jsonify({"error": "Project not found"}), 404
+            # Check if researcher owns project
+            if project.get("creator") != researcher.id: 
+                return jsonify({"error": "You do not have permission to delete this project"}), 403
+            if project.get("id") == researcher.id:
+                # delete project directory
+                if os.path.exists(project.get("path")):
+                    shutil.rmtree(project.get("path"))
+                researcher.project_list.remove(project)
+                flag_modified(researcher, "project_list")
+                db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Project was unable to be deleted"}), 500
+
+    return jsonify({"message": "Project deleted successfully", "projects_list": researcher.project_list})
+            
 
 # ======== TESTING ROUTES ========
 # These routes are for testing purposes only and should be removed once the frontend is in place
@@ -617,7 +906,7 @@ def createProject():
 # The frontend will make POST requests to these routes with the form data
 # The form data will be validated and then used to create a new user in the database
 
-@app.route('/') 
+@app.route('/', methods=['GET'])
 def index():
     return render_template_string('''
     <!DOCTYPE html>
@@ -631,49 +920,21 @@ def index():
         <h1>Welcome to the User Management System</h1>
         <p>Use the links below to register a Listener or a Researcher:</p>
         <ul>
-            <li><a href="/addListener">Register Listener</a></li>
-            <li><a href="/addResearcher">Register Researcher</a></li>
-            <li><a href="/loginPage">Login Page</a></li>
+            <li><a href="/userResetPassword">Reset Password</a></li>
+            <li><a href="/blindEmailParse">Blind Email Parse</a></li>
+            <li><a href="/blindPasswordReset">Blind Password Reset</a></li>
+            <li><a href="/createProject">Create Project</a></li>
+            <li><a href="/updateProjectName">Update Project Name</a></li>
+            <li><a href="/addProjectTags">Add Project Tags</a></li>
+            <li><a href="/removeProjectTags">Remove Project Tags</a></li>
+            <li><a href="/updateProjectStatus">Update Project Status</a></li>
+            <li><a href="/getProjects">Get Projects</a></li>
+            <li><a href="/getProject">Get Project</a></li>
+            <li><a href="/deleteProject">Delete Project</a></li>
         </ul>
     </body>
     </html>
     ''')
-
-@app.route('/createProject', methods=['GET'])
-def createProjectForm():
-    return render_template_string('''
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Create Project</title>
-    </head>
-    <body>
-        <h1>Create Proejct </h1>
-        <form action="/createProject" method="post">
-            <label for="project_name">Project Name:</label><br>
-            <input type="text" id="project_name" name="project_name"><br>
-            <label for="researcher_id">Researcher ID:</label><br>
-            <input type="text" id="researcher_id" name="researcher_id"><br>
-            <button type="submit">Submit</button>
-        </form>
-        <script>
-            document.querySelector('form').addEventListener('submit', function (e) {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                const jsonData = Object.fromEntries(formData);
-                fetch('/createProject', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(jsonData)
-                }).then(response => response.json())
-                    .then(data => console.log(data));
-            });
-        </script>
-    </body>
-    </html>
-''')
     
 @app.route('/userResetPassword', methods=['GET'])
 def userResetPasswordForm():
@@ -686,12 +947,8 @@ def userResetPasswordForm():
         <title>Reset Password</title>
     </head>
     <body>
-        <h1>Reset Password</h1>
+        <h1>User Reset Password</h1>
         <form action="/userResetPassword" method="post">
-            <label for="id">User ID:</label><br>
-            <input type="text" id="id" name="id"><br>
-            <label for="email">Email:</label><br>
-            <input type="email" id="email" name="email"><br>
             <label for="pw">New Password:</label><br>
             <input type="password" id="pw" name="pw"><br>
             <label for="pw_confirmation">Confirm Password:</label><br>
@@ -786,7 +1043,295 @@ def blindPasswordResetForm():
     </body>
     </html>
     ''')
+    
+@app.route('/updateProjectName', methods=['GET'])
+def updateProjectForm():
+    return render_template_string('''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Update Project Name</title>
+    </head>
+    <body>
+        <h1>Update Project Name</h1>
+        <form action="/updateProject" method="post">
+            <label for="project_name">Project Name:</label><br>
+            <input type="text" id="project_name" name="project_name"><br>
+            <label for="new_project_name">New Project Name:</label><br>
+            <input type="text" id="new_project_name" name="new_project_name"><br>
+            <button type="submit">Submit</button>
+        </form>
+        <script>
+            document.querySelector('form').addEventListener('submit', function (e) {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const jsonData = Object.fromEntries(formData);
+                fetch('/updateProjectName', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(jsonData)
+                }).then(response => response.json())
+                .then(data => console.log(data));
+            });
+        </script>
+    </body>
+    </html>
+    ''')
 
+@app.route('/addProjectTags', methods=['GET'])
+def addProjectTagsForm():
+    return render_template_string('''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Add Project Tags</title>
+    </head>
+    <body>
+        <h1>Add Project Tags</h1>
+        <form action="/addProjectTags" method="post">
+            <label for="project_name">Project Name:</label><br>
+            <input type="text" id="project_name" name="project_name"><br>
+            <label for="tags">Tags:</label><br>
+            <input type="text" id="tags" name="tags"><br>
+            <button type="submit">Submit</button>
+        </form>
+        <script>
+            document.querySelector('form').addEventListener('submit', function (e) {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const jsonData = Object.fromEntries(formData);
+
+                // Convert tags to a list
+                if (jsonData.tags) {
+                    jsonData.tags = jsonData.tags.split(',').map(tag => tag.trim());
+                }
+
+                fetch('/addProjectTags', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(jsonData)
+                }).then(response => response.json())
+                .then(data => console.log(data));
+            });
+        </script>
+    </body>
+    </html>
+    ''')
+
+@app.route('/removeProjectTags', methods=['GET'])
+def removeProjectTagsForm():
+    return render_template_string('''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Remove Project Tags</title>
+    </head>
+    <body>
+        <h1>Remove Project Tags</h1>
+        <form action="/removeProjectTags" method="post">
+            <label for="project_name">Project Name:</label><br>
+            <input type="text" id="project_name" name="project_name"><br>
+            <label for="tags">Tags:</label><br>
+            <input type="text" id="tags" name="tags"><br>
+            <button type="submit">Submit</button>
+        </form>
+        <script>
+            document.querySelector('form').addEventListener('submit', function (e) {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const jsonData = Object.fromEntries(formData);
+
+                // Convert tags to a list
+                if (jsonData.tags) {
+                    jsonData.tags = jsonData.tags.split(',').map(tag => tag.trim());
+                }
+
+                fetch('/removeProjectTags', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(jsonData)
+                }).then(response => response.json())
+                .then(data => console.log(data));
+            });
+        </script>
+    </body>
+    </html>
+    ''')
+
+@app.route('/updateProjectStatus', methods=['GET'])
+def updateProjectStatusForm():
+    return render_template_string('''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Update Project Status</title>
+    </head>
+    <body>
+        <h1>Update Project Status</h1>
+        <form action="/updateProjectStatus" method="post">
+            <label for="project_name">Project Name:</label><br>
+            <input type="text" id="project_name" name="project_name"><br>
+            <label for="status">Status:</label><br>
+            <input type="text" id="status" name="status"><br>
+            <button type="submit">Submit</button>
+        </form>
+        <script>
+            document.querySelector('form').addEventListener('submit', function (e) {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const jsonData = Object.fromEntries(formData);
+                fetch('/updateProjectStatus', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(jsonData)
+                }).then(response => response.json())
+                .then(data => console.log(data));
+            });
+        </script>
+    </body>
+    </html>
+    ''')
+
+@app.route('/getProjects', methods=['GET'])
+def getProjectsForm():
+    return render_template_string('''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Get Projects</title>
+    </head>
+    <body>
+        <h1>Get Projects</h1>
+        <button id="getProjects">Get Projects</button>
+        <script>
+            document.getElementById('getProjects').addEventListener('click', function () {
+                fetch('/getProjects', {
+                    method: 'GET'
+                }).then(response => response.json())
+                .then(data => console.log(data));
+            });
+        </script>
+    </body>
+    </html>
+    ''')
+
+@app.route('/getProject', methods=['GET'])
+def getProjectForm():
+    return render_template_string('''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Get Project</title>
+    </head>
+    <body>
+        <h1>Get Project</h1>
+        <form action="/getProject" method="post">
+            <label for="project_name">Project Name:</label><br>
+            <input type="text" id="project_name" name="project_name"><br>
+            <button type="submit">Submit</button>
+        </form>
+        <script>
+            document.querySelector('form').addEventListener('submit', function (e) {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const jsonData = Object.fromEntries(formData);
+                fetch('/getProject', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(jsonData)
+                }).then(response => response.json())
+                .then(data => console.log(data));
+            });
+        </script>
+    </body>
+    </html>
+    ''')
+
+@app.route('/deleteProject', methods=['GET'])
+def deleteProjectForm():
+    return render_template_string('''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Delete Project</title>
+    </head>
+    <body>
+        <h1>Delete Project</h1>
+        <form action="/deleteProject" method="post">
+            <label for="project_name">Project Name:</label><br>
+            <input type="text" id="project_name" name="project_name"><br>
+            <button type="submit">Submit</button>
+        </form>
+        <script>
+            document.querySelector('form').addEventListener('submit', function (e) {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const jsonData = Object.fromEntries(formData);
+                fetch('/deleteProject', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(jsonData)
+                }).then(response => response.json())
+                .then(data => console.log(data));
+            });
+        </script>
+    </body>
+    </html>
+    ''')
+
+@app.route('/createProject', methods=['GET'])
+def createProjectForm():
+    return render_template_string('''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Create Project</title>
+    </head>
+    <body>
+        <h1>Create Project</h1>
+        <form action="/createProject" method="post">
+            <label for="project_name">Project Name:</label><br>
+            <input type="text" id="project_name" name="project_name"><br>
+            <button type="submit">Submit</button>
+        </form>
+        <script>
+            document.querySelector('form').addEventListener('submit', function (e) {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const jsonData = Object.fromEntries(formData);
+                fetch('/createProject', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(jsonData)
+                }).then(response => response.json())
+                .then(data => console.log(data));
+            });
+        </script>
+    </body>
+    </html>
+    ''')
+
+
+# ======== END OF TESTING ROUTES ========
+
+
+# ========== 5. Run the Flask App ==========
 if __name__ == '__main__':
     for _ in range(5):
         try:
