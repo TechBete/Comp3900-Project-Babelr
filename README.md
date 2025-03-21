@@ -39,20 +39,55 @@ once the server is up and running you should be able to connect to the frontend 
 
 #### BACKEND - Implemented Routes
 
-Backend routes can be connected to directly by navigating to:
+Backend routes can be directly navigating to by using the following synta:
 
-```localhost:8016/login                 (User login)```
-```localhost:8016/registerListener      (Registers a listener)```
-```localhost:8016/registerResearcher    (Registers a researcher)```
-```localhost:8016/getListeners          (Display Listeners in the database)```
-```localhost:8016/getResearchers        (Display Researchers in the database)```
-```localhost:8016/userResetPassword     (Reset User Password)```
-```localhost:8016/blindEmailParse       (Email parse for password reset.)```
-```localhost:8016/blindPasswordReset    (Reset password if User password was Forgotten)```
-```localhost:8016/createProject         (creates a project for a Researcher)```
+localhost:8016/(route)
+
+* User login: ```/login``` 
+
+* Register Listener User: ```/registerListener```
+   
+* Register Researcher User : ```/registerResearcher```   
+
+* Reset User Password: ```/userResetPassword```
+
+* Forgot Password (email): ```/blindEmailParse```  
+
+* Forgot Password (reset Password): ```/blindPasswordReset```   
+
+* Get all Listeners: ```/getListeners```
+
+* Get all Researchers: ```/getResearchers```  
+
+* Create a Project: ```/createProject```
+
+* Update a Project Name: ```/updateProjectName```
+
+* Add Tags to a Project: ```/addProjectTags```
+
+* Remove Tags from a Project: ```/removeProjectTags```
+
+* Update Project Status: ```/updateProjectStatus```
+
+* Get all Projects for a Researcher: ```/getProjects```
+
+* Get a specific Project for a Researcher: ```/getProject```
+
+* Delete a Project: ```/deleteProject```
+
+* Set Metrics for a Project: ```/setProjectMetricField```
+
+* Get Metrics for a Project: ```/getProjectMetrics```
+
+* Update Metrics for a Project: ```/updateProjectMetrics```
+
+* Delete Metrics for a Project: ```/deleteProjectMetrics```
+
+* Search Project by Tag: ```/searchProjectByTag```
 
 ####  Connected Routes:
 
 User Login
 Register Researcher
 Register Listener
+Create Project
