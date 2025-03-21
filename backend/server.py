@@ -829,7 +829,7 @@ def getProjects():
     
     return jsonify({"projects_list": researcher.project_list})
 
-@app.route('/getProject' , methods=['GET'])
+@app.route('/getProject' , methods=['POST'])
 @jwt_required()
 def getProject():
     data = request.json
@@ -841,15 +841,15 @@ def getProject():
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
     
-    Researcher = Researcher.query.filter_by(id=researcher_id).first()
-    if not Researcher:
+    researcher_exists = Researcher.query.filter_by(id=researcher_id).first()
+    if not researcher_exists:
         return jsonify({"error": "Researcher not found"}), 404
     
     projectName = data['project_name']
     try:
         with db.session.begin_nested():
             # Check if project exists 
-            project = next((project for project in Researcher.project_list if project.get("name") == projectName), None)
+            project = next((project for project in researcher_exists.project_list if project.get("name") == projectName), None)
             if project is None:
                 return jsonify({"error": "Project not found"}), 404 # disallow returning project if project does not exist
     except Exception as e:
@@ -859,6 +859,8 @@ def getProject():
     return jsonify({"project": project})
 
 # this route is to delete a project
+# frontend should ensure that the user is aboslutely sure they want to delete the project as it will 
+# delete all the files associated with the project
 @app.route('/deleteProject', methods=['POST'])
 @jwt_required()
 def deleteProject():
@@ -883,15 +885,15 @@ def deleteProject():
             if project is None:
                 return jsonify({"error": "Project not found"}), 404
             # Check if researcher owns project
-            if project.get("creator") != researcher.id: 
-                return jsonify({"error": "You do not have permission to delete this project"}), 403
-            if project.get("id") == researcher.id:
+            if project.get("creator") != researcher.first_name: 
+                    if project.get("creator id") != str(researcher.id):
+                        return jsonify({"error": "You do not have permission to delete this project"}), 403
                 # delete project directory
-                if os.path.exists(project.get("path")):
-                    shutil.rmtree(project.get("path"))
+            if os.path.exists(project.get("path")):
+                shutil.rmtree(project.get("path"))
                 researcher.project_list.remove(project)
-                flag_modified(researcher, "project_list")
-                db.session.commit()
+            flag_modified(researcher, "project_list")
+            db.session.commit()
     except Exception as e:
         db.session.rollback()
         logging.debug(e)
@@ -1248,7 +1250,7 @@ def getProjectForm():
                 const formData = new FormData(e.target);
                 const jsonData = Object.fromEntries(formData);
                 fetch('/getProject', {
-                    method: 'GET',
+                    method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(jsonData)
                 }).then(response => response.json())
@@ -1294,7 +1296,7 @@ def deleteProjectForm():
     ''')
 
 @app.route('/createProject', methods=['GET'])
-def createProjectForm():
+def createProjectv1Form():
     return render_template_string('''
     <!DOCTYPE html>
     <html lang="en">
