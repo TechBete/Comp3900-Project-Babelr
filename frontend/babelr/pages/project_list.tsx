@@ -38,29 +38,30 @@ function ProjectList({ projects }: { projects: { name: string; path: string; sta
     );
 }
 
+
+
 export default function MainScreen() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [projectName, setProjectName] = useState("Project_4"); // change this to empty string later for production
     const [createError, setCreateError] = useState("");
     const [projectsData, setProjectData] = useState([]);
-
     useEffect(() => {
-        intialBoot()
+        getProjects();
+        // setProjectData([]);
     }, [])
 
-    async function intialBoot() {
+    async function getProjects() {
         try {
-            const response = await fetch('http://localhost:8016/createProject' , {
-                method:"POST",
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({"project_name": ''}),
+            const response = await fetch('http://localhost:8016/getProjects' , {
+                method:"GET",
                 credentials: 'include'
             })
             if (response.ok) {
-                return
+                const project_list = await response.json();
+                setProjectData(project_list.projects_list);
+                console.log(project_list)
             } else {
                 const error = await response.json()
-                setProjectData(error.projects_list);
                 console.log(error)
             }
         } catch {
@@ -82,11 +83,9 @@ export default function MainScreen() {
             if (response.ok) {
 				const data = await response.json();
                 console.log(data.message);
-                console.log(data.projects_list);
-                setProjectData(data.projects_list);
+                getProjects();
 			} else {
                 const error = await response.json()
-                console.log(JSON.stringify({"project_name": projectName, "researcher_id": "1"}));
 				console.log("NOT OK");
                 console.log(error.error);
 			}
