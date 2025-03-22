@@ -7,10 +7,12 @@
 }
 
 .search-bar input {
-    border: none;
-    background: none;
-    outline: none;
+    display: flex;
+    align-items: center;
+    background: #eee;
     padding: 5px;
+    border-radius: 5px;
+    margin-right: 20px;
 }
 
 .container {
@@ -22,6 +24,12 @@
     flex: 1;
     padding: 20px;
 }
+
+.main-top {
+    display: flex;
+    justify-content: space-between;
+}
+
 
 .projects-h2 {
     margin-bottom: 15px;

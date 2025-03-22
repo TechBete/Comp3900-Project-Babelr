@@ -100,7 +100,14 @@ export default function MainScreen() {
             <div className={styles["container"]}>
                 <Sidebar/>
                 <div className={styles["main-content"]}>
-                    <h2 className={styles["projects-h2"]}>Projects</h2>
+                    <div className={styles["main-top"]}>
+                        <h2 className={styles["projects-h2"]}>
+                            Projects     
+                        </h2>
+                        <div className={styles["search-bar"]}>
+                            <input type="text" placeholder="Search" />
+                        </div>
+                    </div>
                     <table className={styles["table"]} >
                         <thead className={styles["thead"]}>
                             <tr className={styles["tr"]}>
