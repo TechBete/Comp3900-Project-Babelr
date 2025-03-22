@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import styles from "../stylesheets/login.module.css";
+import styles from "stylesheets/login.module.css";
 import { useRouter } from "next/router";
 
 
@@ -17,7 +17,7 @@ export default function RegisterListener() {
 
 	function handleConfirmBlur() {
 		if (confirmPassword && password != "") {
-		setEqualPassError(password !== confirmPassword);
+			setEqualPassError(password !== confirmPassword);
 		}
 	}
   
@@ -32,18 +32,18 @@ export default function RegisterListener() {
 		console.log(formJson);
 
 		if (emailError || equalPassError) {
-			return;
+		return;
 		}
 
-		try {
-			const response = await fetch('http://localhost:8016/registerResearcher', {
-			method:"POST",
-			headers: {'Content-Type': 'application/json'},
-			body: JSON.stringify({        
-				email,
-				pw,
-				first_name: "temp_fn",
-				last_name: "temp_ln"}), //following /registerResearcher format 
+		try{
+			const response = await fetch('http://localhost:8016/registerListener', {
+				method:"POST",
+				headers: {'Content-Type': 'application/json'},
+				body: JSON.stringify({        
+					email,
+					pw,
+					first_name: "temp_fn",
+					last_name: "temp_ln"}), //following /registerListener format 
 			})
 
 			if (response.ok) {
@@ -58,10 +58,8 @@ export default function RegisterListener() {
 			const formJson = Object.fromEntries(formData.entries());
 			console.log(formJson);
 		} catch {
-			setRegisterError("Network Error: Fetch Request Failed");
-		}
-
-
+			setRegisterError("Network Error: Fetch Request Failed")
+    	}
 	}
 
 
@@ -70,38 +68,37 @@ export default function RegisterListener() {
 			<div className={styles["login-container"]}>
 				<Image className={styles["babelr-icon"]} src="/babelr_icon.png" alt="icon" width={100} height={100} />
 				
-				<h2 className={styles["login-header"]}>Researcher Register</h2>
+				<h2 className={styles["login-header"]}>User Register</h2>
 				<form className={styles["login-form"]} method="post" onSubmit={handleSubmit}>
 					<div className={styles["login-form-details"]}>
-						<label htmlFor="email" className={emailError ? styles["invalid-label"] : ""}>
-						{ emailError && <span>*</span> }Institution Email
+						<label htmlFor="email" className={emailError ? "error-label" : ""}>
+							{ emailError && <span>*</span> }Email
 						</label>
 						<input type="email" id="email" name="email" required onInvalid={() => setEmailError(true) } onInput={() => setEmailError(false)} />
-						{emailError && <div className={styles["invalid-label"]}>Invalid email form</div>}
+							{emailError && <div className={"error-label"}>Invalid email form</div>}
 					</div>
 
 					<div className={styles["login-form-details"]}>
-						<label htmlFor="pw" className={equalPassError ? styles["invalid-label"] : ""}>
-						{ equalPassError && <span style={{ color: "red" }}>*</span>}Password
+						<label htmlFor="pw" className={equalPassError ? "error-label" : ""}>
+							{ equalPassError && <span style={{ color: "red" }}>*</span>}Password
 						</label>
 						<input type="password" id="pw" name="pw" required  value={password} onChange={(e) => setPassword(e.target.value)} onBlur={handleConfirmBlur}/>
 					</div>
 
 					<div className={styles["login-form-details"]}>
-					<label htmlFor="confirmPw" className={equalPassError ? styles["invalid-label"] : ""}>
-						{ equalPassError && <span>*</span> }Confirm Password
-					</label>
+						<label htmlFor="confirmPw" className={equalPassError ? "error-label" : ""}>
+							{ equalPassError && <span>*</span> }Confirm Password
+						</label>
 					
 					<input type="password" id="confirmPw" name="confirmPw" required  value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} onBlur={handleConfirmBlur}/>
-
-						<div className={styles["invalid-label"]}>
-						{ equalPassError && <div>Passwords don&apos;t match</div>}
+						<div className={"error-label"}>
+							{ equalPassError && <div>Passwords don&apos;t match</div>}
 						</div>
 					</div>
 
-					<div className={styles["invalid-label"]}>
+					<div className={"error-label"}>
 						{ registerError !== "" && <div>{registerError}</div>}
-						</div>
+					</div>
 					<button type="submit" className={styles["login-button"]}>
 						Register
 					</button>
@@ -112,5 +109,5 @@ export default function RegisterListener() {
 				</p>
 			</div>
 		</div>
-	);
+  	);
 }

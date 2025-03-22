@@ -1,8 +1,8 @@
 import Link from "next/link";
-import styles from "../stylesheets/projects_list.module.css"
-import Navbar from "../components/nav_bar";
-import Sidebar from "../components/side_bar";
-import Modal from "../components/popout_modal";
+import styles from "stylesheets/projects_list.module.css"
+import Navbar from "components/nav_bar";
+import Sidebar from "components/side_bar";
+import Modal from "components/popout_modal";
 import { FormEvent, useEffect, useState } from "react";
 
 

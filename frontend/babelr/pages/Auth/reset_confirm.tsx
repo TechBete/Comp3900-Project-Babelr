@@ -1,5 +1,5 @@
 import router from "next/router";
-import styles from "../stylesheets/reset_confirm.module.css";
+import styles from "stylesheets/reset_confirm.module.css";
 import { FormEvent } from "react";
 
 export default function ResetConfirmEmail() {

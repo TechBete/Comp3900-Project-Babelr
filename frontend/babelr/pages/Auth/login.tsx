@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import styles from "../stylesheets/login.module.css";
+import styles from "stylesheets/login.module.css";
 import { useRouter } from 'next/router'
 
 export default function Login() {
@@ -81,7 +81,7 @@ export default function Login() {
                             </select>
                         </div>
                 </div>
-                <div className={styles["invalid-label"]}>
+                <div className={"error-label"}>
 					{ loginError !== "" && <div>{loginError}</div>}
 				</div>
             </div>
