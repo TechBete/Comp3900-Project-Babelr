@@ -19,7 +19,7 @@ from email.mime.text import MIMEText
 import smtplib
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True, origins=["http://localhost:3000", "http://localhost:8016"])  # Set CORS policy to allow requests from the frontend to the backend
+CORS(app, supports_credentials=True, origins=["http://localhost:3000", "http://localhost:8016", "*"])  # Set CORS policy to allow requests from the frontend to the backend
 load_dotenv()
 # Configure logging - remove for final production
 logging.basicConfig(level=logging.DEBUG)
@@ -36,7 +36,6 @@ app.config["JWT_COOKIE_SAMESITE"] = None;  # Change to "None" in production
 app.config["JWT_COOKIE_DOMAIN"] = None  # Change to your domain in production
 app.config["JWT_COOKIE_PATH"] = "/"
 app.config["JWT_COOKIE_HTTPONLY"] = False # this will allow the cookie to be accessed by javascript, set to True in production to prevent XSS attacks
-jwt = JWTManager(app)
 
 # Mail server configuration (use your actual email service settings)
 app.config['MAIL_USE_TLS'] = True
@@ -80,21 +79,17 @@ def send_verification_email(receiver_email, verification_url):
     subject = "Babelr Account Verification Email"
     body = f'Click the link to verify your email to gain access to Babelr: {verification_url}'
 
-    # Create email message
     msg = MIMEText(body, "plain")
     msg["From"] = os.getenv('MAIL_USERNAME')
     msg["To"] = receiver_email
     msg["Subject"] = subject
 
     try:
-        # Connect to SMTP server and send email
-        server = smtplib.SMTP(os.getenv('MAIL_SERVER'), 587)
+        server = smtplib.SMTP('smtp.mail.yahoo.com', 587)
         server.starttls()
         server.login(os.getenv('MAIL_USERNAME'), os.getenv('MAIL_PASSWORD'))
-
         server.sendmail(os.getenv('MAIL_USERNAME'), receiver_email, msg.as_string())
         server.quit()
-        return "Email sent successfully!"
     except Exception as e:
         return f"Error: {e}"
 
@@ -177,7 +172,6 @@ class Researcher(db.Model):
     uploaded_video = db.Column(db.JSON, default=[]) # 128 char length file ID array
     gender = db.Column(gender_enum)
     is_verified = db.Column(db.Boolean, nullable=False)
-    is_active = db.Column(db.Boolean, nullable=False)
     jti = db.Column(db.String(36))  # JWT ID to store in the database to prevent reuse and duplicate active tokens
     blindlogin = db.Column(UUID(as_uuid=True)) # generate a random uuid for blind login
 
@@ -192,7 +186,6 @@ class Listener(db.Model):
     background_info = db.Column(db.String(1024), default="") # 1024 char length string
     reward_points = db.Column(db.Integer)
     is_verified = db.Column(db.Boolean, nullable=False)
-    is_active = db.Column(db.Boolean, nullable = False)
     languages_list = db.Column(db.JSON, default=[]) # 128 char length array
     languages_proficiency = db.Column(db.JSON, default=[]) # proficiency level array
     jti = db.Column(db.String(36))  # JWT ID to store in the database to prevent reuse and duplicate active tokens
@@ -265,6 +258,9 @@ def login():
     
     if not existing_listener and not existing_researcher:
         return jsonify({"error": "Invalid email-password combination"}), 401
+
+    if (existing_researcher and not existing_researcher.is_verified) or (existing_listener and not existing_listener.is_verified):
+        return jsonify({"error": "User has not verified account"}), 401
     
     # updated for researcher login; check if user is a listener or researcher, 
     # updated token id as uuid for validation in backend routes.
@@ -272,9 +268,6 @@ def login():
     if existing_researcher:
         hashed_password = existing_researcher.pw_hash
         if validate_Password(data, hashed_password):
-            if not existing_researcher.is_verified:
-                return jsonify({"error": "user has not verified account"}), 401
-        
             token = create_access_token(identity=existing_researcher.id, additional_claims={"email": str(existing_researcher.email)})
             
             # get JTI from token and update the database
@@ -296,9 +289,6 @@ def login():
     else:
         hashed_password = existing_listener.pw_hash
         if validate_Password(data, hashed_password):
-            if not existing_listener.is_verified:
-                return jsonify({"error": "user has not verified account"}), 401
-
             token = create_access_token(identity=existing_listener.id, additional_claims={"email": str(existing_listener.email)})
             
             # get JTI from token and update the database
@@ -373,7 +363,6 @@ def createListener():
         background_info=data.get('background_info', ''),
         reward_points=0,
         is_verified=False,
-        is_active=False,
     #    ==== languages to be set in different task, remove and add to task ======
     #    languages_list=data.get('languages_list', []),
     #    languages_proficiency=data.get('languages_proficiency', [])
@@ -382,7 +371,7 @@ def createListener():
     try:
         db.session.add(user)
         db.session.commit()
-        # Generate token and send verification email
+
         token = generate_verification_token(data['email'])
         verification_url = url_for('verify_email', token=token, _external=True)
         send_verification_email(data['email'], verification_url)
@@ -431,7 +420,6 @@ def createResearcher():
         permission=PermissionLevel.researcher,
         organisation=data.get('organisation', ''),
         is_verified=False,
-        is_active=False,
     )
     try:
         db.session.add(user)
@@ -590,7 +578,6 @@ def getListeners():
     users = Listener.query.all()
     return jsonify([{
         "is_verified": user.is_verified,
-        "is_active": user.is_active,
         "Uuid": str(user.id),
         "Demographic ID": user.demographic.id if user.demographic else None,
         "First Name": user.first_name,
@@ -631,7 +618,6 @@ def getResearchers():
     users = Researcher.query.all()
     return jsonify([{
         "is_verified": user.is_verified,
-        "is_active": user.is_active,
         "Uuid": str(user.id),
         "First Name": user.first_name,
         "Last Name": user.last_name,
