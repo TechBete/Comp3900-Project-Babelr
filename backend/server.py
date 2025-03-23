@@ -37,6 +37,8 @@ app.config["JWT_COOKIE_HTTPONLY"] = False # this will allow the cookie to be acc
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USE_SSL'] = False
 
+app.config['AUDIO_FILE_PATH'] = "../audioData"
+
 jwt = JWTManager(app)
 db = SQLAlchemy(app)
 
@@ -185,7 +187,7 @@ class Listener(db.Model):
 
     # one-to-one relationship of listeners-demographics
     demographic = db.relationship("Demographic", back_populates="listener", uselist=False)
-    
+
 class Demographic(db.Model):
     __tablename__ = "demographics"
     id = db.Column(db.Integer, primary_key=True, nullable=False) # ID of demographic record
@@ -597,7 +599,7 @@ def getListeners():
 #        "Last Name": user.last_name,
 #        "Email": user.email,
 #        "Password": user.pw_hash,
-#        "Role": user.permission.value,  
+#        "Role": user.permission.value,
 #        "Background Info": user.background_info,
 #        "Reward Points": user.reward_points,
 #        "languages_list": user.languages_list,
@@ -887,7 +889,6 @@ def searchProjectByTag():
     
     return jsonify({"projects_list": projects})
 
-
 # this route is to update the project status
 @app.route('/updateProjectStatus', methods=['POST'])
 @jwt_required()
@@ -1168,7 +1169,7 @@ def updateProjectMetrics():
 
     return jsonify({"message": "Project metrics updated successfully", "metrics": project['metrics']})
 
-# this route is to delete a specified metric in a project. 
+# this route is to delete a specified metric in a project.
 # this will remove the key value pair from the metrics dictionary
 # this can only be called when a project status is set to 'Draft'
 @app.route('/deleteProjectMetrics', methods=['POST'])
@@ -1221,7 +1222,20 @@ def deleteProjectMetrics():
     
     return jsonify({"message": "Project metric deleted successfully", "metrics": project['metrics']})
 
+@app.route('/uploadAudioFile', methods=['POST'])
+@jwt_required()
+def uploadAudioFile():
+    if "file" not in request.files:
+        return jsonify({"error": "File doesn't exists."}), 400
 
+    file = request.files["file"]
+    if file.filename == "":
+        return jsonify({"error": "There is no selected file."}), 400
+
+    file_path = os.path.join(app.config[AUDIO_FILE_PATH], file.filename)
+    file.save(file_path)
+
+    return jsonify({"message": f"{file.filename} is successfully uploaded!"}), 200
 
 # ======== TESTING ROUTES ========
 # These routes are for testing purposes only and should be removed once the frontend is in place
@@ -1263,7 +1277,7 @@ def index():
     </body>
     </html>
     ''')
-    
+
 @app.route('/userResetPassword', methods=['GET'])
 def userResetPasswordForm():
     return render_template_string('''
@@ -1299,7 +1313,7 @@ def userResetPasswordForm():
     </body>
     </html>
     ''')
-    
+
 @app.route('/blindEmailParse', methods=['GET'])
 def blindEmailParseForm():
     return render_template_string('''
@@ -1333,7 +1347,7 @@ def blindEmailParseForm():
     </body>
     </html>
     ''')
-    
+
 @app.route('/blindPasswordReset', methods=['GET'])
 def blindPasswordResetForm():
     return render_template_string('''
@@ -1371,7 +1385,7 @@ def blindPasswordResetForm():
     </body>
     </html>
     ''')
-    
+
 @app.route('/updateProjectName', methods=['GET'])
 def updateProjectForm():
     return render_template_string('''
