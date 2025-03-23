@@ -407,7 +407,7 @@ def userResetPassword():
         try:
             existing_user.pw_hash = hashed_password.value
             db.session.commit()
-            return jsonify({"message": "Password reset successful"})
+            return jsonify({"message": "Password reset successful"}), 200
         except Exception as e:
             db.session.rollback()
             logging.debug(e)
