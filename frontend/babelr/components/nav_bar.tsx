@@ -7,12 +7,10 @@ export default function Navbar() {
         <div className={styles["nav-bar"]}>
             <HomeIcon/>
             <div className={styles["top-nav-right"]}>
-                <div className={styles["search-bar"]}>
-                    <input type="text" placeholder="Search" />
-                </div>
+
                 <div className={styles["profile-options"]}>
                     <span>My Profile</span>
-                    <span><Link href='/login'>Logout</Link></span>
+                    <span><Link href='/'>Logout</Link></span>
                 </div>
             </div>
         </div>

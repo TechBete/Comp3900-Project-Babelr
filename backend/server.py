@@ -661,7 +661,7 @@ def createProject():
         
     # ensure project name is not empty
     if projectName == '':
-        return jsonify({"error": "Project name cannot be empty", "projects_list": researcher.project_list}), 400
+        return jsonify({"error": "Project name cannot be empty"}), 400
     
     # use a transaction to ensure that the project is only created if the project list is updated successfully
     try:
@@ -702,7 +702,7 @@ def createProject():
         logging.debug(e)
         return jsonify({"error": "Project was unable to be created"}), 500
 
-    return jsonify({"message": "Project created successfully", "projects_list": researcher.project_list}) ## probably should not send back project list but for simplicities sake
+    return jsonify({"message": "Project created successfully"}) ## probably should not send back project list but for simplicities sake
 
 # this route is to update the project name
 @app.route('/updateProjectName', methods=['POST'])
