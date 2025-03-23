@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import styles from "../stylesheets/login.module.css";
+import styles from "stylesheets/login.module.css";
 import { useRouter } from "next/router";
 
 
@@ -47,7 +47,7 @@ export default function RegisterListener() {
 			})
 
 			if (response.ok) {
-				router.push("/login"); // login for now change to verification later
+				router.push("/Auth/login"); // login for now change to verification later
 				setRegisterError("");
 			} else {
 				const error = await response.json();
@@ -71,32 +71,32 @@ export default function RegisterListener() {
 				<h2 className={styles["login-header"]}>User Register</h2>
 				<form className={styles["login-form"]} method="post" onSubmit={handleSubmit}>
 					<div className={styles["login-form-details"]}>
-						<label htmlFor="email" className={emailError ? styles["invalid-label"] : ""}>
+						<label htmlFor="email" className={emailError ? "error-label" : ""}>
 							{ emailError && <span>*</span> }Email
 						</label>
 						<input type="email" id="email" name="email" required onInvalid={() => setEmailError(true) } onInput={() => setEmailError(false)} />
-							{emailError && <div className={styles["invalid-label"]}>Invalid email form</div>}
+							{emailError && <div className={"error-label"}>Invalid email form</div>}
 					</div>
 
 					<div className={styles["login-form-details"]}>
-						<label htmlFor="pw" className={equalPassError ? styles["invalid-label"] : ""}>
+						<label htmlFor="pw" className={equalPassError ? "error-label" : ""}>
 							{ equalPassError && <span style={{ color: "red" }}>*</span>}Password
 						</label>
 						<input type="password" id="pw" name="pw" required  value={password} onChange={(e) => setPassword(e.target.value)} onBlur={handleConfirmBlur}/>
 					</div>
 
 					<div className={styles["login-form-details"]}>
-						<label htmlFor="confirmPw" className={equalPassError ? styles["invalid-label"] : ""}>
+						<label htmlFor="confirmPw" className={equalPassError ? "error-label" : ""}>
 							{ equalPassError && <span>*</span> }Confirm Password
 						</label>
 					
 					<input type="password" id="confirmPw" name="confirmPw" required  value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} onBlur={handleConfirmBlur}/>
-						<div className={styles["invalid-label"]}>
+						<div className={"error-label"}>
 							{ equalPassError && <div>Passwords don&apos;t match</div>}
 						</div>
 					</div>
 
-					<div className={styles["invalid-label"]}>
+					<div className={"error-label"}>
 						{ registerError !== "" && <div>{registerError}</div>}
 					</div>
 					<button type="submit" className={styles["login-button"]}>
@@ -105,7 +105,7 @@ export default function RegisterListener() {
 				</form>
 
 				<p className={styles["signup-link"]}>
-					Already have an account? <Link href="/login">Sign in</Link>
+					Already have an account? <Link href="/Auth/login">Sign in</Link>
 				</p>
 			</div>
 		</div>

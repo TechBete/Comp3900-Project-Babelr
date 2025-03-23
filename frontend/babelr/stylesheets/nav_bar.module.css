@@ -12,14 +12,14 @@
     align-items: center;
 }
 
-.search-bar {
+/* .search-bar {
     display: flex;
     align-items: center;
     background: #eee;
     padding: 5px;
     border-radius: 5px;
     margin-right: 20px;
-}
+} */
 
 
 .profile-options span {

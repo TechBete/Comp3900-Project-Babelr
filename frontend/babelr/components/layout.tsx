@@ -1,6 +1,6 @@
 import Head from "next/head";
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <Head>
