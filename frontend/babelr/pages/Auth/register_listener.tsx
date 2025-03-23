@@ -47,7 +47,7 @@ export default function RegisterListener() {
 			})
 
 			if (response.ok) {
-				router.push("/login"); // login for now change to verification later
+				router.push("/Auth/login"); // login for now change to verification later
 				setRegisterError("");
 			} else {
 				const error = await response.json();
@@ -105,7 +105,7 @@ export default function RegisterListener() {
 				</form>
 
 				<p className={styles["signup-link"]}>
-					Already have an account? <Link href="/login">Sign in</Link>
+					Already have an account? <Link href="/Auth/login">Sign in</Link>
 				</p>
 			</div>
 		</div>

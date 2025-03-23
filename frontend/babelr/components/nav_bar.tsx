@@ -10,7 +10,7 @@ export default function Navbar() {
 
                 <div className={styles["profile-options"]}>
                     <span>My Profile</span>
-                    <span><Link href='/login'>Logout</Link></span>
+                    <span><Link href='/'>Logout</Link></span>
                 </div>
             </div>
         </div>

@@ -20,7 +20,7 @@ export default function ResetConfirmEmail() {
     
                 if (response.ok) {
                     console.log(JSON.stringify({"pw": pw, "pw_confirmation": confirmPw, "id": id}));
-                    router.push("/login"); // login for now change to verification later
+                    router.push("/Auth/login"); // login for now change to verification later
                 } else {
                     const error = await response.json();
                     console.log(error.error);

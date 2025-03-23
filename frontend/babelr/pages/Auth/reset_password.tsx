@@ -25,7 +25,7 @@ export default function ResetConfirmEmail() {
                 } else if (data.researcher_id) {
                     localStorage.setItem("id", data.researcher_id);
                 }
-				router.push("/reset_confirm"); // login for now change to verification later
+				router.push("/Auth/reset_confirm"); // login for now change to verification later
 			} else {
 				const error = await response.json();
 				console.log(error.error);
