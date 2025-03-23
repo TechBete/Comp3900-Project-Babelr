@@ -1,4 +1,4 @@
-import os, uuid, enum, time, shutil
+import os, uuid, enum, smtplib, time, shutil
 import logging  # remove for final production
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, JWTManager, decode_token, set_access_cookies, unset_jwt_cookies, get_jwt
 from flask import Flask, request, jsonify, render_template_string, render_template, redirect, url_for # render_template_string is used to render HTML, can be removed once frontend is inplace
@@ -12,9 +12,11 @@ from sqlalchemy.dialects.postgresql import ARRAY, UUID, ENUM
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy import DDL, event
 from dotenv import load_dotenv
+from itsdangerous import URLSafeTimedSerializer
+from email.mime.text import MIMEText
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True, origins=["http://localhost:3000", "http://localhost:8016"])  # Set CORS policy to allow requests from the frontend to the backend
+CORS(app, supports_credentials=True, origins=["http://localhost:3000", "http://localhost:8016", "*"])  # Set CORS policy to allow requests from the frontend to the backend
 load_dotenv()
 # Configure logging - remove for final production
 logging.basicConfig(level=logging.DEBUG)
@@ -31,10 +33,12 @@ app.config["JWT_COOKIE_SAMESITE"] = None;  # Change to "None" in production
 app.config["JWT_COOKIE_DOMAIN"] = None  # Change to your domain in production
 app.config["JWT_COOKIE_PATH"] = "/"
 app.config["JWT_COOKIE_HTTPONLY"] = False # this will allow the cookie to be accessed by javascript, set to True in production to prevent XSS attacks
-jwt = JWTManager(app)
 
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USE_SSL'] = False
+
+jwt = JWTManager(app)
 db = SQLAlchemy(app)
-#cors.init_app(app) suppressing cors due to error thown by not in use
 
 # ========== 0. Helper Functions ==========
 def validate_required_fields(data, required_fields):
@@ -49,6 +53,37 @@ def hash_password(data):
 
 def validate_Password(data, hashed_password):
     return PasswordHash.verify(data['pw'], hashed_password)
+
+def generate_verification_token(email):
+    # serializer = URLSafeTimedSerializer(app.secret_key)
+    serializer = URLSafeTimedSerializer("app . secrete")
+    return serializer.dumps(email, salt='email-confirm-salt')
+
+def verify_token(token, expiration=3600):  # Token expires in 1 hour
+    serializer = URLSafeTimedSerializer('app . secrete') # app.secret_key)
+    try:
+        email = serializer.loads(token, salt='email-confirm-salt', max_age=expiration)
+        return email
+    except:
+        return None
+
+def send_verification_email(receiver_email, verification_url):
+    subject = "Babelr Account Verification Email"
+    body = f'Click the link to verify your email to gain access to Babelr: {verification_url}'
+
+    msg = MIMEText(body, "plain")
+    msg["From"] = os.getenv('MAIL_USERNAME')
+    msg["To"] = receiver_email
+    msg["Subject"] = subject
+
+    try:
+        server = smtplib.SMTP('smtp.mail.yahoo.com', 587)
+        server.starttls()
+        server.login(os.getenv('MAIL_USERNAME'), os.getenv('MAIL_PASSWORD'))
+        server.sendmail(os.getenv('MAIL_USERNAME'), receiver_email, msg.as_string())
+        server.quit()
+    except Exception as e:
+        return f"Error: {e}"
 
 # Create email validation function to ensure that email being entered is of proper email format
 # check if email proivider is real?
@@ -128,6 +163,7 @@ class Researcher(db.Model):
     project_list = db.Column(db.JSON, default=[]) # 128 char length array
     uploaded_video = db.Column(db.JSON, default=[]) # 128 char length file ID array
     gender = db.Column(gender_enum)
+    is_verified = db.Column(db.Boolean, nullable=False)
     jti = db.Column(db.String(36))  # JWT ID to store in the database to prevent reuse and duplicate active tokens
     blindlogin = db.Column(UUID(as_uuid=True)) # generate a random uuid for blind login
 
@@ -141,6 +177,7 @@ class Listener(db.Model):
     permission = db.Column(permission_level_enum, nullable=False)
     background_info = db.Column(db.String(1024), default="") # 1024 char length string
     reward_points = db.Column(db.Integer)
+    is_verified = db.Column(db.Boolean, nullable=False)
     languages_list = db.Column(db.JSON, default=[]) # 128 char length array
     languages_proficiency = db.Column(db.JSON, default=[]) # proficiency level array
     jti = db.Column(db.String(36))  # JWT ID to store in the database to prevent reuse and duplicate active tokens
@@ -162,6 +199,28 @@ class Demographic(db.Model):
 
 
 # ========== 4. Server Endpoint Routes ==========
+@app.route('/verify/<token>')
+def verify_email(token):
+    email = verify_token(token)
+
+    if not email:
+        # TODO: your token is invalid or expired message
+        return redirect(url_for('login')), 404
+
+    # Find user and mark as verified
+    listener = Listener.query.filter_by(email=email).first()
+    user = listener if listener else Researcher.query.filter_by(email=email).first()
+
+    if user and not user.is_verified:
+        user.is_verified = True
+        db.session.commit()
+        # TODO: your email has been verified message
+    else:
+        pass
+        # TODO: your email has already been verified error message
+
+    return redirect(url_for('login'))
+
 @app.route('/login', methods=['POST'])
 def login():
     data = request.json
@@ -191,6 +250,9 @@ def login():
     
     if not existing_listener and not existing_researcher:
         return jsonify({"error": "Invalid email-password combination"}), 401
+
+    if (existing_researcher and not existing_researcher.is_verified) or (existing_listener and not existing_listener.is_verified):
+        return jsonify({"error": "User has not verified account"}), 401
     
     # updated for researcher login; check if user is a listener or researcher, 
     # updated token id as uuid for validation in backend routes.
@@ -215,6 +277,7 @@ def login():
             response = jsonify({"Login": "Successful"})
             set_access_cookies(response,token)
             response.set_cookie("accesstoken", token, samesite="None")
+
             return response
     else:
         hashed_password = existing_listener.pw_hash
@@ -292,6 +355,7 @@ def createListener():
         permission=PermissionLevel.listener,
         background_info=data.get('background_info', ''),
         reward_points=0,
+        is_verified=False,
     #    ==== languages to be set in different task, remove and add to task ======
     #    languages_list=data.get('languages_list', []),
     #    languages_proficiency=data.get('languages_proficiency', [])
@@ -300,6 +364,10 @@ def createListener():
     try:
         db.session.add(user)
         db.session.commit()
+
+        token = generate_verification_token(data['email'])
+        verification_url = url_for('verify_email', token=token, _external=True)
+        send_verification_email(data['email'], verification_url)
     except IntegrityError as e:
         db.session.rollback()
         logging.debug(e)
@@ -310,7 +378,7 @@ def createListener():
         return jsonify({"error": "Error Code: 500"}), 500
 
     # Ensure languages_proficiency is serialized as a list
-    return jsonify({"message": "Registration Successful"})
+    return jsonify({"message": "Registration Successful"}), 200
 
 @app.route('/registerResearcher', methods=['POST'])
 def createResearcher():
@@ -344,10 +412,16 @@ def createResearcher():
         pw_hash=hashed_password.value,
         permission=PermissionLevel.researcher,
         organisation=data.get('organisation', ''),
+        is_verified=False,
     )
     try:
         db.session.add(user)
         db.session.commit()
+
+        # Generate token and send verification email
+        token = generate_verification_token(data['email'])
+        verification_url = url_for('verify_email', token=token, _external=True)
+        send_verification_email(data['email'], verification_url)
     except IntegrityError as e:
         db.session.rollback()
         logging.debug(e)
@@ -496,6 +570,7 @@ def blindPasswordReset():
 def getListeners():
     users = Listener.query.all()
     return jsonify([{
+        "is_verified": user.is_verified,
         "Uuid": str(user.id),
         "Demographic ID": user.demographic.id if user.demographic else None,
         "First Name": user.first_name,
@@ -535,12 +610,13 @@ def getListeners():
 def getResearchers():
     users = Researcher.query.all()
     return jsonify([{
+        "is_verified": user.is_verified,
         "Uuid": str(user.id),
         "First Name": user.first_name,
         "Last Name": user.last_name,
         "Email": user.email,
         "Password": user.pw_hash,
-        "Role": user.permission.value,  
+        "Role": user.permission.value,
         "Organisation": user.organisation,
         "Projects": [
                     {"name": project.get("name"), 
