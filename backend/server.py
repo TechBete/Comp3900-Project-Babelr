@@ -12,11 +12,8 @@ from sqlalchemy.dialects.postgresql import ARRAY, UUID, ENUM
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy import DDL, event
 from dotenv import load_dotenv
-from flask_mail import Mail, Message
 from itsdangerous import URLSafeTimedSerializer
 from email.mime.text import MIMEText
-
-import smtplib
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True, origins=["http://localhost:3000", "http://localhost:8016", "*"])  # Set CORS policy to allow requests from the frontend to the backend
@@ -37,16 +34,11 @@ app.config["JWT_COOKIE_DOMAIN"] = None  # Change to your domain in production
 app.config["JWT_COOKIE_PATH"] = "/"
 app.config["JWT_COOKIE_HTTPONLY"] = False # this will allow the cookie to be accessed by javascript, set to True in production to prevent XSS attacks
 
-# Mail server configuration (use your actual email service settings)
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USE_SSL'] = False
 
-mail = Mail(app)
 jwt = JWTManager(app)
 db = SQLAlchemy(app)
-
-cors = CORS()
-cors.init_app(app) # suppressing cors due to error thown by not in use
 
 # ========== 0. Helper Functions ==========
 def validate_required_fields(data, required_fields):
@@ -285,6 +277,7 @@ def login():
             response = jsonify({"Login": "Successful"})
             set_access_cookies(response,token)
             response.set_cookie("accesstoken", token, samesite="None")
+
             return response
     else:
         hashed_password = existing_listener.pw_hash
