@@ -16,3 +16,4 @@ argon2_cffi             # handles password hashing
 logging                 # handles logging - remove for prod
 email_validator         # handles email validation
 sqlalchemy              # handles database requests, duplicate of flask-sqlalchemy
+filetype                # helps to check and manage filetypes of audio file

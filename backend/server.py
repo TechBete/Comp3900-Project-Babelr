@@ -1,4 +1,4 @@
-import os, uuid, enum, smtplib, time, shutil
+import os, uuid, enum, smtplib, time, shutil, filetype
 import logging  # remove for final production
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, JWTManager, decode_token, set_access_cookies, unset_jwt_cookies, get_jwt
 from flask import Flask, request, jsonify, render_template_string, render_template, redirect, url_for # render_template_string is used to render HTML, can be removed once frontend is inplace
@@ -36,8 +36,6 @@ app.config["JWT_COOKIE_HTTPONLY"] = False # this will allow the cookie to be acc
 
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USE_SSL'] = False
-
-app.config['AUDIO_FILE_PATH'] = "../audioData"
 
 jwt = JWTManager(app)
 db = SQLAlchemy(app)
@@ -621,7 +619,7 @@ def getResearchers():
         "Role": user.permission.value,
         "Organisation": user.organisation,
         "Projects": [
-                    {"name": project.get("name"), 
+                    {"name": project.get("name"),
                      "path": project.get("path"),
                      "status": project.get("status"),
                      "tags": project.get("tags", [])}
@@ -1218,12 +1216,12 @@ def deleteProjectMetrics():
     except Exception as e:
         db.session.rollback()
         logging.debug(e)
-        return jsonify({"error": "Error: 500, An error occurred while deleting the project metric"}), 500   
-    
+        return jsonify({"error": "Error: 500, An error occurred while deleting the project metric"}), 500
+
     return jsonify({"message": "Project metric deleted successfully", "metrics": project['metrics']})
 
 @app.route('/uploadAudioFile', methods=['POST'])
-@jwt_required()
+# @jwt_required()
 def uploadAudioFile():
     if "file" not in request.files:
         return jsonify({"error": "File doesn't exists."}), 400
@@ -1232,10 +1230,27 @@ def uploadAudioFile():
     if file.filename == "":
         return jsonify({"error": "There is no selected file."}), 400
 
-    file_path = os.path.join(app.config[AUDIO_FILE_PATH], file.filename)
+    # assign local variables to the data fields
+    researcher_id = get_jwt_identity()
+    researcher_id = uuid.UUID(researcher_id) # ensure type consistency
+
+    # search researcher name from researcher uuid
+    researcher = session.get(Researcher, researcher_id)
+    if researcher:
+        researcher_name = researcher.first_name + researcher.last_name
+    else:
+        return jsonify({"error": "Researcher does not exist on database!"}), 400
+
+    audio_file_path = "../audioData" # root directory path for all audio files
+    researcher_dir = os.path.join(audio_file_path, researcher_name)
+
+    # if directory with researcher name doesn't exist, make directory
+    os.makedirs(researcher_dir, exist_ok=True)
+
+    file_path = os.path.join(researcher_dir, file.filename)
     file.save(file_path)
 
-    return jsonify({"message": f"{file.filename} is successfully uploaded!"}), 200
+    return jsonify({"message": f"{file.filename} is successfully uploaded and stored!"}), 200
 
 # ======== TESTING ROUTES ========
 # These routes are for testing purposes only and should be removed once the frontend is in place
@@ -1273,6 +1288,7 @@ def index():
             <li><a href="/getProjectMetrics">Get Project Metrics # working</a></li>
             <li><a href="/updateProjectMetrics">Update Project Metrics # working</a></li>
             <li><a href="/deleteProjectMetrics">Delete Project Metrics # working</a></li>
+            <li><a href="/testUploadAudio">Test Audio uploading function </a></li>
         </ul>
     </body>
     </html>
@@ -1868,6 +1884,43 @@ def searchProjectByTagForm():
                     body: JSON.stringify(jsonData)
                 }).then(response => response.json())
                 .then(data => console.log(data));
+            });
+        </script>
+    </body>
+    </html>
+    ''')
+
+@app.route('/testUploadAudio', methods=['GET'])
+def audioFileUploadForm():
+    return render_template_string('''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Audio file upload testing</title>
+    </head>
+    <body>
+        <h1>Audio file upload</h1>
+        <form id="uploadForm">
+            <label for="audio">Upload Audio File:</label><br>
+            <input type="file" id="audio" name="audio" accept="audio/*"><br><br>
+
+            <button type="submit">Submit</button>
+        </form>
+
+        <script>
+            document.querySelector('form').addEventListener('submit', function (e) {
+                e.preventDefault();
+
+                const formData = new FormData(e.target);
+
+                fetch('/uploadAudioFile', {
+                    method: 'POST',
+                    body: formData
+                }).then(response => response.json())
+                .then(data => console.log(data));
+                .catch(error => console.error('Error:', error));
             });
         </script>
     </body>
