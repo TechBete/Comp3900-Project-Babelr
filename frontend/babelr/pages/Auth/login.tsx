@@ -1,15 +1,20 @@
 import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import styles from "../stylesheets/login.module.css";
+import styles from "stylesheets/login.module.css";
 import { useRouter } from 'next/router'
 
 export default function Login() {
     const router = useRouter()
-    const [selectedOption, setSelectedOption] = useState("/register_listener");
-
-
+    const [selectedOption, setSelectedOption] = useState("/Auth/register_listener");
+    const [loginError, setLoginError] = useState("");
+    const [userType, setUser] = useState("researcher"); // TEMPORARY BEFORE isUser APICALL
+    const [isFirstTime, setFirstTime] = useState(true);
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+        // FOR NOW USE THIS TO CHANGE WHAT THE USERTYPE IS AND IF IT'S THEIR FIRST TIME
+        setUser("researcher");
+        setFirstTime(false);
+
         event.preventDefault()
     
         const formData = new FormData(event.currentTarget);
@@ -17,12 +22,11 @@ export default function Login() {
         const pw = formData.get("password")
 
         try {
-            const formJson = Object.fromEntries(formData.entries());
-            console.log(formJson);
-            const response = await fetch('http://127.0.0.1:8016/login', {
+            const response = await fetch('http://localhost:8016/login', {
                 method:"POST",
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({email, pw}),
+                credentials: 'include'
             })
 
             if (response.ok) {
@@ -32,15 +36,28 @@ export default function Login() {
                     localStorage.setItem("accessToken", data.access_token);
                 }
 
-                router.push('/login')
+                if (userType == "researcher") {
+                    if (isFirstTime ){
+                        router.push("/Researcher/first_time_researcher");
+                    } else {
+                        router.push("/Researcher/project_list");
+                    }
+                } else if (userType == "Listener") {
+                    if (isFirstTime ){
+                        router.push("/Listener/first_time_listener");
+                    } else {
+                        router.push("/Listener/clip_list");
+                    }
+                }
+                setLoginError("Unknown type of user");
             } else {
-                console.log(response.json())
+                const error = await response.json();
+                console.log(error.error);
+				setLoginError(error.error);
             }
 
-            // const formJson = Object.fromEntries(formData.entries());
-            // console.log(formJson);
         } catch {
-
+            setLoginError("Network Error: Fetch Request Failed");
         }
     }
 
@@ -48,7 +65,7 @@ export default function Login() {
         setSelectedOption(event.target.value);
         console.log("Selected:", event.target.value);
     }
-  
+
 
     return (    
         <div className={styles["login-body"]}>
@@ -64,7 +81,7 @@ export default function Login() {
                     </div>
 
                     <div className={styles["login-form-details"]}>
-                        <label htmlFor="pw">Password</label> <span><Link href={"/reset_password"}>Forgot your Password?</Link></span>
+                        <label htmlFor="pw">Password</label> <span><Link href={"/Auth/reset_password"}>Forgot your Password?</Link></span>
                         <input type="password" id="password" name="password" required />
                     </div>
 
@@ -77,11 +94,14 @@ export default function Login() {
                     Don&apos;t have an account? <Link href={selectedOption}>Sign up</Link>
                         <div>
                             <select name="Sign up as" value={selectedOption} onChange={handleUserChange}>
-                                <option value={"/register_listener"}>User</option>
-                                <option value={"/register_researcher"}>Researcher</option>
+                                <option value={"/Auth/register_listener"}>User</option>
+                                <option value={"/Auth/register_researcher"}>Researcher</option>
                             </select>
                         </div>
                 </div>
+                <div className={"error-label"}>
+					{ loginError !== "" && <div>{loginError}</div>}
+				</div>
             </div>
         </div>
     );

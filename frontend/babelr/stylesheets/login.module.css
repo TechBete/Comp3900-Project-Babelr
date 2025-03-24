@@ -7,7 +7,7 @@
     height: 100vh;
     margin: 0;
     background-color: #000026;
-    all:unset
+    /* all:unset */
 }
 
 .login-container {
@@ -88,7 +88,7 @@
     text-decoration: none;
 }
 
-.invalid-label {
+.error-label {
     color: red;
     /* font-weight: bold; */
 }

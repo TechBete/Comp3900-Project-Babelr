@@ -1,0 +1,164 @@
+.project-body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    height: 100vh;
+}
+
+.search-bar input {
+    display: flex;
+    align-items: center;
+    background: #eee;
+    padding: 5px;
+    border-radius: 5px;
+    margin-right: 20px;
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+}
+
+.main-content {
+    flex: 1;
+    padding: 20px;
+}
+
+.main-top {
+    display: flex;
+    justify-content: space-between;
+}
+
+
+.projects-h2 {
+    margin-bottom: 15px;
+    font-size: larger;
+    font-weight: bold;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+.thead {
+    background: #eee;
+}
+
+.td {
+    padding: 10px;
+    text-align: left;
+}
+
+.th {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 2px solid #ccc;
+}
+
+.tr {
+    border-bottom: 1px solid #ddd;
+}
+
+.tr:hover {
+    background: #f9f9f9;
+}
+
+.status {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.in-progress {
+    background: #ffeb99;
+    color: #856404;
+}
+
+.complete {
+    background: #c3e6cb;
+    color: #155724;
+}
+
+.draft {
+    background: #d6d8db;
+    color: #383d41;
+}
+
+.add-project-btn {
+    position: fixed;
+    bottom: 5%;
+    right: 5%;
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 30px;
+    border-radius:50%;
+    font-size: large;
+    cursor: pointer;
+}
+
+.add-project-btn:hover {
+    background: #0056b3;
+}
+
+.projects-link {
+    text-decoration: underline;
+}
+
+/* Modal Styling */
+
+.modalTitle {
+    font-size: 1.25rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+}
+
+.formLabel {
+    display: block;
+    text-align: left;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 5px;
+}
+
+.inputField {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+    margin-top: 5px;
+    outline: none;
+}
+
+.inputField:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 5px rgba(37, 99, 235, 0.5);
+}
+
+.submitButton {
+    margin-top: 16px;
+    width: 100%;
+    padding: 10px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.submitButton:hover {
+    background: #218838;
+}
+
+.invalid-label {
+    color: red;
+    /* font-weight: bold; */
+}
