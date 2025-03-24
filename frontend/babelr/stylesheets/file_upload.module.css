@@ -1,0 +1,164 @@
+/* General Page Styling */
+.project-body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    height: 100vh;
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+}
+
+.main-content {
+    flex: 1;
+    padding: 20px;
+}
+
+/* Heading */
+.heading {
+    margin-bottom: 15px;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+/* Listener Metrics Section */
+.metricsContainer {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.metricBox {
+    flex: 1;
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin: 5px;
+}
+
+.metricBox h3 {
+    font-size: 16px;
+    margin-bottom: 5px;
+}
+
+.metricBox p {
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+}
+
+/* Table Styling */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+.table thead {
+    background: #eee;
+}
+
+.table th, .table td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.table tr:hover {
+    background: #f9f9f9;
+}
+
+/* Add Audio Button */
+.addAudioBtn {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 15px;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-bottom: 15px;
+}
+
+.addAudioBtn:hover {
+    background: #218838;
+}
+
+/* File Upload Modal */
+.modalTitle {
+    font-size: 1.25rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+}
+
+/* Form Label */
+.formLabel {
+    display: block;
+    text-align: left;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 5px;
+}
+
+/* File Input */
+.fileInput {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+    margin-top: 5px;
+    outline: none;
+}
+
+.fileInput:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 5px rgba(37, 99, 235, 0.5);
+}
+
+/* Selected File Name Input */
+.inputField {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+    margin-top: 5px;
+    outline: none;
+}
+
+.inputField:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 5px rgba(37, 99, 235, 0.5);
+}
+
+/* Submit Button */
+.submitButton {
+    margin-top: 16px;
+    width: 100%;
+    padding: 10px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.submitButton:hover {
+    background: #218838;
+}
+
+/* Error Message */
+.invalid-label {
+    color: red;
+    font-size: 14px;
+    margin-top: 5px;
+}
