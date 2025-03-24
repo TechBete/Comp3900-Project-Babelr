@@ -51,6 +51,7 @@ export default function FileUploadPage() {
             const response = await fetch("http://localhost:8016/uploadAudioFile", {
                 method: "POST",
                 body: formData,
+                credentials: 'include'
             });
 
             if (!response.ok) {
