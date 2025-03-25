@@ -1,4 +1,4 @@
-import os, uuid, enum, smtplib, time, shutil, filetype
+import os, uuid, enum, smtplib, time, shutil, filetype, json
 import logging  # remove for final production
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, JWTManager, decode_token, set_access_cookies, unset_jwt_cookies, get_jwt
 from flask import Flask, request, jsonify, render_template_string, render_template, redirect, url_for # render_template_string is used to render HTML, can be removed once frontend is inplace
@@ -151,16 +151,6 @@ event.listen(
 )
 
 # ========== 3. SQL DB Models ==========
-class User(db.Model):
-    __tablename__ = "testusers"
-    id = db.Column(UUID(as_uuid=True), primary_key=True, nullable=False)
-    email = db.Column(db.String(128), nullable=False, unique=True)
-    pw_hash = db.Column(db.String(128)) # Argon2 hash string is 97 char long
-    permission = db.Column(permission_level_enum, nullable=False)
-    is_verified = db.Column(db.Boolean, nullable=False)
-    jti = db.Column(db.String(36))  # JWT ID to store in the database to prevent reuse and duplicate active tokens
-    blindlogin = db.Column(UUID(as_uuid=True)) # generate a random uuid for blind login
-
 class Researcher(db.Model):
     __tablename__ = "researchers"
     id = db.Column(UUID(as_uuid=True), primary_key=True, nullable=False)
@@ -326,14 +316,14 @@ def createListener():
     existing_user = Listener.query.filter_by(email=Email).first()
     if existing_user:
         return jsonify({"error": "Email already registered"}), 400
-    
+
     # check if email is structured correctly
     try:
         validate_email(Email)
     except EmailNotValidError as e:
         return jsonify({"Email entered is not of proper format. Email": str(Email)}), 400
-    
-    # ===== validation of languages to be moved to add languages task ===== 
+
+    # ===== validation of languages to be moved to add languages task =====
     # Validate and process languages_proficiency
     # this check should be refactored to a separate function for register language & proficiency
     # route. code works correctly
@@ -352,7 +342,7 @@ def createListener():
     #        ProficiencyLevel(proficiency).value  # Ensure it remains a list of strings
     #        for proficiency in data['languages_proficiency']
     #    ]
-    
+
     # Hash the user password
     hashed_password = hash_password(data)
 
@@ -442,42 +432,32 @@ def createResearcher():
         return jsonify({"error": "Error Code: 500"}), 500
     return jsonify({"message": "Registration Successful"})
 
-@app.route('/registerTestUser', methods=['POST'])
 def createTestUser():
-    data = request.json
-    required_fields = ['email', 'pw']
-
-    Email = data['email']
+    data = {
+        "first_name": "Alice",
+        "last_name": "Bob",
+        "email": "test@user.com",
+        "pw": "Eve123",
+    }
 
     # Hash the user password
     hashed_password = hash_password(data)
 
-    # Check if email already exists
-    existing_user = Researcher.query.filter_by(email=Email).first()
-    if existing_user:
-        return jsonify({"error": "Email already registered"}), 400
-
-    # check if email is structured correctly
-    try:
-        validate_email(Email)
-    except EmailNotValidError as e:
-        return jsonify({"Email entered is not of proper format. Email": str(Email)}), 400
-
-    user = User(
-        id=data.get('id', uuid.uuid4()),    # generate a random uuid if not provided
+    user = Listener(
+        id=uuid.uuid4(),    # generate a random uuid if not provided
+        first_name=data['first_name'],
+        last_name=data['last_name'],
         email=data['email'],
         pw_hash=hashed_password.value,
-        permission=PermissionLevel.researcher,
-        is_verified=False,
+        permission=PermissionLevel.listener,
+        background_info="test background ahhhhhhhhhhhh",
+        reward_points=0,
+        is_verified=True,
     )
     try:
         db.session.add(user)
         db.session.commit()
-
-        # Generate token and send verification email
-        token = generate_verification_token(data['email'])
-        verification_url = url_for('verify_email', token=token, _external=True)
-        send_verification_email(data['email'], verification_url)
+        # no need to send verification email for testing account
     except IntegrityError as e:
         db.session.rollback()
         logging.debug(e)
@@ -498,7 +478,7 @@ def userResetPassword():
     validation_error = validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
-    
+
     # assign local variables to the data fields
     password = data['pw']
     password_confirmation = data['pw_confirmation']
@@ -1077,7 +1057,6 @@ def deleteProject():
 @app.route('/setProjectMetricField', methods=['POST'])
 @jwt_required()
 def setProjectMetricsField():
-
     data = request.json
     required_fields = ['project_name', 'metrics']
     validation_error = validate_required_fields(data, required_fields)
@@ -1993,10 +1972,11 @@ if __name__ == '__main__':
             with app.app_context():
             # initialize the database
                 db.create_all()
+                createTestUser()
             break
         except OperationalError as e:
             print("Database not ready yet, retrying...")
-            time.sleep(5)   
+            time.sleep(5)
     else:
         print("Database failed to initialize, exiting...")
         exit(1)
