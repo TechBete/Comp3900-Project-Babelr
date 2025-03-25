@@ -1,4 +1,4 @@
-import os, uuid, enum, smtplib, time, shutil, filetype
+import os, uuid, enum, smtplib, time, shutil, filetype, json
 import logging  # remove for final production
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, JWTManager, decode_token, set_access_cookies, unset_jwt_cookies, get_jwt
 from flask import Flask, request, jsonify, render_template_string, render_template, redirect, url_for # render_template_string is used to render HTML, can be removed once frontend is inplace
@@ -229,31 +229,31 @@ def login():
     validation_error = validate_required_fields(data, required_fields)
     if validation_error:
         return jsonify({"error": "validation error"}), 400
-    
+
     password = data['pw']
     Email = data['email']
-    
+
     # do checks for empty strings
     if password == '' or Email == '':
         return jsonify({"error": "Email or Password cannot be empty"}), 400
-    
+
     # add password length and format check in later iteration
-    
+
     # check if email is structured correctly
     try:
         validate_email(Email)
     except EmailNotValidError as e:
         return jsonify({"Email entered is not of proper format. Email": str(Email)}), 400
-    
+
     existing_listener = Listener.query.filter_by(email=Email).first()
     existing_researcher = Researcher.query.filter_by(email=Email).first()
-    
+
     if not existing_listener and not existing_researcher:
         return jsonify({"error": "Invalid email-password combination"}), 401
 
     if (existing_researcher and not existing_researcher.is_verified) or (existing_listener and not existing_listener.is_verified):
         return jsonify({"error": "User has not verified account"}), 401
-    
+
     # updated for researcher login; check if user is a listener or researcher, 
     # updated token id as uuid for validation in backend routes.
     # added email and permissions to additioanl_claims for validation in backend routes.
@@ -261,18 +261,18 @@ def login():
         hashed_password = existing_researcher.pw_hash
         if validate_Password(data, hashed_password):
             token = create_access_token(identity=existing_researcher.id, additional_claims={"email": str(existing_researcher.email)})
-            
+
             # get JTI from token and update the database
             decodeToken = decode_token(token)
             jti = decodeToken.get('jti')
-            
+
             # update the listener's jti in the database
             existing_researcher.jti = jti
-            
+
             # update the database atomically
             db.session.add(existing_researcher)
             db.session.commit()
-            
+
             # set the access token as a cookie in the response
             response = jsonify({"Login": "Successful"})
             set_access_cookies(response,token)
@@ -283,18 +283,18 @@ def login():
         hashed_password = existing_listener.pw_hash
         if validate_Password(data, hashed_password):
             token = create_access_token(identity=existing_listener.id, additional_claims={"email": str(existing_listener.email)})
-            
+
             # get JTI from token and update the database
             decodeToken = decode_token(token)
             jti = decodeToken.get('jti')
-            
+
             # update the listener's jti in the database
             existing_listener.jti = jti
-            
+
             # update the database atomically
             db.session.add(existing_listener)
             db.session.commit()
-            
+
             # set the access token as a cookie in the response
             response = jsonify({"Login": "Successful"})
             set_access_cookies(response,token)
@@ -316,14 +316,14 @@ def createListener():
     existing_user = Listener.query.filter_by(email=Email).first()
     if existing_user:
         return jsonify({"error": "Email already registered"}), 400
-    
+
     # check if email is structured correctly
     try:
         validate_email(Email)
     except EmailNotValidError as e:
         return jsonify({"Email entered is not of proper format. Email": str(Email)}), 400
-    
-    # ===== validation of languages to be moved to add languages task ===== 
+
+    # ===== validation of languages to be moved to add languages task =====
     # Validate and process languages_proficiency
     # this check should be refactored to a separate function for register language & proficiency
     # route. code works correctly
@@ -342,7 +342,7 @@ def createListener():
     #        ProficiencyLevel(proficiency).value  # Ensure it remains a list of strings
     #        for proficiency in data['languages_proficiency']
     #    ]
-    
+
     # Hash the user password
     hashed_password = hash_password(data)
 
@@ -387,23 +387,23 @@ def createResearcher():
     validation_error = validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
-    
+
     Email = data['email']
-    
+
     # Hash the user password
     hashed_password = hash_password(data)
-    
+
     # Check if email already exists
     existing_user = Researcher.query.filter_by(email=Email).first()
     if existing_user:
         return jsonify({"error": "Email already registered"}), 400
-    
+
     # check if email is structured correctly
     try:
         validate_email(Email)
     except EmailNotValidError as e:
         return jsonify({"Email entered is not of proper format. Email": str(Email)}), 400
-    
+
     user = Researcher(
         id=data.get('id', uuid.uuid4()),    # generate a random uuid if not provided
         first_name=data['first_name'],
@@ -429,7 +429,43 @@ def createResearcher():
     except Exception as e:
         db.session.rollback()
         logging.debug(e)
-        return jsonify({"error": "Error Code: 500"}), 500 
+        return jsonify({"error": "Error Code: 500"}), 500
+    return jsonify({"message": "Registration Successful"})
+
+def createTestUser():
+    data = {
+        "first_name": "Alice",
+        "last_name": "Bob",
+        "email": "test@user.com",
+        "pw": "Eve123",
+    }
+
+    # Hash the user password
+    hashed_password = hash_password(data)
+
+    user = Listener(
+        id=uuid.uuid4(),    # generate a random uuid if not provided
+        first_name=data['first_name'],
+        last_name=data['last_name'],
+        email=data['email'],
+        pw_hash=hashed_password.value,
+        permission=PermissionLevel.listener,
+        background_info="test background ahhhhhhhhhhhh",
+        reward_points=0,
+        is_verified=True,
+    )
+    try:
+        db.session.add(user)
+        db.session.commit()
+        # no need to send verification email for testing account
+    except IntegrityError as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Error Code: 500"}), 500
     return jsonify({"message": "Registration Successful"})
 
 # this route is to reset a user's password
@@ -442,7 +478,7 @@ def userResetPassword():
     validation_error = validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
-    
+
     # assign local variables to the data fields
     password = data['pw']
     password_confirmation = data['pw_confirmation']
@@ -450,29 +486,28 @@ def userResetPassword():
     user_id = uuid.UUID(user_id) # ensure type consistency
     email = get_jwt().get('email') # get email from jwt claims
 
-    
     # check to see if password str is empty
     if password == '' or password_confirmation == '':
         return jsonify({"error": "Password cannot be empty"}), 400
-    
+
     # check to see if password and password confirmation match
     if password != password_confirmation:
         return jsonify({"error": "Passwords do not match"}), 400
-    
+
     # check to see if user exists
     isListener = Listener.query.filter_by(id=user_id).first()
     isResearcher = Researcher.query.filter_by(id=user_id).first()
-    
+
     # Check if user is a listener or researcher, assign as existing_user
     existing_user = isListener if isListener else isResearcher
     if not existing_user:
         return jsonify({"error": "Error: 404, User not Found"}), 404
-    
+
     # Check if email matches the user
     if existing_user.email != email:
-        return jsonify({"error": 
+        return jsonify({"error":
             "Error: 400, Email does not match the one registered with the account"}), 400
-    
+
     if existing_user:
         hashed_password = hash_password(data)
         pw_validated = validate_Password(data, existing_user.pw_hash)
@@ -496,22 +531,22 @@ def blindEmailParse():
     validation_error = validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
-    
+
     email = data['email']
-    
+
     # check if email is structured correctly
     try:
         validate_email(email)
     except EmailNotValidError as e:
         return jsonify({"Email entered is not of proper format. Email": str(email)}), 400
-    
+
     # check if email is in the database
     existing_listener = Listener.query.filter_by(email=email).first()
     existing_researcher = Researcher.query.filter_by(email=email).first()
-    
+
     if not existing_listener and not existing_researcher:
         return jsonify({"error": "Email not found"}), 404
-    
+
     # return blind login uuid
     if existing_listener:
         existing_listener.blindlogin = uuid.uuid4()
@@ -522,7 +557,7 @@ def blindEmailParse():
         db.session.commit() # update the database with the new blind login uuid, atomic commit
         return jsonify({"researcher_id": str(existing_researcher.blindlogin), "email": str(existing_researcher.email)})   # added underscore for my sanity
 
-# this route is to reset a user's password if they have forgotten thier password after email verification 
+# this route is to reset a user's password if they have forgotten thier password after email verification
 @app.route('/blindPasswordReset', methods=['POST'])
 def blindPasswordReset():
     data = request.json
@@ -530,28 +565,28 @@ def blindPasswordReset():
     validation_error = validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
-    
+
     # assign local variables to the data fields
     password = data['pw']
     password_confirmation = data['pw_confirmation']
-    blindId = data['id']    
+    blindId = data['id']
     # check to see if password str is empty
     if password == '' or password_confirmation == '':
         return jsonify({"error": "Password cannot be empty"}), 400
-    
+
     # check to see if password and password confirmation match
     if password != password_confirmation:
         return jsonify({"error": "Passwords do not match"}), 400
-    
+
     # check to see if user exists
     isListener = Listener.query.filter_by(blindlogin=blindId).first()
     isResearcher = Researcher.query.filter_by(blindlogin=blindId).first()
-    
+
     # Check if user is a listener or researcher, assign as existing_user
     existing_user = isListener if isListener else isResearcher
     if not existing_user:
         return jsonify({"error": "Error: 404, User not Found"}), 404
-    
+
     if existing_user:
         hashed_password = hash_password(data)
         try:
@@ -577,7 +612,7 @@ def getListeners():
         "Last Name": user.last_name,
         "Email": user.email,
         "Password": user.pw_hash,
-        "Role": user.permission.value,  
+        "Role": user.permission.value,
         "Background Info": user.background_info,
         "Reward Points": user.reward_points,
         "languages_list": [lang for lang in user.languages_list] if user.languages_list else [], # list of languages user speaks
@@ -640,8 +675,8 @@ def createProject():
         return validation_error
     # # FOR FRONTEND TESTING PART
     researcher_id = get_jwt_identity()
-    researcher_id = uuid.UUID(researcher_id) # ensure type consistency   
-    required_fields = ['researcher_id'] 
+    researcher_id = uuid.UUID(researcher_id) # ensure type consistency
+    required_fields = ['researcher_id']
     validation_error = validate_required_fields({'researcher_id': researcher_id}, required_fields) # validate researcher_id
     if validation_error:
         return validation_error
@@ -658,11 +693,11 @@ def createProject():
     # Ensure project list is not empty
     if researcher.project_list is None:
         researcher.project_list = []
-        
+
     # ensure project name is not empty
     if projectName == '':
         return jsonify({"error": "Project name cannot be empty"}), 400
-    
+
     # use a transaction to ensure that the project is only created if the project list is updated successfully
     try:
         with db.session.begin_nested():
@@ -693,7 +728,7 @@ def createProject():
                                             "creator id": int(researcher.id),# updated to include creator id (researcher id) 
                                             "creator": researcher.first_name
                                             }) # updated to include creator name
-            
+
             flag_modified(researcher, "project_list")
 
             db.session.commit()
@@ -713,14 +748,14 @@ def updateProject():
     validation_error = validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
-    
+
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
-    
+
     researcher = Researcher.query.filter_by(id=researcher_id).first()
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
-    
+
     projectName = data['project_name']
     try:
         with db.session.begin_nested():
@@ -729,17 +764,17 @@ def updateProject():
             project = project_dict.get(projectName)
             if project is None:
                 return jsonify({"error": "Project not found"}), 404 # disallow project update if project does not exist
-            
+
             # update project name
             if 'new_project_name' in data:
                 new_project_name = data['new_project_name']
                 if new_project_name == '':
                     return jsonify({"error": "Project name cannot be empty"}), 400
-            
+
                 # Check if project already exists
                 if any(project.get("name") == new_project_name for project in researcher.project_list):
                     return jsonify({"error": "Project name already exists"}), 400
-                
+
                 # create directory for project files in backend and docker.
                 projectOwner = str(researcher_id)
                 projectPath = os.path.join("/app", "audioData")
@@ -749,16 +784,16 @@ def updateProject():
                     os.rename(projectDir, os.path.join(researcherPath, new_project_name))
                     project['name'] = new_project_name
                 else:
-                    return jsonify({"error": "Project already exists"}), 400       
-                        
+                    return jsonify({"error": "Project already exists"}), 400
+
             flag_modified(researcher, "project_list")
-            
+
             db.session.commit()
     except Exception as e:
         db.session.rollback()
         logging.debug(e)
         return jsonify({"error": "Project was unable to be updated"}), 500
-    
+
     return jsonify({"message": "Project updated successfully", "projects_list": researcher.project_list})
 
 # The route is to add tags to a project
@@ -770,14 +805,14 @@ def addProjectTags():
     validation_error = validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
-    
+
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
-    
+
     researcher = Researcher.query.filter_by(id=researcher_id).first()
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
-    
+
     projectName = data['project_name']
     try:
         with db.session.begin_nested():
@@ -786,28 +821,28 @@ def addProjectTags():
             project = project_dict.get(projectName)
             if project is None:
                 return jsonify({"error": "Project not found"}), 404 # disallow project update if project does not exist
-            
+
             add_tags = data['tags']
-                                    
+
             # add tags to the project
             #If tags is a string, split it into a list
             if isinstance(add_tags, str):
                 added_tags = [tag.strip() for tag in add_tags.split(',')]  # Split by ',' and remove extra spaces
             elif isinstance(add_tags, list):
                 added_tags = [str(tag).strip() for tag in add_tags]
-                
+
             for tag in added_tags:
                 if tag not in project['tags']:
                     project['tags'].append(tag) # append tags to the project
-                    
+
             flag_modified(researcher, "project_list")
-            
+
             db.session.commit()
     except Exception as e:
         db.session.rollback()
         logging.debug(e)
         return jsonify({"error": "Project was unable to be updated"}), 500
-    
+
     return jsonify({"message": "Tags added successfully.", "projects_list": researcher.project_list})
 
 # The route is to remove tags from a project
@@ -819,14 +854,14 @@ def removeProjectTags():
     validation_error = validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
-    
+
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
-    
+
     researcher = Researcher.query.filter_by(id=researcher_id).first()
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
-    
+
     projectName = data['project_name']
     try:
         with db.session.begin_nested():
@@ -835,28 +870,28 @@ def removeProjectTags():
             project = project_dict.get(projectName)
             if project is None:
                 return jsonify({"error": "Project not found"}), 404 # disallow project update if project does not exist
-            
+
             remove_tags = data['tags']
-            
+
             # remove tages
             #If tags is a string, split it into a list
             if isinstance(remove_tags, str):
                 removed_tags = [tag.strip() for tag in remove_tags.split(',')]  # Split by ',' and remove extra spaces
             elif isinstance(remove_tags, list):
                 removed_tags = [str(tag).strip() for tag in removed_tags]
-                
+
             for tag in removed_tags:
                 if tag in project['tags']:
                     project['tags'].remove(tag) # remove tags from the project
-                    
+
             flag_modified(researcher, "project_list")
-            
+
             db.session.commit()
     except Exception as e:
         db.session.rollback()
         logging.debug(e)
         return jsonify({"error": "Project was unable to be updated"}), 500
-    
+
     return jsonify({"message": "Tags removed successfully.", "projects_list": researcher.project_list})
 
 @app.route('/searchProjectByTag', methods=['POST'])
@@ -867,14 +902,14 @@ def searchProjectByTag():
     validation_error = validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
-    
+
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
-    
+
     researcher = Researcher.query.filter_by(id=researcher_id).first()
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
-    
+
     tag = data['tag']
     try:
         with db.session.begin_nested():
@@ -884,7 +919,7 @@ def searchProjectByTag():
     except Exception as e:
         logging.debug(e)
         return jsonify({"error": "Error: 500, An error has occured while searching for projects"}), 500
-    
+
     return jsonify({"projects_list": projects})
 
 # this route is to update the project status
@@ -896,14 +931,14 @@ def updateProjectStatus():
     validation_error = validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
-    
+
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
-    
+
     researcher = Researcher.query.filter_by(id=researcher_id).first()
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
-    
+
     projectName = data['project_name']
     try:
         with db.session.begin_nested():
@@ -912,21 +947,21 @@ def updateProjectStatus():
             project = project_dict.get(projectName)
             if project is None:
                 return jsonify({"error": "Project not found"}), 404 # disallow project update if project does not exist
-            
+
             new_status = data['status']
             if new_status == '':
                 return jsonify({"error": "Status cannot be empty"}), 400
-            
+
             project['status'] = new_status
-            
+
             flag_modified(researcher, "project_list")
-            
+
             db.session.commit()
     except Exception as e:
         db.session.rollback()
         logging.debug(e) # remove in production
-        return jsonify({"error": "Project was unable to be updated"}), 500  
-    
+        return jsonify({"error": "Project was unable to be updated"}), 500
+
     return jsonify({"message": "Project status updated successfully.", "projects_list": researcher.project_list})
 
 # this route is to get all the projects of a researcher
@@ -935,11 +970,11 @@ def updateProjectStatus():
 def getProjects():
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
-    
+
     researcher = Researcher.query.filter_by(id=researcher_id).first()
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
-    
+
     return jsonify({"projects_list": researcher.project_list})
 
 @app.route('/getProject' , methods=['POST'])
@@ -950,18 +985,18 @@ def getProject():
     validation_error = validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
-    
+
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
-    
+
     researcher_exists = Researcher.query.filter_by(id=researcher_id).first()
     if not researcher_exists:
         return jsonify({"error": "Researcher not found"}), 404
-    
+
     projectName = data['project_name']
     try:
         with db.session.begin_nested():
-            # Check if project exists 
+            # Check if project exists
             project_dict = {project["name"]: project for project in researcher_exists.project_list}
             project = project_dict.get(projectName)
             if project is None:
@@ -969,11 +1004,11 @@ def getProject():
     except Exception as e:
         logging.debug(e)
         return jsonify({"error": "Error: 500, An error has occured while retrieving the project"}), 500
-    
+
     return jsonify({"project": project})
 
 # this route is to delete a project
-# frontend should ensure that the user is aboslutely sure they want to delete the project as it will 
+# frontend should ensure that the user is aboslutely sure they want to delete the project as it will
 # delete all the files associated with the project
 @app.route('/deleteProject', methods=['POST'])
 @jwt_required()
@@ -983,14 +1018,14 @@ def deleteProject():
     validation_error = validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
-    
+
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
-    
+
     researcher = Researcher.query.filter_by(id=researcher_id).first()
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
-    
+
     projectName = data['project_name']
     try:
         with db.session.begin_nested():
@@ -1000,7 +1035,7 @@ def deleteProject():
             if project is None:
                 return jsonify({"error": "Project not found"}), 404
             # Check if researcher owns project
-            if project.get("creator") != researcher.first_name: 
+            if project.get("creator") != researcher.first_name:
                     if project.get("creator id") != str(researcher.id):
                         return jsonify({"error": "You do not have permission to delete this project"}), 403
                 # delete project directory
@@ -1021,7 +1056,6 @@ def deleteProject():
 @app.route('/setProjectMetricField', methods=['POST'])
 @jwt_required()
 def setProjectMetricsField():
-
     data = request.json
     required_fields = ['project_name', 'metrics']
     validation_error = validate_required_fields(data, required_fields)
@@ -1084,11 +1118,11 @@ def getProjectMetrics():
 
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
-    
+
     researcher = Researcher.query.filter_by(id=researcher_id).first()
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
-    
+
     projectName = data['project_name']
     try:
         with db.session.begin_nested():
@@ -1103,7 +1137,7 @@ def getProjectMetrics():
     except Exception as e:
         logging.debug(e)
         return jsonify({"error": "Error: 500, An error occurred while retrieving the project metrics"}), 500
-    
+
     return jsonify({"metrics": metrics})
 
 # this route is to update the project metrics
@@ -1149,14 +1183,14 @@ def updateProjectMetrics():
 
             frontend_metrics = {key: float(value) for key, value in frontend_metrics.items()}
             logging.debug(f"Frontend metrics: {frontend_metrics}")
-            
+
             # Validate and update metrics
             existing_metrics = project.get('metrics', {})
             if not isinstance(existing_metrics, dict):
                 logging.error("Existing metrics must be a dictionary")
                 return jsonify({"error": "Existing metrics must be a dictionary"}), 500
             existing_metrics.update(frontend_metrics)
-            
+
             # Mark the project_list as modified and commit changes
             flag_modified(researcher, "project_list")
             db.session.commit()
@@ -1181,13 +1215,13 @@ def deleteProjectMetrics():
 
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
-    
+
     researcher = Researcher.query.filter_by(id=researcher_id).first()
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
-        
+
     projectName = data['project_name']
-    
+
     try:
         with db.session.begin_nested():
             # Check if project exists
@@ -1198,11 +1232,11 @@ def deleteProjectMetrics():
 
             if project.status != 'Draft':
                 return jsonify({"error": "The Project status must be set to 'Draft' to delete metrics"}), 400
-            
+
             # check if mertics is a valid dictionary
             if not isinstance(project['metrics'], dict):
                 return jsonify({"error": "Metrics are not in a valid format"}), 500
-            
+
             # delete the metric from the project
             metric = data['metric']
             if metric not in project['metrics']:
@@ -1669,7 +1703,7 @@ def setProjectMetricFieldForm():
         <form id="metricsForm" action="/setProjectMetricField" method="post">
             <label for="project_name">Project Name:</label><br>
             <input type="text" id="project_name" name="project_name" required><br><br>
-            
+
             <div id="metricsContainer">
                 <div class="metric-input">
                     <label for="metric_1">Metric Name:</label>
@@ -1678,11 +1712,11 @@ def setProjectMetricFieldForm():
                     <input type="number" id="value_1" name="metric_value_1" placeholder="Value" required>
                 </div>
             </div>
-            
+
             <button type="button" id="addMetric">Add Metric</button><br><br>
             <button type="submit">Submit</button>
         </form>
-        
+
         <script>
             let metricCount = 1;
 
@@ -1803,7 +1837,7 @@ def updateProjectMetricsForm():
                     console.error('Metrics must be a dictionary');
                     return;
                 }
-                
+
                 jsonData.metrics = metrics;
 
                 // Send the parsed data to the backend
@@ -1937,10 +1971,12 @@ if __name__ == '__main__':
             with app.app_context():
             # initialize the database
                 db.create_all()
+                # creates test user for frontend testing, verification for this account is waived
+                createTestUser()
             break
         except OperationalError as e:
             print("Database not ready yet, retrying...")
-            time.sleep(5)   
+            time.sleep(5)
     else:
         print("Database failed to initialize, exiting...")
         exit(1)
