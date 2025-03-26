@@ -162,7 +162,6 @@ class Researcher(db.Model):
     organisation = db.Column(db.String(128))
     project_list = db.Column(db.JSON, default=[]) # 128 char length array
     uploaded_video = db.Column(db.JSON, default=[]) # 128 char length file ID array
-    gender = db.Column(gender_enum)
     is_verified = db.Column(db.Boolean, nullable=False)
     jti = db.Column(db.String(36))  # JWT ID to store in the database to prevent reuse and duplicate active tokens
     blindlogin = db.Column(UUID(as_uuid=True)) # generate a random uuid for blind login
@@ -173,13 +172,12 @@ class Listener(db.Model):
     first_name = db.Column(db.String(128), nullable=False)
     last_name = db.Column(db.String(128), nullable=False)
     email = db.Column(db.String(128), nullable=False, unique=True)
-    pw_hash = db.Column(db.String(128), nullable=False) # Argon2 hash string is 97 char long 
+    pw_hash = db.Column(db.String(128), nullable=False) # Argon2 hash string is 97 char long
     permission = db.Column(permission_level_enum, nullable=False)
     background_info = db.Column(db.String(1024), default="") # 1024 char length string
     reward_points = db.Column(db.Integer)
     is_verified = db.Column(db.Boolean, nullable=False)
-    languages_list = db.Column(db.JSON, default=[]) # 128 char length array
-    languages_proficiency = db.Column(db.JSON, default=[]) # proficiency level array
+    languages_list = db.Column(db.JSON, default=[]) # sets of language:proficiency
     jti = db.Column(db.String(36))  # JWT ID to store in the database to prevent reuse and duplicate active tokens
     blindlogin = db.Column(UUID(as_uuid=True)) # generate a random uuid for blind login
 
@@ -204,7 +202,6 @@ def verify_email(token):
     email = verify_token(token)
 
     if not email:
-        # TODO: your token is invalid or expired message
         return redirect(url_for('login')), 404
 
     # Find user and mark as verified
@@ -214,10 +211,8 @@ def verify_email(token):
     if user and not user.is_verified:
         user.is_verified = True
         db.session.commit()
-        # TODO: your email has been verified message
     else:
         pass
-        # TODO: your email has already been verified error message
 
     return redirect(url_for('login'))
 
@@ -254,7 +249,7 @@ def login():
     if (existing_researcher and not existing_researcher.is_verified) or (existing_listener and not existing_listener.is_verified):
         return jsonify({"error": "User has not verified account"}), 401
 
-    # updated for researcher login; check if user is a listener or researcher, 
+    # updated for researcher login; check if user is a listener or researcher,
     # updated token id as uuid for validation in backend routes.
     # added email and permissions to additioanl_claims for validation in backend routes.
     if existing_researcher:
@@ -1255,7 +1250,7 @@ def deleteProjectMetrics():
     return jsonify({"message": "Project metric deleted successfully", "metrics": project['metrics']})
 
 @app.route('/uploadAudioFile', methods=['POST'])
-# @jwt_required()
+@jwt_required()
 def uploadAudioFile():
     if "file" not in request.files:
         return jsonify({"error": "File doesn't exists."}), 400
@@ -1285,6 +1280,11 @@ def uploadAudioFile():
     file.save(file_path)
 
     return jsonify({"message": f"{file.filename} is successfully uploaded and stored!"}), 200
+
+@app.route('/languagePreferences', methods=['POST'])
+@jwt_required()
+def manageLanguages():
+    
 
 # ======== TESTING ROUTES ========
 # These routes are for testing purposes only and should be removed once the frontend is in place
