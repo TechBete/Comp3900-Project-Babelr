@@ -177,7 +177,7 @@ class Listener(db.Model):
     background_info = db.Column(db.String(1024), default="") # 1024 char length string
     reward_points = db.Column(db.Integer)
     is_verified = db.Column(db.Boolean, nullable=False)
-    languages_list = db.Column(db.JSON, default=[]) # sets of language:proficiency
+    languages = db.Column(db.JSON, default=list) # sets of language:proficiency
     jti = db.Column(db.String(36))  # JWT ID to store in the database to prevent reuse and duplicate active tokens
     blindlogin = db.Column(UUID(as_uuid=True)) # generate a random uuid for blind login
 
@@ -435,24 +435,31 @@ def createTestUser():
         "pw": "Eve123",
     }
 
+    initial_lang = {
+        "language": "Japanese",
+        "proficiency": "Native",
+    }
+
     # Hash the user password
     hashed_password = hash_password(data)
 
     user = Listener(
-        id=uuid.uuid4(),    # generate a random uuid if not provided
+        id="736259a4-aea2-4de7-aa87-5764e1db624b",    # generate a random uuid if not provided
         first_name=data['first_name'],
         last_name=data['last_name'],
         email=data['email'],
         pw_hash=hashed_password.value,
         permission=PermissionLevel.listener,
-        background_info="test background ahhhhhhhhhhhh",
+        background_info="ahhhhhhhhhhhh",
         reward_points=0,
+        languages=initial_lang,
         is_verified=True,
     )
     try:
-        db.session.add(user)
-        db.session.commit()
-        # no need to send verification email for testing account
+        with db.session.begin_nested():
+            db.session.add(user)
+            db.session.commit()
+            # no need to send verification email for testing account
     except IntegrityError as e:
         db.session.rollback()
         logging.debug(e)
@@ -1281,10 +1288,75 @@ def uploadAudioFile():
 
     return jsonify({"message": f"{file.filename} is successfully uploaded and stored!"}), 200
 
-@app.route('/languagePreferences', methods=['POST'])
+@app.route('/addLanguage', methods=['POST'])
 @jwt_required()
-def manageLanguages():
-    
+def addLanguage():
+    data = request.json
+    required_fields = ['language', 'proficiency']
+
+    # check validation error
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+
+    listener_id = get_jwt_identity()
+    listener_id = uuid.UUID(listener_id)
+
+    # check if listener is valid user
+    listener = Researcher.query.filter_by(id=listener_id).first()
+    if not listener:
+        return jsonify({"error": "Listener not found"}), 404
+
+    try:
+        with db.session.begin_nested():
+            language = data['language']
+            proficiency = data['proficiency']
+            # append data(language:proficiency set) oat the end of listener lanugages list
+            listener.languages.append()
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        #TODO: check error code and message
+        return jsonify({"error": "Failed to update the language"}), 500
+
+
+def testAddLanguage():
+    data = {
+        "language": "Korean",
+        "proficiency": "Native",
+    }
+
+    try:
+        with db.session.begin_nested():
+            listener = Researcher.query.filter_by(first_name="Alice").first()
+            if not listener:
+                return jsonify({"error": "Listener not found"}), 404
+            # append data(language:proficiency set) oat the end of listener lanugages list
+            # listener.languages.append(data)
+            # listener.languages = (listener.languages or []) + [data]
+            listener.languages = [] #testing
+            db.session.commit()
+            # no need to send verification email for testing account
+    except IntegrityError as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Error Code: 500"}), 500
+    return jsonify({"message": "Add language Successful"}), 200
+
+
+'''
+@app.route('/editLanguage', methods=['POST'])
+@jwt_required()
+def editLanguage():
+
+@app.route('/deleteLanguage', methods=['POST'])
+@jwt_required()
+def addLanguage():
+'''
 
 # ======== TESTING ROUTES ========
 # These routes are for testing purposes only and should be removed once the frontend is in place
@@ -1322,7 +1394,9 @@ def index():
             <li><a href="/getProjectMetrics">Get Project Metrics # working</a></li>
             <li><a href="/updateProjectMetrics">Update Project Metrics # working</a></li>
             <li><a href="/deleteProjectMetrics">Delete Project Metrics # working</a></li>
-            <li><a href="/testUploadAudio">Test Audio uploading function </a></li>
+            <li><a href="/testUploadAudio">Test Audio uploading function # idkidk </a></li>
+            <li><a href="/testAddLang">Test add language function </a></li>
+            <li><a href="/getListenerData">Test get user data function </a></li>
         </ul>
     </body>
     </html>
@@ -1961,6 +2035,72 @@ def audioFileUploadForm():
     </html>
     ''')
 
+@app.route('/testAddLang', methods=['GET'])
+def testAddLanguageForm():
+    return render_template_string('''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Add language</title>
+    </head>
+    <body>
+        <h1>User Add Language</h1>
+        <form action="/addLanguage" method="post">
+            <label for="language">Language:</label><br>
+            <input type="text" id="language" name="language"><br>
+            <label for="proficiency">Proficiency level:</label><br>
+            <input type="text" id="proficiency" name="proficiency"><br>
+            <button type="submit">Submit</button>
+        </form>
+        <script>
+            document.querySelector('form').addEventListener('submit', function (e) {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const jsonData = Object.fromEntries(formData);
+                fetch('/addLanguage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(jsonData)
+                }).then(response => response.json())
+                    .then(data => console.log(data));
+            });
+        </script>
+    </body>
+    </html>
+    ''')
+
+@app.route('/getListenerData', methods=['GET'])
+def getListenerDataForm():
+    return render_template_string('''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Get Listener</title>
+    </head>
+    <body>
+        <h1>Get Listener</h1>
+        <form action="/getListeners" method="post">
+            <button type="submit">Submit</button>
+        </form>
+        <script>
+            document.querySelector('form').addEventListener('submit', function (e) {
+                e.preventDefault();
+                fetch('/getListeners', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify("")
+                }).then(response => response.json())
+                .then(data => console.log(data));
+            });
+        </script>
+    </body>
+    </html>
+    ''')
+
 # ======== END OF TESTING ROUTES ========
 
 
@@ -1973,6 +2113,7 @@ if __name__ == '__main__':
                 db.create_all()
                 # creates test user for frontend testing, verification for this account is waived
                 createTestUser()
+                testAddLanguage()
             break
         except OperationalError as e:
             print("Database not ready yet, retrying...")
