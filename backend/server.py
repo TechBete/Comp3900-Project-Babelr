@@ -11,6 +11,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.dialects.postgresql import ARRAY, UUID, ENUM
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy import DDL, event
+from sqlalchemy.sql import func, text
 from dotenv import load_dotenv
 from itsdangerous import URLSafeTimedSerializer
 from email.mime.text import MIMEText
@@ -435,10 +436,10 @@ def createTestUser():
         "pw": "Eve123",
     }
 
-    initial_lang = {
-        "language": "Japanese",
-        "proficiency": "Native",
-    }
+    test_lang = [{
+        "language": "English",
+        "proficiency": "Native"
+    }]
 
     # Hash the user password
     hashed_password = hash_password(data)
@@ -452,8 +453,8 @@ def createTestUser():
         permission=PermissionLevel.listener,
         background_info="ahhhhhhhhhhhh",
         reward_points=0,
-        languages=initial_lang,
         is_verified=True,
+        languages=test_lang,
     )
     try:
         with db.session.begin_nested():
@@ -1309,34 +1310,35 @@ def addLanguage():
 
     try:
         with db.session.begin_nested():
-            language = data['language']
-            proficiency = data['proficiency']
+            data = {
+                "language": language,
+                "proficiency": proficiency,
+            }
             # append data(language:proficiency set) oat the end of listener lanugages list
-            listener.languages.append()
+            listener.languages.append(data)
+            flag_modified(listener, "languages")
+            db.session.commit()
     except Exception as e:
         db.session.rollback()
         logging.debug(e)
         #TODO: check error code and message
         return jsonify({"error": "Failed to update the language"}), 500
 
-
 def testAddLanguage():
-    data = {
-        "language": "Korean",
-        "proficiency": "Native",
-    }
-
     try:
-        with db.session.begin_nested():
-            listener = Researcher.query.filter_by(first_name="Alice").first()
-            if not listener:
-                return jsonify({"error": "Listener not found"}), 404
-            # append data(language:proficiency set) oat the end of listener lanugages list
-            # listener.languages.append(data)
-            # listener.languages = (listener.languages or []) + [data]
-            listener.languages = [] #testing
+        listener = db.session.query(Listener).filter_by(first_name="Alice").first()
+        if not listener:
+            return jsonify({"error": "Listener not found"}), 404
+
+        new_lang = {
+            "language": "German",
+            "proficiency": "limited_working"
+        }
+
+        if new_lang not in listener.languages:
+            listener.languages.append(new_lang)
+            flag_modified(listener, "languages")
             db.session.commit()
-            # no need to send verification email for testing account
     except IntegrityError as e:
         db.session.rollback()
         logging.debug(e)
