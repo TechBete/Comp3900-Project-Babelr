@@ -352,9 +352,7 @@ def createListener():
         background_info=data.get('background_info', ''),
         reward_points=0,
         is_verified=False,
-    #    ==== languages to be set in different task, remove and add to task ======
-    #    languages_list=data.get('languages_list', []),
-    #    languages_proficiency=data.get('languages_proficiency', [])
+        languages=[],
     )
 
     try:
@@ -436,7 +434,8 @@ def createTestUser():
         "pw": "Eve123",
     }
 
-    test_lang = [{
+    test_lang = [
+    {
         "language": "English",
         "proficiency": "Native"
     }]
@@ -622,25 +621,27 @@ def getListeners():
         "languages_proficiency": [lp.value for lp in user.languages_proficiency] if user.languages_proficiency else []  # Convert enum array
     } for user in users])
 
+'''
 # test route to get a listener by id once listener cookie is implemented
-#@app.route('/getListener/<uuid:listener_id>', methods=['GET'])
-#def getListener(listener_id):
-#    user = Listener.query.get(listener_id)
-#    if user is None:
-#        return jsonify({"error": "Listener not found"}), 404
-#    return jsonify({
-#        "Uuid": str(user.id),
-#        "Demographic ID": user.demographic.id if user.demographic else None,
-#        "First Name": user.first_name,
-#        "Last Name": user.last_name,
-#        "Email": user.email,
-#        "Password": user.pw_hash,
-#        "Role": user.permission.value,
-#        "Background Info": user.background_info,
-#        "Reward Points": user.reward_points,
-#        "languages_list": user.languages_list,
-#        "languages_proficiency": [lp.value for lp in user.languages_proficiency] if user.languages_proficiency else []  # Convert enum array
-#    })
+@app.route('/getListener/<uuid:listener_id>', methods=['GET'])
+def getListener(listener_id):
+    user = Listener.query.get(listener_id)
+    if user is None:
+        return jsonify({"error": "Listener not found"}), 404
+    return jsonify({
+        "Uuid": str(user.id),
+        "Demographic ID": user.demographic.id if user.demographic else None,
+        "First Name": user.first_name,
+        "Last Name": user.last_name,
+        "Email": user.email,
+        "Password": user.pw_hash,
+        "Role": user.permission.value,
+        "Background Info": user.background_info,
+        "Reward Points": user.reward_points,
+        "languages_list": user.languages_list,
+        "languages_proficiency": [lp.value for lp in user.languages_proficiency] if user.languages_proficiency else []  # Convert enum array
+    })
+'''
 
 # this route may only be used by the admin to get all researchers
 # update to only allow admin to access this route once single researcher recall route has been implemented
@@ -1309,20 +1310,26 @@ def addLanguage():
         return jsonify({"error": "Listener not found"}), 404
 
     try:
-        with db.session.begin_nested():
-            data = {
-                "language": language,
-                "proficiency": proficiency,
-            }
-            # append data(language:proficiency set) oat the end of listener lanugages list
-            listener.languages.append(data)
+        new_language = {
+            "language": language,
+            "proficiency": proficiency,
+        }
+
+        # implement new validation check to make sure if language is in lanuage list
+
+        if new_language not in listener.languages:
+            listener.languages.append(new_language)
             flag_modified(listener, "languages")
             db.session.commit()
+    except IntegrityError as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
     except Exception as e:
         db.session.rollback()
         logging.debug(e)
-        #TODO: check error code and message
-        return jsonify({"error": "Failed to update the language"}), 500
+        return jsonify({"error": "Error Code: 500"}), 500
+    return jsonify({"message": "Add language Successful"}), 200
 
 def testAddLanguage():
     try:
@@ -1349,16 +1356,149 @@ def testAddLanguage():
         return jsonify({"error": "Error Code: 500"}), 500
     return jsonify({"message": "Add language Successful"}), 200
 
-
-'''
 @app.route('/editLanguage', methods=['POST'])
 @jwt_required()
 def editLanguage():
+    data = request.json
+    required_fields = ['language', 'new_proficiency']
+
+    # check validation error
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+
+    listener_id = get_jwt_identity()
+    listener_id = uuid.UUID(listener_id)
+
+    # check if listener is valid user
+    listener = Researcher.query.filter_by(id=listener_id).first()
+    if not listener:
+        return jsonify({"error": "Listener not found"}), 404
+
+    try:
+        language = data['language']
+        language_to_change = list(filter(lambda x: x["language"] == lanugage, listener.languages))
+
+        if language_to_change is None:
+            return jsonify({"error": "Lanugage doesn't exist"}), 400
+        listener.languages.remove(language_to_change)
+        new_language = {
+            "language": lanugage,
+            "proficiency": data['new_proficiency']
+        }
+        listener.languages.append(new_language)
+        flag_modified(listener, "languages")
+        db.session.commit()
+    except IntegrityError as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Error Code: 500"}), 500
+    return jsonify({"message": "Edit language Successful"}), 200
+
+def testEditLanguage():
+    data = {
+        "language": "English",
+        "new_proficiency": "limited_working"
+    }
+
+    listener = db.session.query(Listener).filter_by(first_name="Alice").first()
+    try:
+        language = data['language']
+        language_to_change = list(filter(lambda x: x["language"] == lanugage, listener.languages))
+
+        if language_to_change is None:
+            return jsonify({"error": "Lanugage doesn't exist"}), 400
+        listener.languages.remove(language_to_change)
+        new_language = {
+            "language": data['language'],
+            "proficiency": data['new_proficiency']
+        }
+        listener.languages.append(new_language)
+        flag_modified(listener, "languages")
+        db.session.commit()
+    except IntegrityError as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Error Code: 500"}), 500
+    return jsonify({"message": "Edit language Successful"}), 200
 
 @app.route('/deleteLanguage', methods=['POST'])
 @jwt_required()
-def addLanguage():
-'''
+def deleteLanguage():
+    data = request.json
+    required_fields = ['language', 'proficiency']
+
+    # check validation error
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+
+    listener_id = get_jwt_identity()
+    listener_id = uuid.UUID(listener_id)
+
+    # check if listener is valid user
+    listener = Researcher.query.filter_by(id=listener_id).first()
+    if not listener:
+        return jsonify({"error": "Listener not found"}), 404
+
+    try:
+        find_language = {
+            "language": language,
+            "proficiency": proficiency,
+        }
+
+        # implement new validation check to make sure if language is in lanuage list
+
+        if find_language not in listener.languages:
+            return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
+        if find_language in listener.languages:
+            listener.languages.remove(find_language)
+            flag_modified(listener, "languages")
+            db.session.commit()
+    except IntegrityError as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Error Code: 500"}), 500
+    return jsonify({"message": "Delete language Successful"}), 200
+
+def testDeleteLanguage():
+    try:
+        listener = db.session.query(Listener).filter_by(first_name="Alice").first()
+        if not listener:
+            return jsonify({"error": "Listener not found"}), 404
+
+        delete_lang = {
+            "language": "German",
+            "proficiency": "limited_working"
+        }
+
+        if delete_lang not in listener.languages:
+            return jsonify({"error": "Language not exist"}), 400
+        if delete_lang in listener.languages:
+            listener.languages.remove(delete_lang)
+            flag_modified(listener, "languages")
+            db.session.commit()
+    except IntegrityError as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Error Code: 500"}), 500
+    return jsonify({"message": "Add language Successful"}), 200
 
 # ======== TESTING ROUTES ========
 # These routes are for testing purposes only and should be removed once the frontend is in place
@@ -2115,7 +2255,8 @@ if __name__ == '__main__':
                 db.create_all()
                 # creates test user for frontend testing, verification for this account is waived
                 createTestUser()
-                testAddLanguage()
+                # testAddLanguage() # for testing add language functionality; To be removed
+                testEditLanguage()
             break
         except OperationalError as e:
             print("Database not ready yet, retrying...")
