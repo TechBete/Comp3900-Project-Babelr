@@ -11,6 +11,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.dialects.postgresql import ARRAY, UUID, ENUM
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy import DDL, event
+from sqlalchemy.sql import func, text
 from dotenv import load_dotenv
 from itsdangerous import URLSafeTimedSerializer
 from email.mime.text import MIMEText
@@ -162,7 +163,6 @@ class Researcher(db.Model):
     organisation = db.Column(db.String(128))
     project_list = db.Column(db.JSON, default=[]) # 128 char length array
     uploaded_video = db.Column(db.JSON, default=[]) # 128 char length file ID array
-    gender = db.Column(gender_enum)
     is_verified = db.Column(db.Boolean, nullable=False)
     jti = db.Column(db.String(36))  # JWT ID to store in the database to prevent reuse and duplicate active tokens
     blindlogin = db.Column(UUID(as_uuid=True)) # generate a random uuid for blind login
@@ -173,13 +173,12 @@ class Listener(db.Model):
     first_name = db.Column(db.String(128), nullable=False)
     last_name = db.Column(db.String(128), nullable=False)
     email = db.Column(db.String(128), nullable=False, unique=True)
-    pw_hash = db.Column(db.String(128), nullable=False) # Argon2 hash string is 97 char long 
+    pw_hash = db.Column(db.String(128), nullable=False) # Argon2 hash string is 97 char long
     permission = db.Column(permission_level_enum, nullable=False)
     background_info = db.Column(db.String(1024), default="") # 1024 char length string
     reward_points = db.Column(db.Integer)
     is_verified = db.Column(db.Boolean, nullable=False)
-    languages_list = db.Column(db.JSON, default=[]) # 128 char length array
-    languages_proficiency = db.Column(db.JSON, default=[]) # proficiency level array
+    languages = db.Column(db.JSON, default=list) # sets of language:proficiency
     jti = db.Column(db.String(36))  # JWT ID to store in the database to prevent reuse and duplicate active tokens
     blindlogin = db.Column(UUID(as_uuid=True)) # generate a random uuid for blind login
 
@@ -204,7 +203,6 @@ def verify_email(token):
     email = verify_token(token)
 
     if not email:
-        # TODO: your token is invalid or expired message
         return redirect(url_for('login')), 404
 
     # Find user and mark as verified
@@ -214,10 +212,8 @@ def verify_email(token):
     if user and not user.is_verified:
         user.is_verified = True
         db.session.commit()
-        # TODO: your email has been verified message
     else:
         pass
-        # TODO: your email has already been verified error message
 
     return redirect(url_for('login'))
 
@@ -254,7 +250,7 @@ def login():
     if (existing_researcher and not existing_researcher.is_verified) or (existing_listener and not existing_listener.is_verified):
         return jsonify({"error": "User has not verified account"}), 401
 
-    # updated for researcher login; check if user is a listener or researcher, 
+    # updated for researcher login; check if user is a listener or researcher,
     # updated token id as uuid for validation in backend routes.
     # added email and permissions to additioanl_claims for validation in backend routes.
     if existing_researcher:
@@ -356,9 +352,7 @@ def createListener():
         background_info=data.get('background_info', ''),
         reward_points=0,
         is_verified=False,
-    #    ==== languages to be set in different task, remove and add to task ======
-    #    languages_list=data.get('languages_list', []),
-    #    languages_proficiency=data.get('languages_proficiency', [])
+        languages=[],
     )
 
     try:
@@ -440,6 +434,13 @@ def createTestUser():
         "pw": "Eve123",
     }
 
+
+    test_lang = [
+    {
+        "language": "English",
+        "proficiency": "Native"
+    }]
+
     data2 = {
         "first_name": "Jim",
         "last_name": "Bill",
@@ -447,20 +448,22 @@ def createTestUser():
         "pw": "Jim123",
     }
 
+
     # Hash the user password
     hashed_password = hash_password(data)
     hashed_password2 = hash_password(data)
 
     user = Listener(
-        id=uuid.uuid4(),    # generate a random uuid if not provided
+        id="736259a4-aea2-4de7-aa87-5764e1db624b",    # generate a random uuid if not provided
         first_name=data['first_name'],
         last_name=data['last_name'],
         email=data['email'],
         pw_hash=hashed_password.value,
         permission=PermissionLevel.listener,
-        background_info="test background ahhhhhhhhhhhh",
+        background_info="ahhhhhhhhhhhh",
         reward_points=0,
         is_verified=True,
+        languages=test_lang,
     )
 
     user2 = Researcher(
@@ -474,10 +477,11 @@ def createTestUser():
     )
 
     try:
-        db.session.add(user)
-        db.session.add(user2)
-        db.session.commit()
-        # no need to send verification email for testing account
+        with db.session.begin_nested():
+            db.session.add(user)
+            db.session.add(user2)
+            db.session.commit()
+            # no need to send verification email for testing account
     except IntegrityError as e:
         db.session.rollback()
         logging.debug(e)
@@ -640,25 +644,27 @@ def getListeners():
         "languages_proficiency": [lp.value for lp in user.languages_proficiency] if user.languages_proficiency else []  # Convert enum array
     } for user in users])
 
+'''
 # test route to get a listener by id once listener cookie is implemented
-#@app.route('/getListener/<uuid:listener_id>', methods=['GET'])
-#def getListener(listener_id):
-#    user = Listener.query.get(listener_id)
-#    if user is None:
-#        return jsonify({"error": "Listener not found"}), 404
-#    return jsonify({
-#        "Uuid": str(user.id),
-#        "Demographic ID": user.demographic.id if user.demographic else None,
-#        "First Name": user.first_name,
-#        "Last Name": user.last_name,
-#        "Email": user.email,
-#        "Password": user.pw_hash,
-#        "Role": user.permission.value,
-#        "Background Info": user.background_info,
-#        "Reward Points": user.reward_points,
-#        "languages_list": user.languages_list,
-#        "languages_proficiency": [lp.value for lp in user.languages_proficiency] if user.languages_proficiency else []  # Convert enum array
-#    })
+@app.route('/getListener/<uuid:listener_id>', methods=['GET'])
+def getListener(listener_id):
+    user = Listener.query.get(listener_id)
+    if user is None:
+        return jsonify({"error": "Listener not found"}), 404
+    return jsonify({
+        "Uuid": str(user.id),
+        "Demographic ID": user.demographic.id if user.demographic else None,
+        "First Name": user.first_name,
+        "Last Name": user.last_name,
+        "Email": user.email,
+        "Password": user.pw_hash,
+        "Role": user.permission.value,
+        "Background Info": user.background_info,
+        "Reward Points": user.reward_points,
+        "languages_list": user.languages_list,
+        "languages_proficiency": [lp.value for lp in user.languages_proficiency] if user.languages_proficiency else []  # Convert enum array
+    })
+'''
 
 # this route may only be used by the admin to get all researchers
 # update to only allow admin to access this route once single researcher recall route has been implemented
@@ -1276,7 +1282,7 @@ def deleteProjectMetrics():
     return jsonify({"message": "Project metric deleted successfully", "metrics": project['metrics']})
 
 @app.route('/uploadAudioFile', methods=['POST'])
-# @jwt_required()
+@jwt_required()
 def uploadAudioFile():
     if "file" not in request.files:
         return jsonify({"error": "File doesn't exists."}), 400
@@ -1306,6 +1312,214 @@ def uploadAudioFile():
     file.save(file_path)
 
     return jsonify({"message": f"{file.filename} is successfully uploaded and stored!"}), 200
+
+@app.route('/addLanguage', methods=['POST'])
+@jwt_required()
+def addLanguage():
+    data = request.json
+    required_fields = ['language', 'proficiency']
+
+    # check validation error
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+
+    listener_id = get_jwt_identity()
+    listener_id = uuid.UUID(listener_id)
+
+    # check if listener is valid user
+    listener = Researcher.query.filter_by(id=listener_id).first()
+    if not listener:
+        return jsonify({"error": "Listener not found"}), 404
+
+    try:
+        new_language = {
+            "language": language,
+            "proficiency": proficiency,
+        }
+
+        # implement new validation check to make sure if language is in lanuage list
+
+        if new_language not in listener.languages:
+            listener.languages.append(new_language)
+            flag_modified(listener, "languages")
+            db.session.commit()
+    except IntegrityError as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Error Code: 500"}), 500
+    return jsonify({"message": "Add language Successful"}), 200
+
+def testAddLanguage():
+    try:
+        listener = db.session.query(Listener).filter_by(first_name="Alice").first()
+        if not listener:
+            return jsonify({"error": "Listener not found"}), 404
+
+        new_lang = {
+            "language": "German",
+            "proficiency": "limited_working"
+        }
+
+        if new_lang not in listener.languages:
+            listener.languages.append(new_lang)
+            flag_modified(listener, "languages")
+            db.session.commit()
+    except IntegrityError as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Error Code: 500"}), 500
+    return jsonify({"message": "Add language Successful"}), 200
+
+@app.route('/editLanguage', methods=['POST'])
+@jwt_required()
+def editLanguage():
+    data = request.json
+    required_fields = ['language', 'new_proficiency']
+
+    # check validation error
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+
+    listener_id = get_jwt_identity()
+    listener_id = uuid.UUID(listener_id)
+
+    # check if listener is valid user
+    listener = Researcher.query.filter_by(id=listener_id).first()
+    if not listener:
+        return jsonify({"error": "Listener not found"}), 404
+
+    try:
+        target_language = data['language']
+
+        found = False
+        for lang_data in listener.languages:
+            if lang_data['language'] == target_language:
+                lang_data['proficiency'] = data['new_proficiency']
+                flag_modified(listener, "languages")
+                found = True
+                db.session.commit()
+        if not found:
+            return jsonify({"error": "Language not found"}), 400
+    except IntegrityError as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Error Code: 500"}), 500
+    return jsonify({"message": "Edit language Successful"}), 200
+
+def testEditLanguage():
+    data = {
+        "language": "Japanese",
+        "new_proficiency": "limited_working"
+    }
+
+    listener = db.session.query(Listener).filter_by(first_name="Alice").first()
+    try:
+        target_language = data['language']
+
+        found = False
+        for lang_data in listener.languages:
+            if lang_data['language'] == target_language:
+                lang_data['proficiency'] = "limited_working"
+                flag_modified(listener, "languages")
+                found = True
+                print(found)
+                db.session.commit()
+        if not found:
+            print("error: Language not found")
+            return jsonify({"error": "Language not found"}), 400
+    except IntegrityError as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Error Code: 500"}), 500
+    return jsonify({"message": "Edit language Successful"}), 200
+
+@app.route('/deleteLanguage', methods=['POST'])
+@jwt_required()
+def deleteLanguage():
+    data = request.json
+    required_fields = ['language', 'proficiency']
+
+    # check validation error
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+
+    listener_id = get_jwt_identity()
+    listener_id = uuid.UUID(listener_id)
+
+    # check if listener is valid user
+    listener = Researcher.query.filter_by(id=listener_id).first()
+    if not listener:
+        return jsonify({"error": "Listener not found"}), 404
+
+    try:
+        find_language = {
+            "language": language,
+            "proficiency": proficiency,
+        }
+
+        # implement new validation check to make sure if language is in lanuage list
+
+        if find_language not in listener.languages:
+            return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
+        if find_language in listener.languages:
+            listener.languages.remove(find_language)
+            flag_modified(listener, "languages")
+            db.session.commit()
+    except IntegrityError as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Error Code: 500"}), 500
+    return jsonify({"message": "Delete language Successful"}), 200
+
+def testDeleteLanguage():
+    try:
+        listener = db.session.query(Listener).filter_by(first_name="Alice").first()
+        if not listener:
+            return jsonify({"error": "Listener not found"}), 404
+
+        delete_lang = {
+            "language": "German",
+            "proficiency": "limited_working"
+        }
+
+        if delete_lang not in listener.languages:
+            return jsonify({"error": "Language not exist"}), 400
+        if delete_lang in listener.languages:
+            listener.languages.remove(delete_lang)
+            flag_modified(listener, "languages")
+            db.session.commit()
+    except IntegrityError as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Error Code: 500"}), 500
+    return jsonify({"message": "Add language Successful"}), 200
 
 # ======== TESTING ROUTES ========
 # These routes are for testing purposes only and should be removed once the frontend is in place
@@ -1343,7 +1557,9 @@ def index():
             <li><a href="/getProjectMetrics">Get Project Metrics # working</a></li>
             <li><a href="/updateProjectMetrics">Update Project Metrics # working</a></li>
             <li><a href="/deleteProjectMetrics">Delete Project Metrics # working</a></li>
-            <li><a href="/testUploadAudio">Test Audio uploading function </a></li>
+            <li><a href="/testUploadAudio">Test Audio uploading function # idkidk </a></li>
+            <li><a href="/testAddLang">Test add language function </a></li>
+            <li><a href="/getListenerData">Test get user data function </a></li>
         </ul>
     </body>
     </html>
@@ -1982,6 +2198,72 @@ def audioFileUploadForm():
     </html>
     ''')
 
+@app.route('/testAddLang', methods=['GET'])
+def testAddLanguageForm():
+    return render_template_string('''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Add language</title>
+    </head>
+    <body>
+        <h1>User Add Language</h1>
+        <form action="/addLanguage" method="post">
+            <label for="language">Language:</label><br>
+            <input type="text" id="language" name="language"><br>
+            <label for="proficiency">Proficiency level:</label><br>
+            <input type="text" id="proficiency" name="proficiency"><br>
+            <button type="submit">Submit</button>
+        </form>
+        <script>
+            document.querySelector('form').addEventListener('submit', function (e) {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const jsonData = Object.fromEntries(formData);
+                fetch('/addLanguage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(jsonData)
+                }).then(response => response.json())
+                    .then(data => console.log(data));
+            });
+        </script>
+    </body>
+    </html>
+    ''')
+
+@app.route('/getListenerData', methods=['GET'])
+def getListenerDataForm():
+    return render_template_string('''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Get Listener</title>
+    </head>
+    <body>
+        <h1>Get Listener</h1>
+        <form action="/getListeners" method="post">
+            <button type="submit">Submit</button>
+        </form>
+        <script>
+            document.querySelector('form').addEventListener('submit', function (e) {
+                e.preventDefault();
+                fetch('/getListeners', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify("")
+                }).then(response => response.json())
+                .then(data => console.log(data));
+            });
+        </script>
+    </body>
+    </html>
+    ''')
+
 # ======== END OF TESTING ROUTES ========
 
 
@@ -1994,6 +2276,8 @@ if __name__ == '__main__':
                 db.create_all()
                 # creates test user for frontend testing, verification for this account is waived
                 createTestUser()
+                # testAddLanguage() # for testing add language functionality; To be removed
+                testEditLanguage()
             break
         except OperationalError as e:
             print("Database not ready yet, retrying...")
