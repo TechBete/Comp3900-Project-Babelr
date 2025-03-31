@@ -451,7 +451,7 @@ def createTestUser():
 
     # Hash the user password
     hashed_password = hash_password(data)
-    hashed_password2 = hash_password(data)
+    hashed_password2 = hash_password(data2)
 
     user = Listener(
         id="736259a4-aea2-4de7-aa87-5764e1db624b",    # generate a random uuid if not provided
@@ -1328,14 +1328,14 @@ def addLanguage():
     listener_id = uuid.UUID(listener_id)
 
     # check if listener is valid user
-    listener = Researcher.query.filter_by(id=listener_id).first()
+    listener = Listener.query.filter_by(id=listener_id).first()
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
     try:
         new_language = {
-            "language": language,
-            "proficiency": proficiency,
+            "language": data['language'],
+            "proficiency": data['proficiency'],
         }
 
         # implement new validation check to make sure if language is in lanuage list
@@ -1394,7 +1394,7 @@ def editLanguage():
     listener_id = uuid.UUID(listener_id)
 
     # check if listener is valid user
-    listener = Researcher.query.filter_by(id=listener_id).first()
+    listener = Listener.query.filter_by(id=listener_id).first()
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
@@ -1466,14 +1466,14 @@ def deleteLanguage():
     listener_id = uuid.UUID(listener_id)
 
     # check if listener is valid user
-    listener = Researcher.query.filter_by(id=listener_id).first()
+    listener = Listener.query.filter_by(id=listener_id).first()
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
     try:
         find_language = {
-            "language": language,
-            "proficiency": proficiency,
+            "language": data['language'],
+            "proficiency": data['proficiency'],
         }
 
         # implement new validation check to make sure if language is in lanuage list
