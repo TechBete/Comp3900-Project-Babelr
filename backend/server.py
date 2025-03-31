@@ -451,7 +451,7 @@ def createTestUser():
 
     # Hash the user password
     hashed_password = hash_password(data)
-    hashed_password2 = hash_password(data)
+    hashed_password2 = hash_password(data2)
 
     user = Listener(
         id="736259a4-aea2-4de7-aa87-5764e1db624b",    # generate a random uuid if not provided
