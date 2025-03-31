@@ -1,6 +1,7 @@
 import { useState, FormEvent } from "react";
 import styles from "stylesheets/first_time_listener.module.css";
 import Image from "next/image";
+import { useRouter } from "next/router";
 
 type LanguageEntry = {
     language: string;
@@ -10,6 +11,7 @@ type LanguageEntry = {
 export default function LanguageSelector() {
     const [languages, setLanguages] = useState<LanguageEntry[]>([]);
     const [error, setError] = useState("");
+    const router = useRouter();
 
     const handleChange = (index: number, field: keyof LanguageEntry, value: string) => {
         const newLanguages = [...languages];
@@ -29,27 +31,40 @@ export default function LanguageSelector() {
 
     const handleSubmit = async (event: FormEvent) => {
         event.preventDefault();
+
+        let allSuccessful = true;
+
         for (const entry of languages) {
-            if (entry.language && entry.proficiency) {
-                await postLanguage(entry);
+            const success = await postLanguage(entry);
+            if (!success) {
+                allSuccessful = false;
             }
+        }
+    
+        if (allSuccessful) {
+            router.push("/listenerhomepage");
         }
     };
 
-    const postLanguage = async (entry: LanguageEntry) => {
+    const postLanguage = async (entry: LanguageEntry): Promise<boolean> => {
         try {
-            const response = await fetch("http://localhost:8016/editlanguage", {
+            const response = await fetch("http://localhost:8016/addLanguage", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
                 body: JSON.stringify(entry),
             });
-            if (!response.ok) {
+
+            if (!response.ok){
                 const data = await response.json();
                 setError(data.error || "Error posting language");
+                return false;
             }
+
+            return true;
         } catch {
             setError("Network Error: Fetch Request Failed");
+            return false;
         }
     };
 
@@ -70,14 +85,16 @@ export default function LanguageSelector() {
                                         className={styles.select}
                                         required
                                     >
-                                        <option value="">Language</option>
-                                        <option>English</option>
-                                        <option>Spanish</option>
-                                        <option>French</option>
-                                        <option>Mandarin</option>
-                                        <option>Hindi</option>
-                                        <option>Arabic</option>
-                                        <option>Other</option>
+                                    <option value="">Language</option>
+                                    {["English", "Spanish", "French", "Mandarin", "Hindi", "Arabic", "Other"].map((lang) => ( // change to saved list of languages later
+                                        <option
+                                            key={lang}
+                                            value={lang}
+                                            disabled={languages.some((e, i) => e.language === lang && i !== index)}
+                                        >
+                                            {lang}
+                                        </option>
+                                    ))}
                                     </select>
 
                                     <select

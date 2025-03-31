@@ -2,6 +2,7 @@ import { FormEvent, useState } from "react";
 import styles from "stylesheets/first_time_listener.module.css";
 import Image from "next/image";
 import DatePickerWrapper from "components/date_picker"
+import { useRouter } from "next/router";
 
 
 export default function First_time() {
@@ -11,6 +12,7 @@ export default function First_time() {
     const [country, setCountry] = useState("");
     const [education, setEducation] = useState("");
     const [Error, setError] = useState("");
+    const router = useRouter();
 
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault()
@@ -27,6 +29,7 @@ export default function First_time() {
     async function PostDemographics(key: string, value: string ,API: string) {
         console.log("DEMOGRAPHICS POST BELOW");
         console.log(JSON.stringify({[key]: value}));
+        router.push('first_time_listener_lg')// FOR NOW BEFORE OTHER ADD API CALLS ARE DEVELOPED
         try {
             const response = await fetch(`http://localhost:8016/${API}}`, {
                 method:"POST",
