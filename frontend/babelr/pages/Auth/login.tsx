@@ -8,11 +8,12 @@ export default function Login() {
     const router = useRouter()
     const [selectedOption, setSelectedOption] = useState("/Auth/register_listener");
     const [loginError, setLoginError] = useState("");
+    // FOR NOW USE THIS TO CHANGE WHAT THE USERTYPE IS AND IF IT'S THEIR FIRST TIME
     const [userType, setUser] = useState("researcher"); // TEMPORARY BEFORE isUser APICALL
-    const [isFirstTime, setFirstTime] = useState(true);
+    const [isFirstTime, setFirstTime] = useState(false);
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-        // FOR NOW USE THIS TO CHANGE WHAT THE USERTYPE IS AND IF IT'S THEIR FIRST TIME
-        setUser("researcher");
+        // DOES NOTHING BECAUSE ASYNC FUNCTION
+        setUser('researcher');
         setFirstTime(false);
 
         event.preventDefault()
@@ -37,7 +38,7 @@ export default function Login() {
                 }
 
                 if (userType == "researcher") {
-                    if (isFirstTime ){
+                    if (isFirstTime){
                         router.push("/Researcher/first_time_researcher");
                     } else {
                         router.push("/Researcher/project_list");
