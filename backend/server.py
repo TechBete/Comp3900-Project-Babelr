@@ -1376,19 +1376,17 @@ def editLanguage():
         return jsonify({"error": "Listener not found"}), 404
 
     try:
-        language = data['language']
-        language_to_change = list(filter(lambda x: x["language"] == lanugage, listener.languages))
+        target_language = data['language']
 
-        if language_to_change is None:
-            return jsonify({"error": "Lanugage doesn't exist"}), 400
-        listener.languages.remove(language_to_change)
-        new_language = {
-            "language": lanugage,
-            "proficiency": data['new_proficiency']
-        }
-        listener.languages.append(new_language)
-        flag_modified(listener, "languages")
-        db.session.commit()
+        found = False
+        for lang_data in listener.languages:
+            if lang_data['language'] == target_language:
+                lang_data['proficiency'] = data['new_proficiency']
+                flag_modified(listener, "languages")
+                found = True
+                db.session.commit()
+        if not found:
+            return jsonify({"error": "Language not found"}), 400
     except IntegrityError as e:
         db.session.rollback()
         logging.debug(e)
@@ -1401,25 +1399,25 @@ def editLanguage():
 
 def testEditLanguage():
     data = {
-        "language": "English",
+        "language": "Japanese",
         "new_proficiency": "limited_working"
     }
 
     listener = db.session.query(Listener).filter_by(first_name="Alice").first()
     try:
-        language = data['language']
-        language_to_change = list(filter(lambda x: x["language"] == lanugage, listener.languages))
+        target_language = data['language']
 
-        if language_to_change is None:
-            return jsonify({"error": "Lanugage doesn't exist"}), 400
-        listener.languages.remove(language_to_change)
-        new_language = {
-            "language": data['language'],
-            "proficiency": data['new_proficiency']
-        }
-        listener.languages.append(new_language)
-        flag_modified(listener, "languages")
-        db.session.commit()
+        found = False
+        for lang_data in listener.languages:
+            if lang_data['language'] == target_language:
+                lang_data['proficiency'] = "limited_working"
+                flag_modified(listener, "languages")
+                found = True
+                print(found)
+                db.session.commit()
+        if not found:
+            print("error: Language not found")
+            return jsonify({"error": "Language not found"}), 400
     except IntegrityError as e:
         db.session.rollback()
         logging.debug(e)
