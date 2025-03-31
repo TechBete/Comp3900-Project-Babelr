@@ -434,14 +434,24 @@ def createTestUser():
         "pw": "Eve123",
     }
 
+
     test_lang = [
     {
         "language": "English",
         "proficiency": "Native"
     }]
 
+    data2 = {
+        "first_name": "Jim",
+        "last_name": "Bill",
+        "email": "research@user.com",
+        "pw": "Jim123",
+    }
+
+
     # Hash the user password
     hashed_password = hash_password(data)
+    hashed_password2 = hash_password(data)
 
     user = Listener(
         id="736259a4-aea2-4de7-aa87-5764e1db624b",    # generate a random uuid if not provided
@@ -455,9 +465,21 @@ def createTestUser():
         is_verified=True,
         languages=test_lang,
     )
+
+    user2 = Researcher(
+        id=uuid.uuid4(),    # generate a random uuid if not provided
+        first_name=data2['first_name'],
+        last_name=data2['last_name'],
+        email=data2['email'],
+        pw_hash=hashed_password2.value,
+        permission=PermissionLevel.researcher,
+        is_verified=True,
+    )
+
     try:
         with db.session.begin_nested():
             db.session.add(user)
+            db.session.add(user2)
             db.session.commit()
             # no need to send verification email for testing account
     except IntegrityError as e:
@@ -469,6 +491,7 @@ def createTestUser():
         logging.debug(e)
         return jsonify({"error": "Error Code: 500"}), 500
     return jsonify({"message": "Registration Successful"})
+
 
 # this route is to reset a user's password
 @app.route('/userResetPassword', methods=['POST'])
