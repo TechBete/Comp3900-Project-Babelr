@@ -187,7 +187,7 @@ class Listener(db.Model):
 
 class Demographic(db.Model):
     __tablename__ = "demographics"
-    id = db.Column(db.Integer, primary_key=True, nullable=False) # ID of demographic record
+    id = db.Column(db.Integer, primary_key=True, nullable=False, autoincrement=True) # ID of demographic record
     listener_id = db.Column(UUID(as_uuid=True), db.ForeignKey("listeners.id"))
     listener = db.relationship("Listener", back_populates="demographic")
     age = db.Column(db.Integer, nullable=False)
@@ -309,9 +309,12 @@ def createListener():
 
     Email = data['email']
     # Check if email already exists
-    existing_user = Listener.query.filter_by(email=Email).first()
-    if existing_user:
-        return jsonify({"error": "Email already registered"}), 400
+    existing_listener = Listener.query.filter_by(email=Email).first()
+    existing_researcher = Researcher.query.filter_by(email=Email).first()
+    if existing_listener:
+        return jsonify({"error": "Email already registered as listener"}), 400
+    elif existing_researcher:
+        return jsonify({"error": "Email already registered as researcher"}), 400
 
     # check if email is structured correctly
     try:
@@ -388,9 +391,12 @@ def createResearcher():
     hashed_password = hash_password(data)
 
     # Check if email already exists
-    existing_user = Researcher.query.filter_by(email=Email).first()
-    if existing_user:
-        return jsonify({"error": "Email already registered"}), 400
+    existing_listener = Listener.query.filter_by(email=Email).first()
+    existing_researcher = Researcher.query.filter_by(email=Email).first()
+    if existing_listener:
+        return jsonify({"error": "Email already registered as listener"}), 400
+    elif existing_researcher:
+        return jsonify({"error": "Email already registered as researcher"}), 400
 
     # check if email is structured correctly
     try:
@@ -453,6 +459,23 @@ def createTestUser():
     hashed_password = hash_password(data)
     hashed_password2 = hash_password(data2)
 
+
+    demo_data = {
+        "age": 53,
+        "country_of_residence": "Australia",
+        "address": "2 King St",
+        "education": "Bachelor of Arts",
+        "gender": "female"
+    }
+
+    demo = Demographic(
+        age=demo_data['age'],
+        country_of_residence=demo_data['country_of_residence'],
+        address=demo_data['address'],
+        education=demo_data['education'],
+        gender=demo_data['gender']
+    )
+
     user = Listener(
         id="736259a4-aea2-4de7-aa87-5764e1db624b",    # generate a random uuid if not provided
         first_name=data['first_name'],
@@ -464,6 +487,7 @@ def createTestUser():
         reward_points=0,
         is_verified=True,
         languages=test_lang,
+        demographic=demo
     )
 
     user2 = Researcher(
@@ -1530,6 +1554,8 @@ def testDeleteLanguage():
         return jsonify({"error": "Error Code: 500"}), 500
     return jsonify({"message": "Add language Successful"}), 200
 
+# ======== HELPER FUNCTIONS ========
+# Helper function to return current point status of listener
 @app.route('/getCurrentPoints', methods=['GET'])
 @jwt_required()
 def getCurrentPoints():
@@ -1540,9 +1566,9 @@ def getCurrentPoints():
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
-    return jsonify({"reward_points": listener.reward_points})g
+    return jsonify({"reward_points": listener.reward_points})
 
-
+# Helper function to get user role from uuid
 @app.route('/getRoleFromID', methods=['GET'])
 @jwt_required()
 def getRoleFromID():
@@ -1558,7 +1584,63 @@ def getRoleFromID():
     else:
         return jsonify({"error": "User ID not found"}), 404
 
+@app.route('/registerDemographics', methods=['POST'])
+@jwt_required()
+def registerDemographics():
+    data = request.json
+    required_fields = ['age', 'country_of_residence', 'address', 'education']
 
+    # check validation error
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+
+    listener_id = get_jwt_identity()
+    listener_id = uuid.UUID(listener_id)
+
+    # check if listener is valid user
+    listener = Listener.query.filter_by(id=listener_id).first()
+    if not listener:
+        return jsonify({"error": "Listener not found"}), 404
+    # if not listener.demographics.listener_id == listener_id:
+        # return jsonify({"error": "Demographic does not belongs to this listener"}), 404
+
+    listener.demographic = Demographic(
+        age=data['age'],
+        country_of_residence=data['country_of_residence'],
+        address=data['address'],
+        education=data['education'],
+        gender=data['gender']
+    )
+
+'''
+def testRegisterDemographics():
+    data = {
+        "age": 53,
+        "country_of_residence": "Australia",
+        "address": "2 King St",
+        "education": "Bachelor of Arts",
+        "gender": "female"
+    }
+
+    # check if listener is valid user
+    listener = db.session.query(Listener).filter_by(first_name="Alice").first()
+    if not listener:
+        return jsonify({"error": "Listener not found"}), 404
+    # if not listener.demographic.listener_id == listener_id:
+        # return jsonify({"error": "Demographic does not belongs to this listener"}), 404
+
+    listener.demographic = Demographic(
+        age=data['age'],
+        country_of_residence=data['country_of_residence'],
+        address=data['address'],
+        education=data['education'],
+        gender=data['gender']
+    )
+
+@app.route('/edit')
+def
+'''
 
 # ======== TESTING ROUTES ========
 # These routes are for testing purposes only and should be removed once the frontend is in place
@@ -2316,7 +2398,8 @@ if __name__ == '__main__':
                 # creates test user for frontend testing, verification for this account is waived
                 createTestUser()
                 # testAddLanguage() # for testing add language functionality; To be removed
-                testEditLanguage()
+                # testEditLanguage()
+                testRegisterDemographics()
             break
         except OperationalError as e:
             print("Database not ready yet, retrying...")
