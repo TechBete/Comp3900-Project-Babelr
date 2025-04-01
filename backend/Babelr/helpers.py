@@ -1,0 +1,94 @@
+from flask import jsonify
+from email.mime.text import MIMEText
+from itsdangerous import URLSafeTimedSerializer
+from password import PasswordHash
+from Babelr.models import Researcher, Listener
+import os, smtplib
+
+# ========== 0. Helper Functions ==========
+
+
+def check_verified(email):
+    existing_listener = Listener.query.filter_by(email=email).first()
+    existing_researcher = Researcher.query.filter_by(email=email).first()
+    if existing_listener and existing_listener.is_verified:
+        return True
+    if existing_researcher and existing_researcher.is_verified:
+        return True
+    
+    return jsonify({"error": "Email not verified"}), 401
+
+def validate_required_fields(data, required_fields):
+    for field in required_fields:
+        if field not in data:
+            return jsonify({"error": "Missing field: {}".format(field)}), 400
+    return None
+
+def hash_password(data):
+    hashed_password = PasswordHash(data['pw'])
+    return hashed_password
+
+def validate_Password(data, hashed_password):
+    return PasswordHash.verify(data['pw'], hashed_password)
+
+def generate_verification_token(email):
+    # serializer = URLSafeTimedSerializer(app.secret_key)
+    serializer = URLSafeTimedSerializer("app . secrete")
+    return serializer.dumps(email, salt='email-confirm-salt')
+
+def verify_token(token, expiration=3600):  # Token expires in 1 hour
+    serializer = URLSafeTimedSerializer('app . secrete') # app.secret_key)
+    try:
+        email = serializer.loads(token, salt='email-confirm-salt', max_age=expiration)
+        return email
+    except:
+        return None
+
+def send_verification_email(receiver_email, verification_url):
+    subject = "Babelr Account Verification Email"
+    body = f'Click the link to verify your email to gain access to Babelr: {verification_url}'
+
+    msg = MIMEText(body, "plain")
+    msg["From"] = os.getenv('MAIL_USERNAME')
+    msg["To"] = receiver_email
+    msg["Subject"] = subject
+
+    try:
+        server = smtplib.SMTP('smtp.mail.yahoo.com', 587)
+        server.starttls()
+        server.login(os.getenv('MAIL_USERNAME'), os.getenv('MAIL_PASSWORD'))
+        server.sendmail(os.getenv('MAIL_USERNAME'), receiver_email, msg.as_string())
+        server.quit()
+    except Exception as e:
+        return f"Error: {e}"
+    
+def is_existing_user(email):
+    existing_listener = Listener.query.filter_by(email=email).first()
+    existing_researcher = Researcher.query.filter_by(email=email).first()
+    if existing_listener or existing_researcher:
+        return True
+    return False
+
+def is_researcher(email):
+    existing_researcher = Researcher.query.filter_by(email=email).first()
+    if existing_researcher:
+        return existing_researcher
+    else:
+        return None
+
+def is_listener(email):
+    existing_listener = Listener.query.filter_by(email=email).first()
+    if existing_listener:
+        return existing_listener
+    else:
+        return None
+    
+def blind_login(id):
+    existing_listener = Listener.query.filter_by(blind_login=id).first()
+    existing_researcher = Researcher.query.filter_by(blind_login=id).first()
+    if existing_listener:
+        return existing_listener.blindlogin
+    elif existing_researcher:
+        return existing_researcher.blindlogin
+    else:
+        return None
