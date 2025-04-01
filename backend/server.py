@@ -1530,6 +1530,36 @@ def testDeleteLanguage():
         return jsonify({"error": "Error Code: 500"}), 500
     return jsonify({"message": "Add language Successful"}), 200
 
+@app.route('/getCurrentPoints', methods=['GET'])
+@jwt_required()
+def getCurrentPoints():
+    listener_id = get_jwt_identity()
+    listener_id = uuid.UUID(listener_id)
+
+    listener = Listener.query.filter_by(id=listener_id).first()
+    if not listener:
+        return jsonify({"error": "Listener not found"}), 404
+
+    return jsonify({"reward_points": listener.reward_points})g
+
+
+@app.route('/getRoleFromID', methods=['GET'])
+@jwt_required()
+def getRoleFromID():
+    user_id = get_jwt_identity()
+    user_id = uuid.UUID(user_id)
+
+    listener = Listener.query.filter_by(id=user_id).first()
+    researcher = Researcher.query.filter_by(id=user_id).first()
+    if listener and not researcher:
+        return jsonify({"role": "listener"})
+    elif not listener and researcher:
+        return jsonify({"role": "researcher"})
+    else:
+        return jsonify({"error": "User ID not found"}), 404
+
+
+
 # ======== TESTING ROUTES ========
 # These routes are for testing purposes only and should be removed once the frontend is in place
 # These routes are used to simulate the frontend form submissions
