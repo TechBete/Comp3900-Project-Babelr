@@ -118,6 +118,7 @@ def login():
             return response
     return jsonify({"error": "Failed Login. Either Email or password was incorrect"}), 401   # update frontend for error message popup
 
+# unset cookie on logout - look into this when possible
 @authBp.route('/logout', methods=['POST'])
 @jwt_required()
 def logout():
@@ -161,7 +162,7 @@ def createListener():
         reward_points=0,
         is_verified=False,
         languages=([] if not data.get('languages') else data['languages']),
-        assigned_videos=([] if not data.get('assigned_videos') else data['assigned_videos']),
+        assigned_audio=([] if not data.get('assigned_audio') else data['assigned_audio']),
     )
 
     try:
@@ -271,6 +272,7 @@ def createTestUser():
         reward_points=0,
         is_verified=True,
         languages=test_lang,
+        assigned_audio=([] if not data.get('assigned_audio') else data['assigned_audio']),
     )
 
     user2 = Researcher(
@@ -370,7 +372,7 @@ def blindEmailParse():
     try:
         validate_email(Email)
     except EmailNotValidError as e:
-        return jsonify({"Email entered is not of proper format. Email": str(email)}), 400
+        return jsonify({"Email entered is not of proper format. Email": str(Email)}), 400
 
     # check if email is in the database
     if helper.is_existing_user(Email):

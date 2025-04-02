@@ -75,7 +75,7 @@ class Researcher(db.Model):
     permission = db.Column(permission_level_enum, nullable=False)
     organisation = db.Column(db.String(128))
     project_list = db.Column(db.JSON, default=list) # 128 char length array
-    uploaded_video = db.Column(db.JSON, default=list) # 128 char length file ID array
+    uploaded_audio = db.Column(db.JSON, default=list) # 128 char length file ID array
     is_verified = db.Column(db.Boolean, nullable=False)
     jti = db.Column(db.String(36))  # JWT ID to store in the database to prevent reuse and duplicate active tokens
     blindlogin = db.Column(UUID(as_uuid=True)) # generate a random uuid for blind login
@@ -94,7 +94,7 @@ class Listener(db.Model):
     languages = db.Column(db.JSON, default=list) # sets of language:proficiency
     jti = db.Column(db.String(36))  # JWT ID to store in the database to prevent reuse and duplicate active tokens
     blindlogin = db.Column(UUID(as_uuid=True)) # generate a random uuid for blind login
-    assigned_videos = db.Column(db.JSON, default=list) # list of video IDs assigned to the listener
+    assigned_audio = db.Column(db.JSON, default=list) # list of video IDs assigned to the listener
     
     # one-to-one relationship of listeners-demographics
     demographic = db.relationship("Demographic", back_populates="listener", uselist=False)

@@ -20,15 +20,15 @@ def create_app(config_class=Config):
     # Register blueprints
     from Babelr.auth.routes import authBp
     from Babelr.projects.routes import projectsBp
-    from Babelr.researchers.routes import researcherBp
-    from Babelr.listeners.routes import listenerBp
+    from Babelr.researchers.routes import researchersBp
+    from Babelr.listeners.routes import userBp
 #   from Babelr.admin.routes import adminBp     commenting out for now
     from Babelr.main.routes import mainBp
     
     # Register the blueprints with their respective URL prefixes
     app.register_blueprint(authBp, url_prefix='/auth')
-    app.register_blueprint(researcherBp, url_prefix='/researcher')
-    app.register_blueprint(listenerBp, url_prefix='/listener')
+    app.register_blueprint(researchersBp, url_prefix='/researcher')
+    app.register_blueprint(userBp, url_prefix='/listener')
     app.register_blueprint(projectsBp, url_prefix='/projects')
 #   app.register_blueprint(adminBp, url_prefix='/admin') commenting out for now
     app.register_blueprint(mainBp, url_prefix='/')
