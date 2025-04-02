@@ -96,11 +96,29 @@ class PermissionLevel(enum.Enum):
     researcher = "researcher"
 
 class ProficiencyLevel(enum.Enum):
-    elementary = "elementary"
-    limited_working = "limited_working"
-    professional = "professional"
-    native = "native"
-    bilingual = "bilingual"
+    elementary = (1, "elementary")
+    limited_working = (2, "limited_working")
+    professional = (3, "professional")
+    native = (4, "native")
+    bilingual = (5, "bilingual")
+
+    def __init__(self, rank, label) -> None:
+        self._rank = rank
+        self._label = label
+
+    @property
+    def rank(self):
+        return self._rank
+
+    def __str__(self) -> str:
+        return self._label
+
+    @classmethod
+    def from_str(cls, label: str) -> "ProficiencyLevel":
+        for member in cls:
+            if str(member) == label:
+                return member
+        raise ValueError(f"{label} is not a valid {cls.__name__}")
 
 
 class Gender(enum.Enum):
