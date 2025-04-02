@@ -2,7 +2,6 @@ import os, uuid, time, shutil
 import logging  # remove for final production
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, JWTManager, decode_token, set_access_cookies, unset_jwt_cookies, get_jwt
 from flask import Flask, request, jsonify, render_template_string, render_template, redirect, url_for # render_template_string is used to render HTML, can be removed once frontend is inplace
-from email_validator import validate_email, EmailNotValidError
 from flask import send_from_directory, send_file # this is for accessing files from a directory
 
 from sqlalchemy.orm.attributes import flag_modified

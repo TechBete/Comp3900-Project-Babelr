@@ -1,5 +1,5 @@
 from flask import request, jsonify, url_for, redirect
-from Babelr.models import Researcher, Listener, PermissionLevel, Gender, ProficiencyLevel, Demographic
+from Babelr.models import Researcher, Listener, PermissionLevel
 from Babelr import db, jwt
 from Babelr.auth import authBp
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, decode_token, set_access_cookies, get_jwt
@@ -355,7 +355,7 @@ def userResetPassword():
             return jsonify({"error": "Error: 500, An error has occured while updating the password"}), 500
 
 # this route is to reset a user's password if they have forgotten thier password
-# this is to be updated to use email user verification
+# this is to be updated to use email user verification once decerntralization is implemented
 @authBp.route('/blindEmailParse', methods=['POST'])
 def blindEmailParse():
     data = request.json
