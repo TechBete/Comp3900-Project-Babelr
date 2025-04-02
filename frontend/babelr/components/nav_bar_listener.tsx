@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import styles from "../stylesheets/nav_bar.module.css"
 import HomeIcon from "../components/homeicon"
 import Link from "next/link"
@@ -7,11 +7,15 @@ export default function Navbar_Listener() {
     const [Error, setError] = useState("");
     const [Points, setPoints] = useState(0);
 
-    async function getPoints() {
+    useEffect(() => {
+        getCurrentPoints();
+    });
+
+    async function getCurrentPoints() {
         console.log("DEMOGRAPHICS POST BELOW");
         console.log(JSON.stringify({}));
         try {
-            const response = await fetch(`http://localhost:8016/getPoints}`, {
+            const response = await fetch(`http://localhost:8016/getCurrentPoints}`, {
                 method:"POST",
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({}),
@@ -19,9 +23,9 @@ export default function Navbar_Listener() {
             })
     
             if (response.ok) {
-                // const response = await response.json()
-                console.log(response);
-                setPoints(0);
+                const res = await response.json()
+                console.log(res);
+                setPoints(res.reward_points);
                 return // change later maybe
             } else {
                 const error = await response.json();
@@ -30,6 +34,7 @@ export default function Navbar_Listener() {
     
         } catch {
             // setError("Network Error: Fetch Request Failed");
+            return Error;
         }
     }
 
@@ -38,9 +43,8 @@ export default function Navbar_Listener() {
         <div className={styles["nav-bar"]}>
             <HomeIcon/>
             <div className={styles["top-nav-right"]}>
-
                 <div className={styles["profile-options"]}>
-                    <span><Link href='/rewards_system'>Points: {getPoints()}</Link></span>
+                    <span><Link href='/Listener/rewards_shop'>Points: {Points}</Link></span>
                     <span>My Profile</span>
                     <span><Link href='/'>Logout</Link></span>
                 </div>

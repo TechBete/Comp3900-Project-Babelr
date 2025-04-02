@@ -198,6 +198,23 @@ class Demographic(db.Model):
 
 
 # ========== 4. Server Endpoint Routes ==========
+@app.route('/redeemRewards', methods=['POST'])
+@jwt_required()
+def redeem_rewards():
+    return jsonify({'message': 'everything worked'})
+
+@app.route('/getCurrentPoints', methods=['GET'])
+@jwt_required()
+def get_current_points():
+    listener_id = get_jwt_identity()
+    listener_id = uuid.UUID(id)
+
+    listener = Listener.query.filter_by(id=listener_id).first()
+    if not listener:
+        return jsonify({"error": "Listener not found"}), 404
+    
+    return jsonify({'reward_points', listener.reward_points})
+
 @app.route('/verify/<token>')
 def verify_email(token):
     email = verify_token(token)
