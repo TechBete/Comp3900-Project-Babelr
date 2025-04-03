@@ -5,6 +5,10 @@ import Navbar from "components/nav_bar";
 import Sidebar from "components/project_sidebar"
 import Modal from "components/popout_modal";
 import styles from "stylesheets/file_upload.module.css";
+// import AudioClipsTable from "components/clips_table";
+import {Box, Button} from "@mui/material";
+
+import TableTest from "components/table";
 
 interface AudioData {
     name: string;
@@ -24,7 +28,7 @@ export default function FileUploadPage() {
     const [tags, setTags] = useState("");
     const [uploadError, setUploadError] = useState("");
     const [audioData, setAudioData] = useState<AudioData[]>([
-        { name: "Screaming.mp3", tags: ["Fast Speech", "Child"], dateAdded: "2/5/2025", evaluated: "48/50", rating: 3.6 },
+        { name: "Screaming.mp3", tags: ["Fast Speech", "Child", "asdasdasda", "asjdhasjdh", "asdasd", "asjdhjasdhasjd"], dateAdded: "2/5/2025", evaluated: "48/50", rating: 3.6 },
         { name: "Asong.wav", tags: ["Style Speech", "Adult"], dateAdded: "5/4/2025", evaluated: "30/50", rating: 2.375 }
     ]);
 
@@ -123,31 +127,13 @@ export default function FileUploadPage() {
                         </div>
                     </div>
 
-                    <button className={styles.addAudioBtn} onClick={() => setIsModalOpen(true)}> + </button>
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <Button className={styles.addAudioBtn} sx={{ marginLeft: "auto" }}  onClick={() => setIsModalOpen(true)}> + </Button>
+                    </Box>
 
-                    <table className={styles.table}>
-                        <thead>
-                            <tr>
-                                <th>Audio Clips</th>
-                                <th>Tags</th>
-                                <th>Date Added</th>
-                                <th>Evaluated</th>
-                                <th>Rating</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {audioData.map((audio, index) => (
-                                <tr key={index} className={styles.tr}>
-                                    <td className={styles.td}><a href="#">{audio.name}</a></td>
-                                    <td className={styles.td}>{audio.tags.join(", ")}</td>
-                                    <td className={styles.td}>{audio.dateAdded}</td>
-                                    <td className={styles.td}>{audio.evaluated}</td>
-                                    <td className={styles.td}>{audio.rating}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-
+                    {/* <AudioTable audioData={audioData}/> */}
+                    {/* <AudioClipsTable></AudioClipsTable> */}
+                    <TableTest audioData={audioData}></TableTest>
                     <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} hasCloseBtn>
                         <h2 className={styles.modalTitle}>Upload New Audio</h2>
 
@@ -180,6 +166,7 @@ export default function FileUploadPage() {
                                 className={styles.inputField}
                             />
 
+                            
                             <button type="submit" className={styles.submitButton}>Upload</button>
                             {uploadError && <div className={styles.invalidLabel}>{uploadError}</div>}
                         </form>
@@ -187,5 +174,33 @@ export default function FileUploadPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+
+function AudioTable({ audioData }: { audioData: AudioData[] }) {
+    return (
+        <table className={styles.clipTable}>
+            <thead>
+                <tr>
+                    <th>Audio Clips</th>
+                    <th>Tags</th>
+                    <th>Date Added</th>
+                    <th>Evaluated</th>
+                    <th>Rating</th>
+                </tr>
+            </thead>
+            <tbody>
+                {audioData.map((audioInfo: AudioData, index: number) => (
+                    <tr key={index} className={styles.tr}>
+                        <td className={styles.td}><a href="#">{audioInfo.name}</a></td>
+                        <td className={styles.td}>{audioInfo.tags.join(", ")}</td>
+                        <td className={styles.td}>{audioInfo.dateAdded}</td>
+                        <td className={styles.td}>{audioInfo.evaluated}</td>
+                        <td className={styles.td}>{audioInfo.rating}</td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
     );
 }
