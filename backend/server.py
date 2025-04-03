@@ -162,7 +162,7 @@ class Researcher(db.Model):
     permission = db.Column(permission_level_enum, nullable=False)
     organisation = db.Column(db.String(128))
     project_list = db.Column(db.JSON, default=[]) # 128 char length array
-    uploaded_video = db.Column(db.JSON, default=[]) # 128 char length file ID array
+    uploaded_audio = db.Column(db.JSON, default=[]) # 128 char length file ID array
     is_verified = db.Column(db.Boolean, nullable=False)
     jti = db.Column(db.String(36))  # JWT ID to store in the database to prevent reuse and duplicate active tokens
     blindlogin = db.Column(UUID(as_uuid=True)) # generate a random uuid for blind login
