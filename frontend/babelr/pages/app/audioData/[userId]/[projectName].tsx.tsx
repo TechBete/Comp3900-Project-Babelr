@@ -176,31 +176,3 @@ export default function FileUploadPage() {
         </div>
     );
 }
-
-
-function AudioTable({ audioData }: { audioData: AudioData[] }) {
-    return (
-        <table className={styles.clipTable}>
-            <thead>
-                <tr>
-                    <th>Audio Clips</th>
-                    <th>Tags</th>
-                    <th>Date Added</th>
-                    <th>Evaluated</th>
-                    <th>Rating</th>
-                </tr>
-            </thead>
-            <tbody>
-                {audioData.map((audioInfo: AudioData, index: number) => (
-                    <tr key={index} className={styles.tr}>
-                        <td className={styles.td}><a href="#">{audioInfo.name}</a></td>
-                        <td className={styles.td}>{audioInfo.tags.join(", ")}</td>
-                        <td className={styles.td}>{audioInfo.dateAdded}</td>
-                        <td className={styles.td}>{audioInfo.evaluated}</td>
-                        <td className={styles.td}>{audioInfo.rating}</td>
-                    </tr>
-                ))}
-            </tbody>
-        </table>
-    );
-}
