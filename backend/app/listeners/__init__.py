@@ -1,6 +1,6 @@
 from flask import Blueprint
-from . import db, jwt
+from app import db, jwt
 
 userBp = Blueprint("listeners", __name__)
 
-from Babelr.listeners import routes
+from app.listeners import routes

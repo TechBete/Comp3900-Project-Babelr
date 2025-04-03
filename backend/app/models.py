@@ -1,7 +1,7 @@
 import enum, uuid
 from sqlalchemy.dialects.postgresql import UUID, ENUM
 from sqlalchemy import DDL, event
-from Babelr import db
+from app import db
  
 #========== 1. Python Enums ==========
 class PermissionLevel(enum.Enum):

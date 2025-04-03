@@ -1,11 +1,11 @@
 from flask import jsonify, request
-from Babelr.models import Researcher
-from Babelr import db, jwt
-import Babelr.helpers as helpers
+from app.models import Researcher
+from app import db, jwt
+import app.helpers as helpers
 import os, uuid, shutil, logging
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt, jwt_required, get_jwt_identity
 from sqlalchemy.orm.attributes import flag_modified
-from Babelr.projects import projectsBp
+from app.projects import projectsBp
 
 
 

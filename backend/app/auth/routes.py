@@ -1,11 +1,11 @@
 from flask import request, jsonify, url_for, redirect
-from Babelr.models import Researcher, Listener, PermissionLevel
-from Babelr import db, jwt
-from Babelr.auth import authBp
+from app.models import Researcher, Listener, PermissionLevel
+from app import db, jwt
+from app.auth import authBp
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, decode_token, set_access_cookies, get_jwt
 from email_validator import validate_email, EmailNotValidError
 from sqlalchemy.exc import IntegrityError
-import Babelr.helpers as helper
+import app.helpers as helper
 import uuid, logging
 
 # moved all authentication related functions to this file

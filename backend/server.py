@@ -1,5 +1,5 @@
-import os, time
-from backend import create_app, db
+import time, os
+from app import create_app, db
 from flask import render_template_string
 from sqlalchemy.exc import OperationalError
 
@@ -761,7 +761,7 @@ if __name__ == '__main__':
             # initialize the database
                 db.create_all()
                 # creates test user for frontend testing, verification for this account is waived
-                from Babelr.auth import createTestUser, testEditLanguage
+                from app.auth import createTestUser, testEditLanguage
                 createTestUser()
                 # testAddLanguage() # for testing add language functionality; To be removed
                 testEditLanguage()
