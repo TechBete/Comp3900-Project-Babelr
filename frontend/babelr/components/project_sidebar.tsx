@@ -25,7 +25,8 @@ export default function Sidebar({project_name}: Props) {
                 [`& .MuiDrawer-paper`]: { 
                     width: drawerWidth, 
                     boxSizing: 'border-box',
-                    position: 'relative',
+                    position: 'fixed',
+                    top: '50px',
                     backgroundColor: '#282D3F',
                     // backgroundColor: '#1e1e1e',
                     color: '#e7e9de'
