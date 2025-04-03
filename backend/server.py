@@ -761,7 +761,8 @@ if __name__ == '__main__':
             # initialize the database
                 db.create_all()
                 # creates test user for frontend testing, verification for this account is waived
-                from app.auth import createTestUser, testEditLanguage
+                from app.auth import createTestUser
+                from app.listeners import testEditLanguage
                 createTestUser()
                 # testAddLanguage() # for testing add language functionality; To be removed
                 testEditLanguage()

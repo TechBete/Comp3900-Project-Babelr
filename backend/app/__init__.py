@@ -27,7 +27,7 @@ def create_app(config_class=Config):
     from app.researchers.routes import researchersBp
     from app.listeners.routes import userBp
 #   from app.admin.routes import adminBp     commenting out for now
-    from app.main.routes import mainBp
+
     
     # Register the blueprints with their respective URL prefixes
     app.register_blueprint(authBp, url_prefix='/auth')
@@ -35,7 +35,6 @@ def create_app(config_class=Config):
     app.register_blueprint(userBp, url_prefix='/listener')
     app.register_blueprint(projectsBp, url_prefix='/projects')
 #   app.register_blueprint(adminBp, url_prefix='/admin') commenting out for now
-    app.register_blueprint(mainBp, url_prefix='/')
 
     return app
 
