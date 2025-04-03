@@ -1,8 +1,8 @@
 import Link from "next/link";
 import styles from "stylesheets/projects_list.module.css"
 import Navbar from "components/nav_bar";
-import Sidebar from "components/side_bar";
 import Modal from "components/popout_modal";
+import CreateButton from "components/create_button";
 import { FormEvent, useEffect, useState } from "react";
 
 
@@ -98,7 +98,6 @@ export default function MainScreen() {
         <div className={styles["project-body"]}>
             < Navbar/>
             <div className={styles["container"]}>
-                <Sidebar/>
                 <div className={styles["main-content"]}>
                     <div className={styles["main-top"]}>
                         <h2 className={styles["projects-h2"]}>
@@ -120,7 +119,8 @@ export default function MainScreen() {
                         <ProjectList projects={projectsData}/>
                     </table>
 
-                    <button className={styles["add-project-btn"]} onClick={() => setIsModalOpen(true)}> + </button>
+
+                    <CreateButton onClick={() => setIsModalOpen(true)}></CreateButton>
                     <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} hasCloseBtn>
                         <h2 className={styles.modalTitle}>New Project</h2>
 
@@ -136,7 +136,6 @@ export default function MainScreen() {
                                 onChange={(e) => setProjectName(e.target.value)}
                                 className={styles.inputField}
                             />
-
                             <button type="submit" className={styles.submitButton}>
                                 Create Project
                             </button>
