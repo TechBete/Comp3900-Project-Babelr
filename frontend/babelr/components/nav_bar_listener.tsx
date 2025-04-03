@@ -16,7 +16,7 @@ export default function Navbar_Listener() {
         console.log(JSON.stringify({}));
         try {
             const response = await fetch(`http://localhost:8016/getCurrentPoints}`, {
-                method:"POST",
+                method:"GET",
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({}),
                 credentials: 'include'
@@ -28,6 +28,7 @@ export default function Navbar_Listener() {
                 setPoints(res.reward_points);
                 return // change later maybe
             } else {
+                console.log("iss issue?");
                 const error = await response.json();
                 setError(error.error);
             }

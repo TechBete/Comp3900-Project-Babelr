@@ -205,9 +205,9 @@ def redeem_rewards():
 
 @app.route('/getCurrentPoints', methods=['GET'])
 @jwt_required()
-def get_current_points():
+def getCurrentPoints():
     listener_id = get_jwt_identity()
-    listener_id = uuid.UUID(id)
+    listener_id = uuid.UUID(listener_id)
 
     listener = Listener.query.filter_by(id=listener_id).first()
     if not listener:
