@@ -11,7 +11,7 @@ export default function ResetConfirmEmail() {
         const formData = new FormData(event.currentTarget);
         const email = formData.get("email")
         try{
-			const response = await fetch('http://localhost:8016/blindEmailParse', {
+			const response = await fetch('http://localhost:8016/auth/blindEmailParse', {
 				method:"POST",
 				headers: {'Content-Type': 'application/json'},
 				body: JSON.stringify({email}), 

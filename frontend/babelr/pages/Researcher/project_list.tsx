@@ -52,7 +52,7 @@ export default function MainScreen() {
 
     async function getProjects() {
         try {
-            const response = await fetch('http://localhost:8016/getProjects' , {
+            const response = await fetch('http://localhost:8016/projects/getProjects' , {
                 method:"GET",
                 credentials: 'include'
             })
@@ -73,7 +73,7 @@ export default function MainScreen() {
         event.preventDefault()
 		// const formData = new FormData(event.currentTarget);
         try {
-            const response = await fetch('http://localhost:8016/createProject', {
+            const response = await fetch('http://localhost:8016/projects/createProject', {
                 method:"POST",
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({"project_name": projectName}),

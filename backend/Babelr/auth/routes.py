@@ -16,7 +16,7 @@ def verify_email(token):
     email = helper.verify_token(token)
 
     if not email:
-        return redirect(url_for('login')), 404
+        return redirect(url_for('auth.login')), 404
 
     # Find user and mark as verified
     listener = Listener.query.filter_by(email=email).first()
@@ -28,7 +28,7 @@ def verify_email(token):
     else:
         pass
 
-    return redirect(url_for('login'))
+    return redirect(url_for('auth.login'))
 
 @authBp.route('/login', methods=['POST'])
 def login():
