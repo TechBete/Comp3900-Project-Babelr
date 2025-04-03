@@ -1290,25 +1290,34 @@ def uploadAudioFile():
     file = request.files["file"]
     if file.filename == "":
         return jsonify({"error": "There is no selected file."}), 400
+    
+    project_name = request.form.get("projectName")
+    if not project_name:
+        return jsonify({"error": "Project does not exist"}), 400
+    
 
     # assign local variables to the data fields
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id) # ensure type consistency
 
     # search researcher name from researcher uuid
-    researcher = session.get(Researcher, researcher_id)
+    researcher = db.session.get(Researcher, researcher_id)
     if researcher:
         researcher_name = researcher.first_name + researcher.last_name
     else:
         return jsonify({"error": "Researcher does not exist on database!"}), 400
 
-    audio_file_path = "../audioData" # root directory path for all audio files
-    researcher_dir = os.path.join(audio_file_path, researcher_name)
+    audio_file_path = "/app/audioData" # root directory path for all audio files
+    researcher_dir = os.path.join(audio_file_path, str(researcher_id))
+    project_dir = os.path.join(researcher_dir, str(project_name))
+    project_researcher_dir = os.path.join(project_dir, researcher_name)
+
+    logging.debug(f'PATH IS {project_researcher_dir}')
 
     # if directory with researcher name doesn't exist, make directory
-    os.makedirs(researcher_dir, exist_ok=True)
+    os.makedirs(project_researcher_dir, exist_ok=True)
 
-    file_path = os.path.join(researcher_dir, file.filename)
+    file_path = os.path.join(project_researcher_dir, file.filename)
     file.save(file_path)
 
     return jsonify({"message": f"{file.filename} is successfully uploaded and stored!"}), 200
