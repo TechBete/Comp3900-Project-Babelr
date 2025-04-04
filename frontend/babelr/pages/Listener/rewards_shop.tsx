@@ -16,6 +16,7 @@ export default function Rewards_shop() {
             })
     
             if (response.ok) {
+
                 // const response = await response.json()
                 return // change later maybe
             } else {

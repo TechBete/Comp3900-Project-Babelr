@@ -198,10 +198,26 @@ class Demographic(db.Model):
 
 
 # ========== 4. Server Endpoint Routes ==========
-@app.route('/redeemRewards', methods=['POST'])
+@app.route('/submitRating', methods=['POST', 'OPTIONS'])
 @jwt_required()
-def redeem_rewards():
-    return jsonify({'message': 'everything worked'})
+def submitRating():
+    data = request.json
+    audio_file_id = data.id
+
+    listener_id = get_jwt_identity()
+    listener_id = uuid.UUID(listener_id)
+    listener = Listener.query.filter_by(id=listener_id).first()
+    listener.reward_points = listener.reward_points + 1
+    db.session.commit()
+
+    return jsonify({'message': 'reward_id is'})
+
+@app.route('/redeemRewards', methods=['POST', 'OPTIONS'])
+@jwt_required()
+def redeemRewards():
+    data = request.json
+
+    return jsonify({'message': 'reward_id is: ' + data.reward_id})
 
 @app.route('/getCurrentPoints', methods=['GET'])
 @jwt_required()
@@ -318,6 +334,10 @@ def login():
 @app.route('/registerListener', methods=['POST'])
 def createListener():
     data = request.json
+
+    createTestUser()
+
+    return jsonify({"message": "Registration Successful"}), 200
 
     required_fields = ['first_name', 'last_name', 'email', 'pw']
     validation_error = validate_required_fields(data, required_fields)
