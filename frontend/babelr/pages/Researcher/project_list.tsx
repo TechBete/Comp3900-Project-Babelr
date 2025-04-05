@@ -1,9 +1,10 @@
 import Link from "next/link";
 import styles from "stylesheets/projects_list.module.css"
-import Navbar from "components/nav_bar";
+import Navbar from "components/nav_bar_researcher";
 import Modal from "components/popout_modal";
 import CreateButton from "components/create_button";
 import { FormEvent, useEffect, useState } from "react";
+import RoleCheck from "components/role_checker";
 
 
 
@@ -47,34 +48,9 @@ export default function MainScreen() {
     const [createError, setCreateError] = useState("");
     const [projectsData, setProjectData] = useState([]);
 
-
-    const [userRole, setUserRole] = useState<string | null>(null); // middleware test
-    const [, setRoleError] = useState("");// middleware test
     useEffect(() => {
         getProjects();
-        getUserRole(); // middleware test
     }, [])
-
-    
-    async function getUserRole() {
-        try {
-            const res = await fetch("http://localhost:8016/getRoleFromID", {
-                method: "GET",
-                credentials: "include",
-            });
-
-            const data = await res.json();
-
-            if (res.ok && data.role) {
-                setUserRole(data.role);
-            } else {
-                setRoleError(data.error || "Failed to fetch role");
-            }
-        } catch  {
-            setRoleError("Network error while fetching role");
-        }
-    }
-
     async function getProjects() {
         try {
             const response = await fetch('http://localhost:8016/getProjects' , {
@@ -120,60 +96,58 @@ export default function MainScreen() {
     }
 
     return (
-        <div className={styles["project-body"]}>
-            < Navbar/>
-            <div className={styles["container"]}>
-                <div className={styles["main-content"]}>
-                    <div className={styles["main-top"]}>
-                        <h2 className={styles["projects-h2"]}>
-                            Projects     
-                        </h2>
-                        <div className={styles["search-bar"]}>
-                            <input type="text" placeholder="Search" />
+        <RoleCheck requiredRole="researcher">
+            <div className={styles["project-body"]}>
+                < Navbar/>
+                <div className={styles["container"]}>
+                    <div className={styles["main-content"]}>
+                        <div className={styles["main-top"]}>
+                            <h2 className={styles["projects-h2"]}>
+                                Projects     
+                            </h2>
+                            <div className={styles["search-bar"]}>
+                                <input type="text" placeholder="Search" />
+                            </div>
                         </div>
+                        <table className={styles["table"]} >
+                            <thead className={styles["thead"]}>
+                                <tr className={styles["tr"]}>
+                                    <th className={styles["th"]}>Name</th>
+                                    <th className={styles["th"]}>Status</th>
+                                    <th className={styles["th"]}>Creator</th>
+                                    <th className={styles["th"]}></th>
+                                </tr>
+                            </thead>
+                            <ProjectList projects={projectsData}/>
+                        </table>
+
+                        <CreateButton onClick={() => setIsModalOpen(true)}></CreateButton>
+                        <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} hasCloseBtn>
+                            <h2 className={styles.modalTitle}>New Project</h2>
+
+                            <form onSubmit={handleCreate}>
+                                <label htmlFor="project_name" className={styles.formLabel}>
+                                    Project Name
+                                </label>
+                                <input
+                                    id="project_name"
+                                    type="text"
+                                    name="project_name"
+                                    value={projectName}
+                                    onChange={(e) => setProjectName(e.target.value)}
+                                    className={styles.inputField}
+                                />
+                                <button type="submit" className={styles.submitButton}>
+                                    Create Project
+                                </button>
+                                <div className={styles["invalid-label"]}>
+                                { createError !== "" && <div>{createError}</div>}
+                                </div>
+                            </form>
+                        </Modal>
                     </div>
-                    <table className={styles["table"]} >
-                        <thead className={styles["thead"]}>
-                            <tr className={styles["tr"]}>
-                                <th className={styles["th"]}>Name</th>
-                                <th className={styles["th"]}>Status</th>
-                                <th className={styles["th"]}>Creator</th>
-                                <th className={styles["th"]}></th>
-                            </tr>
-                        </thead>
-                        <ProjectList projects={projectsData}/>
-                    </table>
-
-                    {userRole === "researcher" && (
-                        <>
-                            <CreateButton onClick={() => setIsModalOpen(true)}></CreateButton>
-                            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} hasCloseBtn>
-                                <h2 className={styles.modalTitle}>New Project</h2>
-
-                                <form onSubmit={handleCreate}>
-                                    <label htmlFor="project_name" className={styles.formLabel}>
-                                        Project Name
-                                    </label>
-                                    <input
-                                        id="project_name"
-                                        type="text"
-                                        name="project_name"
-                                        value={projectName}
-                                        onChange={(e) => setProjectName(e.target.value)}
-                                        className={styles.inputField}
-                                    />
-                                    <button type="submit" className={styles.submitButton}>
-                                        Create Project
-                                    </button>
-                                    <div className={styles["invalid-label"]}>
-                                    { createError !== "" && <div>{createError}</div>}
-                                    </div>
-                                </form>
-                            </Modal>
-                        </>
-                    )}
                 </div>
             </div>
-        </div>
+        </RoleCheck>
     );
 }

@@ -3,6 +3,7 @@ import styles from "stylesheets/first_time_listener.module.css";
 import Image from "next/image";
 import DatePickerWrapper from "components/date_picker"
 import { useRouter } from "next/router";
+import RoleCheck from "components/role_checker";
 
 
 export default function First_time() {
@@ -20,7 +21,6 @@ export default function First_time() {
         console.log(Object.fromEntries(formData.entries()));
 
         for (const [key, value] of formData.entries()) {
-            // console.log(`${key}: ${value}`);
             PostDemographics(`${key}`, `${value}`,'editname')
         }  
         console.log(Error)
@@ -53,6 +53,7 @@ export default function First_time() {
 
 
     return (
+        <RoleCheck requiredRole="listener">
             <div className={styles["body"]}>
                 <div className={styles["form-container"]}>
                     <div className={styles["information-container"]}>
@@ -150,5 +151,6 @@ export default function First_time() {
                     <Image src="/babelr_logo.png" alt="side-image" width={1024} height={1024}/>
                 </div>
             </div>
+        </RoleCheck>
     );
 }   
