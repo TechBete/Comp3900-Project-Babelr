@@ -7,6 +7,7 @@ import { FormEvent, useEffect, useState } from "react";
 
 
 
+
 function Project({ name, path, status, creator } : { name: string; path: string; status: string; creator: string }) {
     
     const StatusStyle = () => {
@@ -45,10 +46,34 @@ export default function MainScreen() {
     const [projectName, setProjectName] = useState("Project_4"); // change this to empty string later for production
     const [createError, setCreateError] = useState("");
     const [projectsData, setProjectData] = useState([]);
+
+
+    const [userRole, setUserRole] = useState<string | null>(null); // middleware test
+    const [, setRoleError] = useState("");// middleware test
     useEffect(() => {
         getProjects();
-        // setProjectData([]);
+        getUserRole(); // middleware test
     }, [])
+
+    
+    async function getUserRole() {
+        try {
+            const res = await fetch("http://localhost:8016/getRoleFromID", {
+                method: "GET",
+                credentials: "include",
+            });
+
+            const data = await res.json();
+
+            if (res.ok && data.role) {
+                setUserRole(data.role);
+            } else {
+                setRoleError(data.error || "Failed to fetch role");
+            }
+        } catch  {
+            setRoleError("Network error while fetching role");
+        }
+    }
 
     async function getProjects() {
         try {
@@ -119,31 +144,34 @@ export default function MainScreen() {
                         <ProjectList projects={projectsData}/>
                     </table>
 
+                    {userRole === "researcher" && (
+                        <>
+                            <CreateButton onClick={() => setIsModalOpen(true)}></CreateButton>
+                            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} hasCloseBtn>
+                                <h2 className={styles.modalTitle}>New Project</h2>
 
-                    <CreateButton onClick={() => setIsModalOpen(true)}></CreateButton>
-                    <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} hasCloseBtn>
-                        <h2 className={styles.modalTitle}>New Project</h2>
-
-                        <form onSubmit={handleCreate}>
-                            <label htmlFor="project_name" className={styles.formLabel}>
-                                Project Name
-                            </label>
-                            <input
-                                id="project_name"
-                                type="text"
-                                name="project_name"
-                                value={projectName}
-                                onChange={(e) => setProjectName(e.target.value)}
-                                className={styles.inputField}
-                            />
-                            <button type="submit" className={styles.submitButton}>
-                                Create Project
-                            </button>
-                            <div className={styles["invalid-label"]}>
-                            { createError !== "" && <div>{createError}</div>}
-                            </div>
-                        </form>
-                    </Modal>
+                                <form onSubmit={handleCreate}>
+                                    <label htmlFor="project_name" className={styles.formLabel}>
+                                        Project Name
+                                    </label>
+                                    <input
+                                        id="project_name"
+                                        type="text"
+                                        name="project_name"
+                                        value={projectName}
+                                        onChange={(e) => setProjectName(e.target.value)}
+                                        className={styles.inputField}
+                                    />
+                                    <button type="submit" className={styles.submitButton}>
+                                        Create Project
+                                    </button>
+                                    <div className={styles["invalid-label"]}>
+                                    { createError !== "" && <div>{createError}</div>}
+                                    </div>
+                                </form>
+                            </Modal>
+                        </>
+                    )}
                 </div>
             </div>
         </div>
