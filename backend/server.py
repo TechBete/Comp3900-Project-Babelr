@@ -668,7 +668,6 @@ def getListeners():
         "languages_proficiency": [lp.value for lp in user.languages_proficiency] if user.languages_proficiency else []  # Convert enum array
     } for user in users])
 
-'''
 # test route to get a listener by id once listener cookie is implemented
 @app.route('/getListener/<uuid:listener_id>', methods=['GET'])
 def getListener(listener_id):
@@ -685,10 +684,8 @@ def getListener(listener_id):
         "Role": user.permission.value,
         "Background Info": user.background_info,
         "Reward Points": user.reward_points,
-        "languages_list": user.languages_list,
-        "languages_proficiency": [lp.value for lp in user.languages_proficiency] if user.languages_proficiency else []  # Convert enum array
+        "languages": user.languages,
     })
-'''
 
 # this route may only be used by the admin to get all researchers
 # update to only allow admin to access this route once single researcher recall route has been implemented
@@ -1588,7 +1585,8 @@ def getRoleFromID():
 @jwt_required()
 def registerDemographics():
     data = request.json
-    required_fields = ['age', 'country_of_residence', 'address', 'education']
+    required_fields = ['first_name', 'last_name', 'age', 'country_of_residence', 'address', 'education']
+    gender = data['gender'] # optional
 
     # check validation error
     validation_error = validate_required_fields(data, required_fields)
@@ -1610,7 +1608,7 @@ def registerDemographics():
         country_of_residence=data['country_of_residence'],
         address=data['address'],
         education=data['education'],
-        gender=data['gender']
+        gender=gender
     )
 
 '''
