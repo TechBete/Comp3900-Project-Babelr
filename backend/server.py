@@ -2397,7 +2397,7 @@ if __name__ == '__main__':
                 createTestUser()
                 # testAddLanguage() # for testing add language functionality; To be removed
                 # testEditLanguage()
-                testRegisterDemographics()
+                # testRegisterDemographics()
             break
         except OperationalError as e:
             print("Database not ready yet, retrying...")
