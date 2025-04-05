@@ -12,8 +12,8 @@ export default function Navbar_Listener() {
     });
 
     async function getCurrentPoints() {
-        console.log("DEMOGRAPHICS POST BELOW");
-        console.log(JSON.stringify({}));
+        console.log("Return prev points");
+        console.log(Points);
         try {
             const response = await fetch(`http://localhost:8016/getCurrentPoints}`, {
                 method:"GET",
@@ -23,8 +23,10 @@ export default function Navbar_Listener() {
             })
     
             if (response.ok) {
+                console.log("reached?")
                 const res = await response.json()
                 console.log(res);
+                console.log(res.reward_points);
                 setPoints(res.reward_points);
                 return // change later maybe
             } else {
@@ -34,6 +36,7 @@ export default function Navbar_Listener() {
             }
     
         } catch {
+            console.log("an error occured in call to getCurrentPoints");
             // setError("Network Error: Fetch Request Failed");
             return Error;
         }

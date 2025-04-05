@@ -21,15 +21,17 @@ export default function Evaluation() {
             })
     
             if (response.ok) {
-                console.log("is okay");
+                console.log("HAHAHAHAHHAHAHAHHA!!!");
                 // const response = await response.json()
                 return // change later maybe
             } else {
+                console.log("Banana Apple Berry Cherry Merry!!!");
                 const error = await response.json();
                 setError(error.error);
             }
     
         } catch {
+            console.log("There was a network error unforunate/1111");
             setError("Network Error: Fetch Request Failed");
             return Error;
         }

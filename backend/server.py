@@ -198,11 +198,13 @@ class Demographic(db.Model):
 
 
 # ========== 4. Server Endpoint Routes ==========
-@app.route('/submitRating', methods=['POST', 'OPTIONS'])
+@app.route('/submitRating', methods=['POST'])
 @jwt_required()
 def submitRating():
     data = request.json
-    audio_file_id = data.id
+
+    print("**********************************************")
+    print(data['id'])
 
     listener_id = get_jwt_identity()
     listener_id = uuid.UUID(listener_id)
@@ -210,7 +212,7 @@ def submitRating():
     listener.reward_points = listener.reward_points + 1
     db.session.commit()
 
-    return jsonify({'message': 'reward_id is'})
+    return jsonify({'message': 'reward_id is: ' + str(listener.reward_points)})
 
 @app.route('/redeemRewards', methods=['POST', 'OPTIONS'])
 @jwt_required()
@@ -228,8 +230,8 @@ def getCurrentPoints():
     listener = Listener.query.filter_by(id=listener_id).first()
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
-    
-    return jsonify({'reward_points', listener.reward_points})
+
+    return jsonify({'reward_points': listener.reward_points})
 
 @app.route('/verify/<token>')
 def verify_email(token):
