@@ -31,7 +31,7 @@ export default function First_time() {
         console.log(JSON.stringify({[key]: value}));
         router.push('first_time_listener_lg')// FOR NOW BEFORE OTHER ADD API CALLS ARE DEVELOPED
         try {
-            const response = await fetch(`http://localhost:8016/${API}}`, {
+            const response = await fetch(`http://localhost:8016/listener/${API}}`, {
                 method:"POST",
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({[key]: value}),

@@ -48,7 +48,7 @@ export default function FileUploadPage() {
         formData.append("tags", tags);
 
         try {
-            const response = await fetch("http://localhost:8016/upload", {
+            const response = await fetch("http://localhost:8016/projects/uploadAudioFile", {
                 method: "POST",
                 body: formData,
             });

@@ -17,11 +17,12 @@ export default function First_time() {
         console.log(Error)
     }
 
+    // dont actually have demographics for researcher but can consider
     async function PostDemographics(key: string, value: string ,API: string) {
         console.log("DEMOGRAPHICS POST BELOW");
         console.log(JSON.stringify({[key]: value}));
         try {
-            const response = await fetch(`http://localhost:8016/${API}}`, {
+            const response = await fetch(`http://localhost:8016/researcher/${API}}`, {
                 method:"POST",
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({[key]: value}),

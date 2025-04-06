@@ -48,7 +48,7 @@ export default function LanguageSelector() {
 
     const postLanguage = async (entry: LanguageEntry): Promise<boolean> => {
         try {
-            const response = await fetch("http://localhost:8016/addLanguage", {
+            const response = await fetch("http://localhost:8016/listener/addLanguage", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
