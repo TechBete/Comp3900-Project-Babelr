@@ -3,7 +3,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.exc import IntegrityError
 from flask import jsonify, request
 from app.listeners import userBp
-from app.models import Listener
+from app.models import Demographic, Listener
 import app.helpers as helpers
 import uuid, logging
 from app import db
@@ -29,7 +29,6 @@ def getListeners():
         "is_verified": user.is_verified,
         "allocated audio": [audio.value for audio in user.allocated_audio] if user.allocated_audio else [], # Convert enum array
     } for user in users])
-
 '''
 # test route to get a listener by id once listener cookie is implemented
 @userBp.route('/getListener/<uuid:listener_id>', methods=['GET'])
@@ -261,3 +260,47 @@ def testDeleteLanguage():
         return jsonify({"error": "Error Code: 500"}), 500
     return jsonify({"message": "Add language Successful"}), 200
 
+
+# Helper function to return current point status of listener
+@userBp.route('/getCurrentPoints', methods=['GET'])
+@jwt_required()
+def getCurrentPoints():
+    listener_id = get_jwt_identity()
+    listener_id = uuid.UUID(listener_id)
+
+    listener = Listener.query.filter_by(id=listener_id).first()
+    if not listener:
+        return jsonify({"error": "Listener not found"}), 404
+
+    return jsonify({"reward_points": listener.reward_points})
+
+
+@userBp.route('/registerDemographics', methods=['POST'])
+@jwt_required()
+def registerDemographics():
+    data = request.json
+    required_fields = ['first_name', 'last_name', 'age', 'country_of_residence', 'address', 'education']
+    gender = data['gender'] # optional
+
+    # check validation error
+    validation_error = helpers.validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+
+    listener_id = get_jwt_identity()
+    listener_id = uuid.UUID(listener_id)
+
+    # check if listener is valid user
+    listener = Listener.query.filter_by(id=listener_id).first()
+    if not listener:
+        return jsonify({"error": "Listener not found"}), 404
+    # if not listener.demographics.listener_id == listener_id:
+        # return jsonify({"error": "Demographic does not belongs to this listener"}), 404
+
+    listener.demographic = Demographic(
+        age=data['age'],
+        country_of_residence=data['country_of_residence'],
+        address=data['address'],
+        education=data['education'],
+        gender=gender
+    )
