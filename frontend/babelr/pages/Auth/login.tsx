@@ -29,7 +29,7 @@ export default function Login() {
             })
 
             if (response.ok) {
-                const roleRes = await fetch("http://localhost:8016/getRoleFromID", {
+                const roleRes = await fetch("http://localhost:8016/auth/getRoleFromID", {
                     method: "GET",
                     credentials: "include",
                 });
