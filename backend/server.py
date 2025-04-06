@@ -5,7 +5,6 @@ from app.auth.routes import createTestUser
 from app.listeners.routes import testEditLanguage
 from sqlalchemy.exc import OperationalError
 
-
 # ======== TESTING ROUTES ========
 # These routes are for testing purposes only and should be removed once the frontend is in place
 # These routes are used to simulate the frontend form submissions
