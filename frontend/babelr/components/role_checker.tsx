@@ -14,7 +14,7 @@ export default function RoleCheck({
 	useEffect(() => {
 		async function fetchRole() {
 			try {
-				const res = await fetch('http://localhost:8016/getRoleFromID', {
+				const res = await fetch('http://localhost:8016/auth/getRoleFromID', {
 					method: "GET",
 					credentials: "include",
 				});
