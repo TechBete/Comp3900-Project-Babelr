@@ -9,10 +9,10 @@ export default function Login() {
     const [selectedOption, setSelectedOption] = useState("/Auth/register_listener");
     const [loginError, setLoginError] = useState("");
     // FOR NOW USE THIS TO CHANGE WHAT THE USERTYPE IS AND IF IT'S THEIR FIRST TIME
-    const [userType, setUser] = useState("researcher"); // TEMPORARY BEFORE isUser APICALL
-    const [isFirstTime, setFirstTime] = useState(false);
+    const [userType, setUser] = useState("Listener"); // TEMPORARY BEFORE isUser APICALL
+    const [isFirstTime, setFirstTime] = useState(true);
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-        // DOES NOTHING BECAUSE ASYNC FUNCTION
+        // DOES NOTHING BECAUSE ASYNC FUNCTION BUT JUST TO KEEP COMPILER HAPPY
         setUser('researcher');
         setFirstTime(false);
 
@@ -32,10 +32,10 @@ export default function Login() {
 
             if (response.ok) {
                 // adding jwt to local storage
-                const data = await response.json();
-                if (data.access_token) {
-                    localStorage.setItem("accessToken", data.access_token);
-                }
+                // const data = await response.json();
+                // if (data.access_token) {
+                //     localStorage.setItem("accessToken", data.access_token);
+                // }
 
                 if (userType == "researcher") {
                     if (isFirstTime){
@@ -49,8 +49,9 @@ export default function Login() {
                     } else {
                         router.push("/Listener/clip_list");
                     }
+                } else {
+                    setLoginError("Unknown type of user");
                 }
-                setLoginError("Unknown type of user");
             } else {
                 const error = await response.json();
                 console.log(error.error);
