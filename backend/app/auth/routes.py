@@ -434,3 +434,20 @@ def blindPasswordReset():
             db.session.rollback()
             logging.debug(e)
             return jsonify({"error": "Error: 500, An error has occured while updating the password"}), 500
+        
+
+# Helper function to get user role from uuid
+@authBp.route('/getRoleFromID', methods=['GET'])
+@jwt_required()
+def getRoleFromID():
+    user_id = get_jwt_identity()
+    user_id = uuid.UUID(user_id)
+
+    listener = Listener.query.filter_by(id=user_id).first()
+    researcher = Researcher.query.filter_by(id=user_id).first()
+    if listener and not researcher:
+        return jsonify({"role": "listener"})
+    elif not listener and researcher:
+        return jsonify({"role": "researcher"})
+    else:
+        return jsonify({"error": "User ID not found"}), 404
