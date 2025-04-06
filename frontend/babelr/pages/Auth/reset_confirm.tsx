@@ -12,7 +12,7 @@ export default function ResetConfirmEmail() {
             const pw = formData.get("new-password");
             const confirmPw = formData.get("confirm-password");
             try{
-                const response = await fetch('http://localhost:8016/blindPasswordReset', {
+                const response = await fetch('http://localhost:8016/auth/blindPasswordReset', {
                     method:"POST",
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({"pw": pw, "pw_confirmation": confirmPw, "id": id}), 
