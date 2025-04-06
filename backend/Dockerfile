@@ -3,6 +3,12 @@
 # versions of python from docker hub. 
 FROM python:3.13-slim
 
+# Set environment variables
+ENV FLASK_APP=server.py
+
+# Set python path to include the working directory
+ENV PYTHONPATH=/usr/src/app
+
 # Set the working directory
 WORKDIR /usr/src/app
 
@@ -14,9 +20,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the remaining files into container
 COPY . .
-
-# Set python path to include the working directory
-ENV PYTHONPATH=/usr/src/app
 
 # Expose Port
 EXPOSE 8016

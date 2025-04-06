@@ -2,4 +2,5 @@
 result
 __pycache__/
 .hypothesis/
-.env
+*.env
+
