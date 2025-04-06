@@ -29,7 +29,7 @@ export async function middleware(req: NextRequest) {
     try {
 
         if (pathname.startsWith('/Listener') || pathname.startsWith('/Researcher')) {
-            const res = await fetch('http://web:8016/getRoleFromID', {
+            const res = await fetch('http://web:8016/auth/getRoleFromID', {
                 method: 'GET',
                 headers: {
                   Cookie: req.headers.get('cookie') || '',
