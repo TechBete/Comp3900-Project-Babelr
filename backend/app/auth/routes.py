@@ -68,7 +68,9 @@ def login():
 
     # assign user to either researcher or listener
     existing_researcher = helper.is_researcher(Email)
+    logging.debug(existing_researcher)
     existing_listener = helper.is_listener(Email)
+    logging.debug(existing_listener)
     
     # updated for researcher login; check if user is a listener or researcher,
     # updated token id as uuid for validation in backend routes.
@@ -114,6 +116,7 @@ def login():
             # set the access token as a cookie in the response
             response = jsonify({"Login": "Successful"})
             set_access_cookies(response,token)
+            response.set_cookie("accesstoken", token, samesite="None")
 
             return response
     return jsonify({"error": "Failed Login. Either Email or password was incorrect"}), 401   # update frontend for error message popup
@@ -287,10 +290,14 @@ def createTestUser():
 
     try:
         with db.session.begin_nested():
-            db.session.add(user)
-            db.session.add(user2)
+            existing_listener = helper.is_listener(user.email)
+            if not existing_listener:
+                db.session.add(user)
+            existing_researcher = helper.is_researcher(user2.email)
+            if not existing_researcher:
+                db.session.add(user2)
             db.session.commit()
-            # no need to send verification email for testing account
+        # no need to send verification email for testing account
     except IntegrityError as e:
         db.session.rollback()
         logging.debug(e)

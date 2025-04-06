@@ -70,18 +70,10 @@ def is_existing_user(email):
     return False
 
 def is_researcher(email):
-    existing_researcher = Researcher.query.filter_by(email=email).first()
-    if existing_researcher:
-        return existing_researcher
-    else:
-        return None
+    return Researcher.query.filter_by(email=email).first()
 
 def is_listener(email):
-    existing_listener = Listener.query.filter_by(email=email).first()
-    if existing_listener:
-        return existing_listener
-    else:
-        return None
+    return Listener.query.filter_by(email=email).first()
     
 def blind_login(id):
     existing_listener = Listener.query.filter_by(blind_login=id).first()

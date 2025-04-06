@@ -27,7 +27,6 @@ def create_app(config_class=Config):
     from app.researchers.routes import researchersBp
     from app.listeners.routes import userBp
 #   from app.admin.routes import adminBp     commenting out for now
-
     
     # Register the blueprints with their respective URL prefixes
     app.register_blueprint(authBp, url_prefix='/auth')
@@ -39,5 +38,5 @@ def create_app(config_class=Config):
     return app
 
 # this should allow for importing the create_app function from the app package
-from . import create_app, db
-__all__ = ['create_app', 'db', 'jwt']
+#from . import create_app, db
+#__all__ = ['create_app', 'db', 'jwt']
