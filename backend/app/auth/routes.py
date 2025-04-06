@@ -218,6 +218,8 @@ def createResearcher():
         permission=PermissionLevel.researcher,
         organisation=data.get('organisation', ''),
         is_verified=False,
+        project_list=[],
+        uploaded_audio=[]
     )
     try:
         db.session.add(user)
@@ -286,6 +288,8 @@ def createTestUser():
         pw_hash=hashed_password2.value,
         permission=PermissionLevel.researcher,
         is_verified=True,
+        project_list=[],
+        uploaded_audio=[]
     )
 
     try:

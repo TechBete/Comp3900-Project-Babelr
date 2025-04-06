@@ -275,12 +275,14 @@ def getCurrentPoints():
     return jsonify({"reward_points": listener.reward_points})
 
 
-@userBp.route('/registerDemographics', methods=['POST'])
+@app.route('/registerListenerDemographics', methods=['POST'])
 @jwt_required()
-def registerDemographics():
+def registerListenerDemographics():
     data = request.json
     required_fields = ['first_name', 'last_name', 'age', 'country_of_residence', 'address', 'education']
     gender = data['gender'] # optional
+    background_info = data['background_info'] # optional
+    languages = data['languages'] # optional
 
     # check validation error
     validation_error = helpers.validate_required_fields(data, required_fields)
@@ -294,13 +296,71 @@ def registerDemographics():
     listener = Listener.query.filter_by(id=listener_id).first()
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
-    # if not listener.demographics.listener_id == listener_id:
-        # return jsonify({"error": "Demographic does not belongs to this listener"}), 404
 
-    listener.demographic = Demographic(
-        age=data['age'],
-        country_of_residence=data['country_of_residence'],
-        address=data['address'],
-        education=data['education'],
-        gender=gender
-    )
+    try:
+        # edge case when optional data fields are null
+        if data['gender'] in Gender._value2member_map_:
+            gender = Gender(data['gender'])
+        else:
+            gender = None
+
+        #TODO: if any of the mandatory is "" (NULL), should return error
+
+        listener.first_name = data['first_name']
+        listener.last_name = data['last_name']
+        listener.background_info = data['background_info']
+        listener.demographic = Demographic(
+            age=data['age'],
+            country_of_residence=data['country_of_residence'],
+            address=data['address'],
+            education=data['education'],
+            gender=gender
+        )
+        listener.languages =  data['languages']
+        flag_modified(listener, "first_name")
+        flag_modified(listener, "last_name")
+        flag_modified(listener, "background_info")
+        flag_modified(listener, "demographic")
+        flag_modified(listener, "languages")
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Error Code: 500"}), 500
+    return jsonify({"message": "Register demographic Successful"}), 200
+
+
+@userBp.route('/editName', methods=['POST'])
+@jwt_required()
+def editName():
+    data = request.json
+    required_fields = ['first_name', 'last_name']
+
+    # check validation error
+    validation_error = helpers.validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+
+    listener_id = get_jwt_identity()
+    listener_id = uuid.UUID(listener_id)
+
+    # check if listener is valid user
+    listener = Listener.query.filter_by(id=listener_id).first()
+    if not listener:
+        return jsonify({"error": "Listener not found"}), 404
+
+    try:
+        if not data['first_name'] and not data['last_name']:
+            return jsonify({"error": "Name fields can not be empty"}), 400
+        listener.first_name = data['first_name']
+        listener.last_name = data['last_name']
+        flag_modified(listener, "first_name")
+        flag_modified(listener, "last_name")
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Server failed to edit name for user: 500"}), 500
+    return jsonify({"message": "Edit name Successful"}), 200
+
+# TODO: background info, country of residence, age, address, education, gender edit functions to be implemented

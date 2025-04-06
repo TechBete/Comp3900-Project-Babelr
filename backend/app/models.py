@@ -2,7 +2,7 @@ import enum, uuid
 from sqlalchemy.dialects.postgresql import UUID, ENUM
 from sqlalchemy import DDL, event
 from app import db
- 
+
 #========== 1. Python Enums ==========
 class PermissionLevel(enum.Enum):
     admin = "admin"
@@ -94,8 +94,8 @@ class Listener(db.Model):
     languages = db.Column(db.JSON, default=list) # sets of language:proficiency
     jti = db.Column(db.String(36))  # JWT ID to store in the database to prevent reuse and duplicate active tokens
     blindlogin = db.Column(UUID(as_uuid=True)) # generate a random uuid for blind login
-    assigned_audio = db.Column(db.JSON, default=list) # list of video IDs assigned to the listener
-    
+    assigned_audio = db.Column(db.JSON, default=list) # list of audio IDs assigned to the listener
+
     # one-to-one relationship of listeners-demographics
     demographic = db.relationship("Demographic", back_populates="listener", uselist=False)
 

@@ -63,13 +63,13 @@ def createProject():
             researcher.project_list.append({"name": projectName,
                                             "path": projectDir,
                                             "status": "Draft",
-                                            "tags": [],
+                                            "tags": [], # big set of tags used for each audio files in the project
                                             "metrics": {
                                                 "Naturalness": 0,
                                                 "Intelligibility": 0,
                                                 "Clarity": 0
                                             },
-                                            "creator id": int(researcher.id),# updated to include creator id (researcher id) 
+                                            "creator id": int(researcher.id),# updated to include creator id (researcher id)
                                             "creator": researcher.first_name
                                             }) # updated to include creator name
 
@@ -490,7 +490,6 @@ def getProjectMetrics():
 @projectsBp.route('/updateProjectMetrics', methods=['POST'])
 @jwt_required()
 def updateProjectMetrics():
-
     data = request.json
     required_fields = ['project_name', 'metrics']
     validation_error = helpers.validate_required_fields(data, required_fields)
@@ -537,6 +536,7 @@ def updateProjectMetrics():
 
             # Mark the project_list as modified and commit changes
             flag_modified(researcher, "project_list")
+            #TODO: update all audio files to have same updated metrics
             db.session.commit()
     except Exception as e:
         db.session.rollback()
@@ -601,6 +601,13 @@ def deleteProjectMetrics():
 @projectsBp.route('/uploadAudioFile', methods=['POST'])
 @jwt_required()
 def uploadAudioFile():
+    data = request.json
+    required_fields = ['project_name', 'tags']
+
+    validation_error = helpers.validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+
     if "file" not in request.files:
         return jsonify({"error": "File doesn't exists."}), 400
 
@@ -613,7 +620,7 @@ def uploadAudioFile():
     researcher_id = uuid.UUID(researcher_id) # ensure type consistency
 
     # search researcher name from researcher uuid
-    researcher = db.session.get(Researcher, researcher_id)
+    researcher = session.get(Researcher, researcher_id)
     if researcher:
         researcher_name = researcher.first_name + researcher.last_name
     else:
@@ -626,7 +633,93 @@ def uploadAudioFile():
     os.makedirs(researcher_dir, exist_ok=True)
 
     file_path = os.path.join(researcher_dir, file.filename)
-    file.save(file_path)
+    file.save(file_path) # save the file in the directory
+
+    try:
+        project_dict = {project["name"]: project for project in researcher.project_list}
+        project = project_dict.get(data['project_name'])
+        if project is None:
+            return jsonify({"error": "Project not found"}), 404
+
+        if project.status != 'Draft':
+            return jsonify({"error": "The Project status must be set to 'Draft' to delete metrics"}), 400
+
+        audio_data = {
+            "name": file.filename,
+            "file_extension": filetype.guess(file_path).extension,
+            "file_path": file_path,
+            "allocated_listeners": [],
+            "metrics": project["metrics"],
+            "tags": [data['tags']]
+            # subset of the project tags, these tags are specific tags for each audio file
+        }
+
+        if audio_data not in researcher["uploaded_audio"]:
+            researcher["uploaded_audio"].append(audio_data)
+            flag_modified(researcher, "uploaded_audio")
+            db.session.commit()
+        else:
+            return jsonify({"message": "Audio file already exist"}), 400
+    except IntegrityError as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Error Code: 500"}), 500
 
     return jsonify({"message": f"{file.filename} is successfully uploaded and stored!"}), 200
 
+def testUploadAudioFile():
+    project_name = "Test Project 1"
+
+    # assign local variables to the data fields
+    researcher_id = "20658111-860a-4a87-a520-11800b9f36e9"
+
+    # search researcher name from researcher uuid
+    researcher = Researcher.query.filter_by(id=researcher_id).first()
+    if researcher:
+        print("YES NAME") # test
+        researcher_name = researcher.first_name + researcher.last_name
+    else:
+        return jsonify({"error": "Researcher does not exist on database!"}), 400
+
+    audio_file_path = "../audioData" # root directory path for all audio files
+    researcher_dir = os.path.join(audio_file_path, researcher_name)
+    print(researcher_dir)
+    print("YES DIRECTORY")
+
+    # if directory with researcher name doesn't exist, make directory
+    os.makedirs(researcher_dir, exist_ok=True)
+
+    file_path = os.path.join(researcher_dir, "test")
+    # file.save(file_path)
+
+    try:
+        project_dict = {project["name"]: project for project in researcher.project_list}
+        project = project_dict.get(project_name)
+        print("YES PROJECT" + project['name'])
+
+        if project is None:
+            return jsonify({"error": "Project not found"}), 404
+
+        audio_data = {
+            "name": "sample file",
+            "file_type": "",
+            "file_path": file_path
+        }
+        if audio_data not in project["audio_file_list"]:
+            project["audio_file_list"].append(audio_data)
+            flag_modified(researcher, "project_list")
+            db.session.commit()
+    except IntegrityError as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Error Code: 500"}), 500
+
+    return jsonify({"message": "file is successfully uploaded and stored!"}), 200
