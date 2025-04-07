@@ -676,15 +676,12 @@ def testUploadAudioFile():
     # search researcher name from researcher uuid
     researcher = Researcher.query.filter_by(id=researcher_id).first()
     if researcher:
-        print("YES NAME") # test
         researcher_name = researcher.first_name + researcher.last_name
     else:
         return jsonify({"error": "Researcher does not exist on database!"}), 400
 
     audio_file_path = "../audioData" # root directory path for all audio files
     researcher_dir = os.path.join(audio_file_path, researcher_name)
-    print(researcher_dir)
-    print("YES DIRECTORY")
 
     # if directory with researcher name doesn't exist, make directory
     os.makedirs(researcher_dir, exist_ok=True)
@@ -695,7 +692,6 @@ def testUploadAudioFile():
     try:
         project_dict = {project["name"]: project for project in researcher.project_list}
         project = project_dict.get(project_name)
-        print("YES PROJECT" + project['name'])
 
         if project is None:
             return jsonify({"error": "Project not found"}), 404

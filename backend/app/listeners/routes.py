@@ -280,9 +280,9 @@ def getCurrentPoints():
 def registerDemographics():
     data = request.json
     required_fields = ['first_name', 'last_name', 'date_of_birth', 'country_of_residence', 'education']
-    gender = data['gender'] # optional
-    background_info = data['background_info'] # optional
-    languages = data['languages'] # optional
+    # optional demograhics
+    gender = data['gender']
+    background_info = data['background_info']
 
     # check validation error
     validation_error = helpers.validate_required_fields(data, required_fields)
@@ -304,8 +304,12 @@ def registerDemographics():
         else:
             gender = None
 
-        #TODO: if any of the mandatory is "" (NULL), should return error
+        # all mandatory demographic fields must not be null
+        for field in required_fields:
+            if field is None:
+                return jsonify({"error": "Mandatory demograhic field is missing"}), 400
 
+        # store demograhic information in listener table
         listener.first_name = data['first_name']
         listener.last_name = data['last_name']
         listener.background_info = data['background_info']
@@ -376,39 +380,3 @@ def changeDemographics():
         db.session.rollback()
         return jsonify({"error": f"An error has occurred while updating the demographics: {e}"}), 500
     return jsonify({"message": "Demographic Edit successful"}), 200
-
-
-"""
-@userBp.route('/editName', methods=['POST'])
-@jwt_required()
-def editName():
-    data = request.json
-    required_fields = ['first_name', 'last_name']
-
-    # check validation error
-    validation_error = helpers.validate_required_fields(data, required_fields)
-    if validation_error:
-        return validation_error
-
-    listener_id = get_jwt_identity()
-    listener_id = uuid.UUID(listener_id)
-
-    # check if listener is valid user
-    listener = Listener.query.filter_by(id=listener_id).first()
-    if not listener:
-        return jsonify({"error": "Listener not found"}), 404
-
-    try:
-        if not data['first_name'] and not data['last_name']:
-            return jsonify({"error": "Name fields can not be empty"}), 400
-        listener.first_name = data['first_name']
-        listener.last_name = data['last_name']
-        flag_modified(listener, "first_name")
-        flag_modified(listener, "last_name")
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        logging.debug(e)
-        return jsonify({"error": "Server failed to edit name for user: 500"}), 500
-    return jsonify({"message": "Edit name Successful"}), 200
-"""
