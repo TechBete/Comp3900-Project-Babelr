@@ -55,15 +55,11 @@ def login():
         return jsonify({"Email entered is not of proper format. Email": str(Email)}), 400
 
     # check if email is already registered
-    try:
-        helper.is_existing_user(Email)
-    except Exception as e:
+    if not helper.is_existing_user(Email):
         return jsonify({"error": "Invalid email-password combination"}), 401
 
     # check if user is verified
-    try:
-        helper.check_verified(Email)
-    except Exception as e:
+    if not helper.check_verified(Email):
         return jsonify({"error": "User has not verified account"}), 401
 
     # assign user to either researcher or listener
