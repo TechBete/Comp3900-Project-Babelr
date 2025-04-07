@@ -5,18 +5,6 @@ import DatePickerWrapper from "components/date_picker"
 import { useRouter } from "next/router";
 import RoleCheck from "components/role_checker";
 
-
-function getAge(birthDate: Date) {
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const m = today.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age;
-  }
-
-
 export default function First_time() {
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
@@ -29,7 +17,7 @@ export default function First_time() {
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault()
         const formData = new FormData(event.currentTarget);
-        formData.set("age", String(getAge(new Date(formData.get("dob") as string))));
+        // formData.set("age", String(getAge(new Date(formData.get("dob") as string))));
         console.log("hello", Object.fromEntries(formData.entries()));
 
         PostDemographics(formData)
@@ -111,7 +99,7 @@ export default function First_time() {
                                     <option>Other</option>
                                 </select>
         
-                                <label className={styles.label} htmlFor="dob">Date of Birth</label>
+                                <label className={styles.label} htmlFor="date_of_birth">Date of Birth</label>
                                 <DatePickerWrapper/>
                                 
                                 <label className={styles.label} htmlFor="country_of_residence">Country of Residence</label> 
