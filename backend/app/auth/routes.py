@@ -322,6 +322,7 @@ def createTestUser():
         languages=test_lang,
         demographic=demo,
         assigned_audio=([] if not data.get('assigned_audio') else data['assigned_audio']),
+        first_time=False 
     )
 
     allocated_listener = Listener(
@@ -337,7 +338,7 @@ def createTestUser():
         languages=[],
         demographic=demo2,
         assigned_audio=([] if not data.get('assigned_audio') else data['assigned_audio']),
-        first_time=True,
+        first_time=False,
     )
 
     user2 = Researcher(
@@ -374,7 +375,7 @@ def createTestUser():
             },
             "tags": ["model3A", "Japanese"]
         }],
-        first_time=True,
+        first_time=False,
     )
 
     try:
