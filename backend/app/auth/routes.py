@@ -182,7 +182,7 @@ def createListener():
         db.session.commit()
 
         token = helper.generate_verification_token(data['email'])
-        verification_url = url_for('verify_email', token=token, _external=True)
+        verification_url = url_for('auth.verify_email', token=token, _external=True)
         helper.send_verification_email(data['email'], verification_url)
     except IntegrityError as e:
         db.session.rollback()
@@ -236,7 +236,7 @@ def createResearcher():
 
         # Generate token and send verification email
         token = helper.generate_verification_token(data['email'])
-        verification_url = url_for('verify_email', token=token, _external=True)
+        verification_url = url_for('auth.verify_email', token=token, _external=True)
         helper.send_verification_email(data['email'], verification_url)
     except IntegrityError as e:
         db.session.rollback()

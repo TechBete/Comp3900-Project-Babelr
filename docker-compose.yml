@@ -48,7 +48,7 @@ services:
     depends_on:
       - web
     environment:
-      - NEXT_PUBLIC_BACKEND_URL=http://localhost:8016
+      - NEXT_PUBLIC_BACKEND_URL=http://web:8016
     env_file:
       - .env
     networks:

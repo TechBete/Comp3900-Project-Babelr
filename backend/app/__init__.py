@@ -9,6 +9,7 @@ import logging
 db = SQLAlchemy()
 jwt = JWTManager()
 
+
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
@@ -19,7 +20,8 @@ def create_app(config_class=Config):
     db.init_app(app)
     jwt.init_app(app)
     CORS(app, supports_credentials=True, 
-         origins=["http://localhost:3000", "https://localhost:8016", "*"])
+         resources={r"/*": {"origins": ["http://localhost:3000", "http://localhost:8016"]}})  # Allow requests from the frontend to the backend
+                                                                                              # Set CORS policy to allow requests from the frontend to the backend
 
     # Register blueprints
     from app.auth.routes import authBp

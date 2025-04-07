@@ -36,7 +36,7 @@ export default function RegisterListener() {
 		}
 
 		try {
-			const response = await fetch('http://localhost:8016/auth/registerResearcher', {
+			const response = await fetch('http://localhost:8016/Auth/registerResearcher', {
 			method:"POST",
 			headers: {'Content-Type': 'application/json'},
 			body: JSON.stringify({        
