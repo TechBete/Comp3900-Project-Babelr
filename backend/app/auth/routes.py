@@ -229,7 +229,7 @@ def createResearcher():
         organisation=data.get('organisation', ''),
         is_verified=False,
         project_list=[],
-        uploaded_audio=[]
+        uploaded_audio=[],
         first_time =True,
     )
     try:
