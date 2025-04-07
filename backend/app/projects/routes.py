@@ -660,10 +660,6 @@ def uploadAudioFile():
             db.session.commit()
         else:
             return jsonify({"message": "Audio file already exist"}), 400
-    except IntegrityError as e:
-        db.session.rollback()
-        logging.debug(e)
-        return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
     except Exception as e:
         db.session.rollback()
         logging.debug(e)
@@ -705,18 +701,21 @@ def testUploadAudioFile():
             return jsonify({"error": "Project not found"}), 404
 
         audio_data = {
-            "name": "sample file",
-            "file_type": "",
-            "file_path": file_path
+            "name": file.filename,
+            "file_extension": filetype.guess(file_path).extension,
+            "file_path": file_path,
+            "allocated_listeners": [],
+            "metrics": project["metrics"],
+            "tags": [data['tags']]
+            # subset of the project tags, these tags are specific tags for each audio file
         }
-        if audio_data not in project["audio_file_list"]:
-            project["audio_file_list"].append(audio_data)
-            flag_modified(researcher, "project_list")
+
+        if audio_data not in researcher["uploaded_audio"]:
+            researcher["uploaded_audio"].append(audio_data)
+            flag_modified(researcher, "uploaded_audio")
             db.session.commit()
-    except IntegrityError as e:
-        db.session.rollback()
-        logging.debug(e)
-        return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
+        else:
+            return jsonify({"message": "Audio file already exist"}), 400
     except Exception as e:
         db.session.rollback()
         logging.debug(e)

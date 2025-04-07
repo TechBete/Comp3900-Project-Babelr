@@ -2,15 +2,14 @@ import time
 from app import create_app, db
 from flask import render_template_string
 from app.auth.routes import createTestUser
-from app.listeners.routes import testEditLanguage
+from app.projects.routes import testUploadAudioFile
 from sqlalchemy.exc import OperationalError
 
 # '''
 # def testRegisterDemographics():
 #     data = {
-#         "age": 53,
+#         "date_of_birth": "1975-11-29",
 #         "country_of_residence": "Australia",
-#         "address": "2 King St",
 #         "education": "Bachelor of Arts",
 #         "gender": "female"
 #     }
@@ -23,9 +22,8 @@ from sqlalchemy.exc import OperationalError
 #         # return jsonify({"error": "Demographic does not belongs to this listener"}), 404
 
 #     listener.demographic = Demographic(
-#         age=data['age'],
+#         date_of_birth=data['date_of_birth'],
 #         country_of_residence=data['country_of_residence'],
-#         address=data['address'],
 #         education=data['education'],
 #         gender=data['gender']
 #     )
@@ -781,7 +779,6 @@ from sqlalchemy.exc import OperationalError
 
 
 # ========== Run the Flask App ==========
-
 app = create_app()
 
 if __name__ == '__main__':
@@ -791,9 +788,11 @@ if __name__ == '__main__':
             # initialize the database
                 db.create_all()
                 createTestUser()
-                testEditLanguage()
+                # testEditLanguage()
                 # creates test user for frontend testing, verification for this account is waived
                 # testAddLanguage() # for testing add language functionality; To be removed
+                print("HELLOOOOOOOOO")
+                testUploadAudioFile()
             break
         except OperationalError as e:
             print("Database not ready yet, retrying...")
