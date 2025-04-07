@@ -166,6 +166,7 @@ def createListener():
         is_verified=False,
         languages=([] if not data.get('languages') else data['languages']),
         assigned_audio=([] if not data.get('assigned_audio') else data['assigned_audio']),
+        first_time =True,
     )
 
     demo = Demographic(
@@ -229,6 +230,7 @@ def createResearcher():
         is_verified=False,
         project_list=[],
         uploaded_audio=[]
+        first_time =True,
     )
     try:
         db.session.add(user)
@@ -339,6 +341,7 @@ def createTestUser():
         languages=[],
         demographic=demo2,
         assigned_audio=([] if not data.get('assigned_audio') else data['assigned_audio']),
+        first_time=True,
     )
 
     user2 = Researcher(
@@ -374,7 +377,8 @@ def createTestUser():
                 "Clarity": 0
             },
             "tags": ["model3A", "Japanese"]
-        }]
+        }],
+        first_time=True,
     )
 
     try:
@@ -536,9 +540,16 @@ def getRoleFromID():
 
     listener = Listener.query.filter_by(id=user_id).first()
     researcher = Researcher.query.filter_by(id=user_id).first()
+
+    user = listener if listener else researcher
+    first_time = user.first_time
+    if first_time:
+        user.first_time = False
+        db.session.commit()
+
     if listener and not researcher:
-        return jsonify({"role": "listener"})
-    elif not listener and researcher:
-        return jsonify({"role": "researcher"})
+        return jsonify({"role": "listener", "first_time": first_time})
+    elif not listener and researcher:       
+        return jsonify({"role": "researcher", "first_time": first_time})
     else:
         return jsonify({"error": "User ID not found"}), 404
