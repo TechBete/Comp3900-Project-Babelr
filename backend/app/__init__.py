@@ -36,7 +36,3 @@ def create_app(config_class=Config):
 #   app.register_blueprint(adminBp, url_prefix='/admin') commenting out for now
 
     return app
-
-# this should allow for importing the create_app function from the app package
-#from . import create_app, db
-#__all__ = ['create_app', 'db', 'jwt']

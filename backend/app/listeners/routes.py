@@ -29,6 +29,7 @@ def getListeners():
         "is_verified": user.is_verified,
         "allocated audio": [audio.value for audio in user.allocated_audio] if user.allocated_audio else [], # Convert enum array
     } for user in users])
+
 '''
 # test route to get a listener by id once listener cookie is implemented
 @userBp.route('/getListener/<uuid:listener_id>', methods=['GET'])

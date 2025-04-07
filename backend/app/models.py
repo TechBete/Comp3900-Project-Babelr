@@ -95,6 +95,7 @@ class Listener(db.Model):
     jti = db.Column(db.String(36))  # JWT ID to store in the database to prevent reuse and duplicate active tokens
     blindlogin = db.Column(UUID(as_uuid=True)) # generate a random uuid for blind login
     assigned_audio = db.Column(db.JSON, default=list) # list of video IDs assigned to the listener
+    completed_audio = db.Column(db.JSON, default=list) # list of video IDs completed by the listener
     
     # one-to-one relationship of listeners-demographics
     demographic = db.relationship("Demographic", back_populates="listener", uselist=False)
