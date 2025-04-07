@@ -55,15 +55,11 @@ def login():
         return jsonify({"Email entered is not of proper format. Email": str(Email)}), 400
 
     # check if email is already registered
-    try:
-        helper.is_existing_user(Email)
-    except Exception as e:
+    if not helper.is_existing_user(Email):
         return jsonify({"error": "Invalid email-password combination"}), 401
 
     # check if user is verified
-    try:
-        helper.check_verified(Email)
-    except Exception as e:
+    if not helper.check_verified(Email):
         return jsonify({"error": "User has not verified account"}), 401
 
     # assign user to either researcher or listener
@@ -166,6 +162,7 @@ def createListener():
         is_verified=False,
         languages=([] if not data.get('languages') else data['languages']),
         assigned_audio=([] if not data.get('assigned_audio') else data['assigned_audio']),
+        first_time =True,
     )
 
     demo = Demographic(
@@ -228,7 +225,8 @@ def createResearcher():
         organisation=data.get('organisation', ''),
         is_verified=False,
         project_list=[],
-        uploaded_audio=[]
+        uploaded_audio=[],
+        first_time =True,
     )
     try:
         db.session.add(user)
@@ -330,6 +328,7 @@ def createTestUser():
         languages=test_lang,
         demographic=demo,
         assigned_audio=([] if not data.get('assigned_audio') else data['assigned_audio']),
+        first_time=False 
     )
 
     allocated_listener = Listener(
@@ -345,6 +344,7 @@ def createTestUser():
         languages=test_lang,
         demographic=demo2,
         assigned_audio=([] if not data.get('assigned_audio') else data['assigned_audio']),
+        first_time=False,
     )
 
     user2 = Researcher(
@@ -380,7 +380,8 @@ def createTestUser():
                 "Clarity": 0
             },
             "tags": ["model3A", "Japanese"]
-        }]
+        }],
+        first_time=False,
     )
 
     try:
@@ -542,9 +543,16 @@ def getRoleFromID():
 
     listener = Listener.query.filter_by(id=user_id).first()
     researcher = Researcher.query.filter_by(id=user_id).first()
+
+    user = listener if listener else researcher
+    first_time = user.first_time
+    if first_time:
+        user.first_time = False
+        db.session.commit()
+
     if listener and not researcher:
-        return jsonify({"role": "listener"})
-    elif not listener and researcher:
-        return jsonify({"role": "researcher"})
+        return jsonify({"role": "listener", "first_time": first_time})
+    elif not listener and researcher:       
+        return jsonify({"role": "researcher", "first_time": first_time})
     else:
         return jsonify({"error": "User ID not found"}), 404

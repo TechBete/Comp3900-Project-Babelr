@@ -3,7 +3,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.exc import IntegrityError
 from flask import jsonify, request
 from app.listeners import userBp
-from app.models import Demographic, Listener
+from app.models import Demographic, Gender, Listener
 import app.helpers as helpers
 import uuid, logging
 from app import db
@@ -347,8 +347,9 @@ def registerDemographics():
     listener = Listener.query.filter_by(id=listener_id).first()
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
-
+    logging.debug("Listener before register %s", repr(listener))
     try:
+        logging.debug("no here!")
         # edge case when optional data fields are null
         if data['gender'] in Gender._value2member_map_:
             gender = Gender(data['gender'])
@@ -363,7 +364,7 @@ def registerDemographics():
         # store demograhic information in listener table
         listener.first_name = data['first_name']
         listener.last_name = data['last_name']
-        listener.background_info = data['background_info']
+        listener.background_info = data['education'] # changed from data['background_info']
         listener.demographic = Demographic(
             date_of_birth=data['date_of_birth'],
             country_of_residence=data['country_of_residence'],
@@ -379,6 +380,7 @@ def registerDemographics():
         db.session.rollback()
         logging.debug(e)
         return jsonify({"error": "Error Code: 500"}), 500
+    logging.debug("Listener after register %s", repr(listener))
     return jsonify({"message": "Register demographic Successful"}), 200
 
 

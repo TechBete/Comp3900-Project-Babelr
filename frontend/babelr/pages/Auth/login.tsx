@@ -8,11 +8,9 @@ export default function Login() {
     const router = useRouter()
     const [selectedOption, setSelectedOption] = useState("/Auth/register_listener");
     const [loginError, setLoginError] = useState("");
-    // FOR NOW USE THIS TO CHANGE WHAT THE USERTYPE IS AND IF IT'S THEIR FIRST TIME
-    const [isFirstTime, setFirstTime] = useState(true); // temporary before isfirstime call
+
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-        // DOES NOTHING BECAUSE ASYNC FUNCTION BUT JUST TO KEEP COMPILER HAPPY
-        setFirstTime(true);
+
 
         event.preventDefault()
     
@@ -36,25 +34,23 @@ export default function Login() {
 
                 const roleData = await roleRes.json();
                 const role = roleData.role;
+                const first_time = roleData.first_time;
+
                 if (!role) {
                     setLoginError("Unknown role");
                     return;
                 }
-                console.log("going here?");
 
                 if (role == "researcher") {
-                    if (isFirstTime){
-                        console.log("going here???");
+                    if (first_time){
                         router.push("/Researcher/first_time_researcher");
                     } else {
                         router.push("/Researcher/project_list");
                     }
                 } else if (role == "listener") {
-                    if (isFirstTime){
-                        console.log("going here");
+                    if (first_time){
                         router.push("/Listener/first_time_listener");
                     } else {
-                        console.log("going here?????????");
                         router.push("/Listener/clip_list");
                     }
                 } else {

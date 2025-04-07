@@ -79,6 +79,7 @@ class Researcher(db.Model):
     is_verified = db.Column(db.Boolean, nullable=False)
     jti = db.Column(db.String(36))  # JWT ID to store in the database to prevent reuse and duplicate active tokens
     blindlogin = db.Column(UUID(as_uuid=True)) # generate a random uuid for blind login
+    first_time = db.Column(db.Boolean, nullable=False)
 
 class Listener(db.Model):
     __tablename__ = "listeners"
@@ -96,6 +97,7 @@ class Listener(db.Model):
     blindlogin = db.Column(UUID(as_uuid=True)) # generate a random uuid for blind login
     assigned_audio = db.Column(db.JSON, default=list) # list of video IDs assigned to the listener
     completed_audio = db.Column(db.JSON, default=list) # list of video IDs completed by the listener
+    first_time = db.Column(db.Boolean, nullable=False)
     
     # one-to-one relationship of listeners-demographics
     demographic = db.relationship("Demographic", back_populates="listener", uselist=False)
