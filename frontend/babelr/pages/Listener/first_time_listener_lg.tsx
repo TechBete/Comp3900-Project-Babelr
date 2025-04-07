@@ -2,6 +2,7 @@ import { useState, FormEvent } from "react";
 import styles from "stylesheets/first_time_listener.module.css";
 import Image from "next/image";
 import { useRouter } from "next/router";
+import RoleCheck from "components/role_checker";
 
 type LanguageEntry = {
     language: string;
@@ -42,13 +43,13 @@ export default function LanguageSelector() {
         }
     
         if (allSuccessful) {
-            router.push("/Listener/home_listener");
+            router.push("/Listener/clip_list");
         }
     };
 
     const postLanguage = async (entry: LanguageEntry): Promise<boolean> => {
         try {
-            const response = await fetch("http://localhost:8016/addLanguage", {
+            const response = await fetch("http://localhost:8016/listener/addLanguage", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
@@ -69,70 +70,72 @@ export default function LanguageSelector() {
     };
 
     return (
-        <div className={styles["body"]}>
-            <div className={styles["form-container"]}>
-                <div className={styles["information-container"]}>
-                    <div className={styles["header-wrapper"]}>
-                        <h1>Select Your Languages</h1>
-                        <p>Add languages and your proficiency level</p>
-                        <form onSubmit={handleSubmit}>
-                        <div className={styles["language-box"]}>
-                            {languages.map((entry, index) => (
-                                <div key={index} style={{ display: "flex", gap: "10px", marginBottom: "10px", alignItems: "center" }}>
-                                    <select
-                                        value={entry.language}
-                                        onChange={(e) => handleChange(index, "language", e.target.value)}
-                                        className={styles.select}
-                                        required
-                                    >
-                                    <option value="">Language</option>
-                                    {["English", "Spanish", "French", "Mandarin", "Hindi", "Arabic", "Other"].map((lang) => ( // change to saved list of languages later
-                                        <option
-                                            key={lang}
-                                            value={lang}
-                                            disabled={languages.some((e, i) => e.language === lang && i !== index)}
+        <RoleCheck requiredRole="listener">
+            <div className={styles["body"]}>
+                <div className={styles["form-container"]}>
+                    <div className={styles["information-container"]}>
+                        <div className={styles["header-wrapper"]}>
+                            <h1>Select Your Languages</h1>
+                            <p>Add languages and your proficiency level</p>
+                            <form onSubmit={handleSubmit}>
+                            <div className={styles["language-box"]}>
+                                {languages.map((entry, index) => (
+                                    <div key={index} style={{ display: "flex", gap: "10px", marginBottom: "10px", alignItems: "center" }}>
+                                        <select
+                                            value={entry.language}
+                                            onChange={(e) => handleChange(index, "language", e.target.value)}
+                                            className={styles.select}
+                                            required
                                         >
-                                            {lang}
-                                        </option>
-                                    ))}
-                                    </select>
+                                        <option value="">Language</option>
+                                        {["English", "Spanish", "French", "Mandarin", "Hindi", "Arabic", "Other"].map((lang) => ( // change to saved list of languages later
+                                            <option
+                                                key={lang}
+                                                value={lang}
+                                                disabled={languages.some((e, i) => e.language === lang && i !== index)}
+                                            >
+                                                {lang}
+                                            </option>
+                                        ))}
+                                        </select>
 
-                                    <select
-                                        value={entry.proficiency}
-                                        onChange={(e) => handleChange(index, "proficiency", e.target.value)}
-                                        className={styles.select}
-                                        required
-                                    >
-                                        <option value="">Proficiency</option>
-                                        <option>Beginner</option>
-                                        <option>Intermediate</option>
-                                        <option>Advanced</option>
-                                        <option>Native</option>
-                                    </select>
+                                        <select
+                                            value={entry.proficiency}
+                                            onChange={(e) => handleChange(index, "proficiency", e.target.value)}
+                                            className={styles.select}
+                                            required
+                                        >
+                                            <option value="">Proficiency</option>
+                                            <option>Beginner</option>
+                                            <option>Intermediate</option>
+                                            <option>Advanced</option>
+                                            <option>Native</option>
+                                        </select>
 
-                                    <button type="button" onClick={() => removeLanguage(index)} style={{ background: "transparent", border: "none", fontSize: "1.2em", cursor: "pointer" }}>
-                                        ✕
-                                    </button>
-                                </div>
-                            ))}
+                                        <button type="button" onClick={() => removeLanguage(index)} style={{ background: "transparent", border: "none", fontSize: "1.2em", cursor: "pointer" }}>
+                                            ✕
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+                                <button type="button" onClick={addLanguage} className={styles.button}>
+                                    Add Language
+                                </button>
+                                <button type="submit" className={styles.button}>
+                                    Next
+                                </button>
+                            </div>
+                                {error && <div className="error-label">{error}</div>}
+                            </form>
                         </div>
-
-                        <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-                            <button type="button" onClick={addLanguage} className={styles.button}>
-                                Add Language
-                            </button>
-                            <button type="submit" className={styles.button}>
-                                Next
-                            </button>
-                        </div>
-                            {error && <div className="error-label">{error}</div>}
-                        </form>
                     </div>
                 </div>
+                <div className={styles["image-container"]}>
+                    <Image src="/babelr_logo.png" alt="side-image" width={1024} height={1024}/>
+                </div>
             </div>
-            <div className={styles["image-container"]}>
-                <Image src="/babelr_logo.png" alt="side-image" width={1024} height={1024}/>
-            </div>
-        </div>
+        </RoleCheck>
     );
 }

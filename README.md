@@ -36,6 +36,7 @@ once the server is up and running you should be able to connect to the frontend 
 ```localhost:3000                       (takes user to login page)```
 ```localhost:3000/register_listener     (register user page)```
 ```localhost:3000/register_researcher   (register researcher page)```
+```localhost:3000/firsttimelistener     (firstime listener page)```
 
 #### BACKEND - Implemented Routes
 

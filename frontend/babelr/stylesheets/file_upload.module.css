@@ -2,6 +2,7 @@
 .project-body {
     font-family: Arial, sans-serif;
     margin: 0;
+    margin-top: 30px;
     padding: 0;
     background-color: #f4f4f4;
     height: 100vh;
@@ -10,9 +11,10 @@
 .container {
     display: flex;
     height: 100vh;
+    margin-top: 50px;
 }
 
-.main-content {
+.mainContent {
     flex: 1;
     padding: 20px;
 }
@@ -53,28 +55,42 @@
 }
 
 /* Table Styling */
-.table {
+.clipTable {
     width: 100%;
     border-collapse: collapse;
     background: white;
 }
 
-.table thead {
-    background: #eee;
+.clipTable thead {
+    background: #a33636;
 }
 
-.table th, .table td {
+.clipTable th{
     padding: 10px;
     text-align: left;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid #942e2e;
+    border-right: 1px solid #942e2e;
 }
 
-.table tr:hover {
+.clipTable tr:hover {
     background: #f9f9f9;
 }
 
+.clipTable tr td {
+    padding: 10px;
+    text-align: left;
+    border-right: 1px solid #942e2e;
+    border-bottom: 1px solid #942e2e;
+    color: black    
+}
+
+/* .clipTable tr td:last-of-type {
+    border: none;
+} */
+
 /* Add Audio Button */
 .addAudioBtn {
+    display: flex;
     background: #28a745;
     color: white;
     border: none;
@@ -84,6 +100,8 @@
     border-radius: 8px;
     cursor: pointer;
     margin-bottom: 15px;
+    /* align-content: end; */
+
 }
 
 .addAudioBtn:hover {

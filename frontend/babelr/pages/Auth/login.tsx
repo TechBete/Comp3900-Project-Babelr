@@ -8,13 +8,9 @@ export default function Login() {
     const router = useRouter()
     const [selectedOption, setSelectedOption] = useState("/Auth/register_listener");
     const [loginError, setLoginError] = useState("");
-    // FOR NOW USE THIS TO CHANGE WHAT THE USERTYPE IS AND IF IT'S THEIR FIRST TIME
-    const [userType, setUser] = useState("Listener"); // TEMPORARY BEFORE isUser APICALL
-    const [isFirstTime, setFirstTime] = useState(true);
+
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-        // DOES NOTHING BECAUSE ASYNC FUNCTION BUT JUST TO KEEP COMPILER HAPPY
-        setUser('researcher');
-        setFirstTime(false);
+
 
         event.preventDefault()
     
@@ -23,7 +19,7 @@ export default function Login() {
         const pw = formData.get("password")
 
         try {
-            const response = await fetch('http://localhost:8016/login', {
+            const response = await fetch('http://localhost:8016/auth/login', {
                 method:"POST",
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({email, pw}),
@@ -31,20 +27,28 @@ export default function Login() {
             })
 
             if (response.ok) {
-                // adding jwt to local storage
-                // const data = await response.json();
-                // if (data.access_token) {
-                //     localStorage.setItem("accessToken", data.access_token);
-                // }
+                const roleRes = await fetch("http://localhost:8016/auth/getRoleFromID", {
+                    method: "GET",
+                    credentials: "include",
+                });
 
-                if (userType == "researcher") {
-                    if (isFirstTime){
+                const roleData = await roleRes.json();
+                const role = roleData.role;
+                const first_time = roleData.first_time;
+
+                if (!role) {
+                    setLoginError("Unknown role");
+                    return;
+                }
+
+                if (role == "researcher") {
+                    if (first_time){
                         router.push("/Researcher/first_time_researcher");
                     } else {
                         router.push("/Researcher/project_list");
                     }
-                } else if (userType == "Listener") {
-                    if (isFirstTime ){
+                } else if (role == "listener") {
+                    if (first_time){
                         router.push("/Listener/first_time_listener");
                     } else {
                         router.push("/Listener/clip_list");

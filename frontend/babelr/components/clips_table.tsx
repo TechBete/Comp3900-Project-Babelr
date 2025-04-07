@@ -1,5 +1,5 @@
 import React from "react";
-import styles from "../styles/AudioClipsTable.module.css";
+import styles from "stylesheets/clips_table.module.css";
 
 const AudioClipsTable = () => {
   const audioClips = [

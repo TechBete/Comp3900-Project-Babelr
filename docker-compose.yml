@@ -19,7 +19,9 @@ services:
       - app_network
 
   web:
-    build: ./backend
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
     environment:                  # dont hardcode environment variables in PROD
       POSTGRES_USER: Babelr
       POSTGRES_PASSWORD: W16B3900 # Change this to your own password in PROD

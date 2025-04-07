@@ -3,7 +3,7 @@ import styles from "stylesheets/first_time_listener.module.css";
 import Image from "next/image";
 import DatePickerWrapper from "components/date_picker"
 import { useRouter } from "next/router";
-
+import RoleCheck from "components/role_checker";
 
 export default function First_time() {
     const [firstName, setFirstName] = useState("");
@@ -17,30 +17,27 @@ export default function First_time() {
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault()
         const formData = new FormData(event.currentTarget);
-        console.log(Object.fromEntries(formData.entries()));
+        // formData.set("age", String(getAge(new Date(formData.get("dob") as string))));
+        console.log("hello", Object.fromEntries(formData.entries()));
 
-        for (const [key, value] of formData.entries()) {
-            // console.log(`${key}: ${value}`);
-            PostDemographics(`${key}`, `${value}`,'editname')
-        }  
+        PostDemographics(formData)
         console.log(Error)
     }
 
-    async function PostDemographics(key: string, value: string ,API: string) {
+    async function PostDemographics(formData: FormData) {
         console.log("DEMOGRAPHICS POST BELOW");
-        console.log(JSON.stringify({[key]: value}));
-        router.push('first_time_listener_lg')// FOR NOW BEFORE OTHER ADD API CALLS ARE DEVELOPED
+        console.log("after", JSON.stringify(Object.fromEntries(formData)));
         try {
-            const response = await fetch(`http://localhost:8016/${API}}`, {
+            const response = await fetch(`http://localhost:8016/auth/registerListenerDemographics`, {
                 method:"POST",
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({[key]: value}),
+                body: JSON.stringify(Object.fromEntries(formData)),
                 credentials: 'include'
             })
     
             if (response.ok) {
                 // const response = await response.json()
-                return // change later maybe
+                router.push('first_time_listener_lg')
             } else {
                 const error = await response.json();
                 setError(error.error);
@@ -53,6 +50,7 @@ export default function First_time() {
 
 
     return (
+        <RoleCheck requiredRole="listener">
             <div className={styles["body"]}>
                 <div className={styles["form-container"]}>
                     <div className={styles["information-container"]}>
@@ -61,23 +59,23 @@ export default function First_time() {
                             <p>Please fill in the information below</p>
                             <form className={styles["demographics-forms"]} method="post" onSubmit={handleSubmit}>
 
-                                <label className={styles.label} htmlFor="first-name">First Name</label>
+                                <label className={styles.label} htmlFor="first_name">First Name</label>
                                 <input 
                                     className={styles.input} 
                                     type="text" 
-                                    id="first-name" 
-                                    name="first-name" 
+                                    id="first_name" 
+                                    name="first_name" 
                                     value={firstName}
                                     onChange={(e) => setFirstName(e.target.value)}
                                     required
                                 />
         
-                                <label className={styles.label} htmlFor="last-name">Last Name</label>
+                                <label className={styles.label} htmlFor="last_name">Last Name</label>
                                 <input 
                                     className={styles.input} 
                                     type="text" 
-                                    id="last-name" 
-                                    name="last-name" 
+                                    id="last_name" 
+                                    name="last_name" 
                                     value={lastName}
                                     onChange={(e) => setLastName(e.target.value)}
                                     required
@@ -101,14 +99,14 @@ export default function First_time() {
                                     <option>Other</option>
                                 </select>
         
-                                <label className={styles.label} htmlFor="dob">Date of Birth</label>
+                                <label className={styles.label} htmlFor="date_of_birth">Date of Birth</label>
                                 <DatePickerWrapper/>
                                 
-                                <label className={styles.label} htmlFor="country">Country of Residence</label> 
+                                <label className={styles.label} htmlFor="country_of_residence">Country of Residence</label> 
                                 <select 
                                     className={styles.select}
-                                    id="country" 
-                                    name="country" 
+                                    id="country_of_residence" 
+                                    name="country_of_residence" 
                                     value={country} 
                                     onChange={(e) => setCountry(e.target.value)}
                                     required
@@ -150,5 +148,6 @@ export default function First_time() {
                     <Image src="/babelr_logo.png" alt="side-image" width={1024} height={1024}/>
                 </div>
             </div>
+        </RoleCheck>
     );
 }   

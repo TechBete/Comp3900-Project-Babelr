@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import styles from "../stylesheets/nav_bar.module.css"
 import HomeIcon from "../components/homeicon"
@@ -45,11 +46,11 @@ export default function Navbar_Listener() {
 
     return ( 
         <div className={styles["nav-bar"]}>
-            <HomeIcon/>
+            <Link href='/Listener/clip_list'><HomeIcon/></Link>
             <div className={styles["top-nav-right"]}>
                 <div className={styles["profile-options"]}>
                     <span><Link href='/Listener/rewards_shop'>Points: {Points}</Link></span>
-                    <span>My Profile</span>
+                    <span><Link href='/Listener/profile'>My Profile</Link></span>
                     <span><Link href='/'>Logout</Link></span>
                 </div>
             </div>
