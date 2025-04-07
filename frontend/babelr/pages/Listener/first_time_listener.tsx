@@ -28,7 +28,7 @@ export default function First_time() {
         console.log("DEMOGRAPHICS POST BELOW");
         console.log("after", JSON.stringify(Object.fromEntries(formData)));
         try {
-            const response = await fetch(`http://localhost:8016/listener/registerListenerDemographics`, {
+            const response = await fetch(`http://localhost:8016/auth/registerListenerDemographics`, {
                 method:"POST",
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(Object.fromEntries(formData)),
