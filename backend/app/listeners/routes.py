@@ -279,8 +279,10 @@ def getCurrentPoints():
 @jwt_required()
 def registerDemographics():
     data = request.json
-    required_fields = ['first_name', 'last_name', 'age', 'country_of_residence', 'address', 'education']
-    gender = data['gender'] # optional
+    required_fields = ['first_name', 'last_name', 'date_of_birth', 'country_of_residence', 'education']
+    # optional demograhics
+    gender = data['gender']
+    background_info = data['background_info']
 
     # check validation error
     validation_error = helpers.validate_required_fields(data, required_fields)
@@ -294,13 +296,134 @@ def registerDemographics():
     listener = Listener.query.filter_by(id=listener_id).first()
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
-    # if not listener.demographics.listener_id == listener_id:
-        # return jsonify({"error": "Demographic does not belongs to this listener"}), 404
 
-    listener.demographic = Demographic(
-        age=data['age'],
-        country_of_residence=data['country_of_residence'],
-        address=data['address'],
-        education=data['education'],
-        gender=gender
-    )
+    try:
+        # edge case when optional data fields are null
+        if data['gender'] in Gender._value2member_map_:
+            gender = Gender(data['gender'])
+        else:
+            gender = None
+
+        # all mandatory demographic fields must not be null
+        for field in required_fields:
+            if field is None:
+                return jsonify({"error": "Mandatory demograhic field is missing"}), 400
+
+        # store demograhic information in listener table
+        listener.first_name = data['first_name']
+        listener.last_name = data['last_name']
+        listener.background_info = data['background_info']
+        listener.demographic = Demographic(
+            date_of_birth=data['date_of_birth'],
+            country_of_residence=data['country_of_residence'],
+            education=data['education'],
+            gender=gender
+        )
+        listener.languages =  data['languages']
+        # raise a flag on listener database to alert that records has been changed.
+        for field in ["first_name", "last_name", "background_info", "demographic", "languages"]:
+            flag_modified(listener, field)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Error Code: 500"}), 500
+    return jsonify({"message": "Register demographic Successful"}), 200
+
+
+# Change the demographic settings of a given user
+# Args:
+#    Mandatory fields: first_name, last_name, date_of_birth, country_of_residence, education
+#    Optional fields: gender, background_info
+#    NOTE: Languages can be set it up later.
+#    However, listeners can't be allocated to audio file if languages are empty
+#    since allocation matching algorithm uses languages information to match audio file and user.
+@userBp.route('/changeDemographics', methods = ['POST'])
+@jwt_required()
+def changeDemographics():
+    data = request.json
+    if data is None:
+        return jsonify({"error": "no data is given with the request"}), 400
+
+    # get listener information from the given uuid
+    # changed to user_id from listener_id to avoid confusion when searching Demographic record
+    user_id = get_jwt_identity()
+    user_id = uuid.UUID(user_id)
+
+    # check if listener is valid user
+    listener = Listener.query.filter_by(id=user_id).first()
+    if not listener:
+        return jsonify({"error": "Listener not found"}), 404
+
+    demographic: Demographic | None = Demographic.query.filter_by(listener_id = user_id).first()
+    if not demographic:
+        return jsonify({"error": f"Demographic data for the user {listener.id} was not found"}), 400
+
+    # Convince the type system that these exists
+    assert demographic is not None
+    assert data is not None
+    try:
+        # mandatory fields information (nullable=False)
+        listener.first_name = data['first_name']
+        listener.last_name = data['last_name']
+        demographic.date_of_birth = data['date_of_birth']
+        demographic.country_of_residence = data['country_of_residence']
+        demographic.education = data['education']
+        # optional fields (nullable=True)
+        demographic.gender = data['gender']
+        listener.background_info = data['background_info']
+
+        for field in ["first_name", "last_name", "background_info"]:
+            flag_modified(listener, field)
+        for field in ["date_of_birth", "country_of_residence", "education", "gender"]:
+            flag_modified(demographic, field)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"An error has occurred while updating the demographics: {e}"}), 500
+    return jsonify({"message": "Demographic Edit successful"}), 200
+
+def testChangeDemographics():
+    data = {
+        "first_name": "new",
+        "last_name": "new",
+        "date_of_birth": "0000-00-00",
+        "country_of_residence": "HERE",
+        "education" : "STUDY",
+        "gender": None,
+        "background_info": "whatever"
+    }
+
+    user_id = "736259a4-aea2-4de7-aa87-5764e1db624b"
+
+    listener = Listener.query.filter_by(id=user_id).first()
+    if not listener:
+        return jsonify({"error": "Listener not found"}), 404
+
+    demographic: Demographic | None = Demographic.query.filter_by(listener_id = user_id).first()
+    if not demographic:
+        return jsonify({"error": f"Demographic data for the user {listener.id} was not found"}), 400
+
+    # Convince the type system that these exists
+    assert demographic is not None
+    assert data is not None
+    try:
+        # mandatory fields information (nullable=False)
+        listener.first_name = data['first_name']
+        listener.last_name = data['last_name']
+        demographic.date_of_birth = data['date_of_birth']
+        demographic.country_of_residence = data['country_of_residence']
+        demographic.education = data['education']
+        # optional fields (nullable=True)
+        demographic.gender = data['gender']
+        listener.background_info = data['background_info']
+
+        for field in ["first_name", "last_name", "background_info"]:
+            flag_modified(listener, field)
+        for field in ["date_of_birth", "country_of_residence", "education", "gender"]:
+            flag_modified(demographic, field)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"An error has occurred while updating the demographics: {e}"}), 500
+    return jsonify({"message": "Demographic Edit successful"}), 200

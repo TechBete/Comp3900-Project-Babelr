@@ -1,5 +1,5 @@
 from flask import request, jsonify, url_for, redirect
-from app.models import Researcher, Listener, PermissionLevel
+from app.models import Researcher, Listener, PermissionLevel, Demographic
 from app import db, jwt
 from app.auth import authBp
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, decode_token, set_access_cookies, get_jwt
@@ -71,7 +71,7 @@ def login():
     logging.debug(existing_researcher)
     existing_listener = helper.is_listener(Email)
     logging.debug(existing_listener)
-    
+
     # updated for researcher login; check if user is a listener or researcher,
     # updated token id as uuid for validation in backend routes.
     # added email and permissions to additioanl_claims for validation in backend routes.
@@ -143,8 +143,8 @@ def createListener():
     Email = data['email']
     # Check if email already exists in the database
     if helper.is_existing_user(Email):
-        return jsonify({"error": "Email already registered"}), 400    
-    
+        return jsonify({"error": "Email already registered"}), 400
+
     # check if email is structured correctly
     try:
         validate_email(Email)
@@ -168,8 +168,17 @@ def createListener():
         assigned_audio=([] if not data.get('assigned_audio') else data['assigned_audio']),
     )
 
+    demo = Demographic(
+        listener_id=user.id,
+        date_of_birth="",
+        gender=None,
+        country_of_residence="",
+        education=""
+    )
+
     try:
         db.session.add(user)
+        db.session.add(demo)
         db.session.commit()
 
         token = helper.generate_verification_token(data['email'])
@@ -218,6 +227,8 @@ def createResearcher():
         permission=PermissionLevel.researcher,
         organisation=data.get('organisation', ''),
         is_verified=False,
+        project_list=[],
+        uploaded_audio=[]
     )
     try:
         db.session.add(user)
@@ -246,7 +257,6 @@ def createTestUser():
         "pw": "Eve123",
     }
 
-
     test_lang = [
     {
         "language": "English",
@@ -260,9 +270,46 @@ def createTestUser():
         "pw": "Jim123",
     }
 
+    data3 = {
+        "first_name": "Kate",
+        "last_name": "Smith",
+        "email": "ksmith@listen.com",
+        "pw": "kate",
+    }
+
     # Hash the user password
     hashed_password = helper.hash_password(data)
     hashed_password2 = helper.hash_password(data2)
+    hashed_password3 = helper.hash_password(data3)
+
+    demo_data = {
+        "date_of_birth": "1959-06-11",
+        "country_of_residence": "Australia",
+        "education": "Bachelor of Arts",
+        "gender": "female"
+    }
+
+    demo_data2 = {
+        "date_of_birth": "2000-09-08",
+        "country_of_residence": "Australia",
+        "education": "HSC",
+        "gender": "female"
+    }
+
+    demo = Demographic(
+        date_of_birth=demo_data['date_of_birth'],
+        country_of_residence=demo_data['country_of_residence'],
+        education=demo_data['education'],
+        gender=demo_data['gender']
+    )
+
+    demo2 = Demographic(
+        date_of_birth=demo_data2['date_of_birth'],
+        country_of_residence=demo_data2['country_of_residence'],
+        education=demo_data2['education'],
+        gender=demo_data2['gender']
+    )
+
 
     user = Listener(
         id="736259a4-aea2-4de7-aa87-5764e1db624b",    # generate a random uuid if not provided
@@ -275,17 +322,59 @@ def createTestUser():
         reward_points=0,
         is_verified=True,
         languages=test_lang,
+        demographic=demo,
+        assigned_audio=([] if not data.get('assigned_audio') else data['assigned_audio']),
+    )
+
+    allocated_listener = Listener(
+        id="20658871-860a-4a87-a520-11800b9f3632",    # generate a random uuid if not provided
+        first_name=data3['first_name'],
+        last_name=data3['last_name'],
+        email=data3['email'],
+        pw_hash=hashed_password3.value,
+        permission=PermissionLevel.listener,
+        background_info="ayo",
+        reward_points=0,
+        is_verified=True,
+        languages=[],
+        demographic=demo2,
         assigned_audio=([] if not data.get('assigned_audio') else data['assigned_audio']),
     )
 
     user2 = Researcher(
-        id=uuid.uuid4(),    # generate a random uuid if not provided
+        id="20658111-860a-4a87-a520-11800b9f36e9",   # generate a random uuid if not provided
         first_name=data2['first_name'],
         last_name=data2['last_name'],
         email=data2['email'],
         pw_hash=hashed_password2.value,
         permission=PermissionLevel.researcher,
         is_verified=True,
+        project_list=[
+        {
+            "name": "Test Project 1",
+            "path": "",
+            "status": "Draft",
+            "tags": [],
+            "metrics": {
+                "Naturalness": 0,
+                "Intelligibility": 0,
+                "Clarity": 0
+            },
+            "creator id": "20658111-860a-4a87-a520-11800b9f36e9",
+            "creator": data2['first_name'],
+        }],
+        uploaded_audio=[{
+            "name": "testFile1",
+            "file_extension": ".wav",
+            "file_path": "./audioData/Bill/TestProject1/",
+            "allocated_listeners": [user.id, allocated_listener.id],
+            "metrics": {
+                "Naturalness": 0,
+                "Intelligibility": 0,
+                "Clarity": 0
+            },
+            "tags": ["model3A", "Japanese"]
+        }]
     )
 
     try:
@@ -296,6 +385,9 @@ def createTestUser():
             existing_researcher = helper.is_researcher(user2.email)
             if not existing_researcher:
                 db.session.add(user2)
+            existing_listener = helper.is_listener(allocated_listener.email)
+            if not existing_listener:
+                db.session.add(allocated_listener)
             db.session.commit()
         # no need to send verification email for testing account
     except IntegrityError as e:
@@ -434,7 +526,6 @@ def blindPasswordReset():
             db.session.rollback()
             logging.debug(e)
             return jsonify({"error": "Error: 500, An error has occured while updating the password"}), 500
-        
 
 # Helper function to get user role from uuid
 @authBp.route('/getRoleFromID', methods=['GET'])
