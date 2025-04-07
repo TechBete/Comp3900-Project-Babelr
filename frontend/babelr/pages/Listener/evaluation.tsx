@@ -16,7 +16,7 @@ export default function Evaluation() {
             const response = await fetch(`http://localhost:8016/submitRating}`, {
                 method:"POST",
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({"id": 2}),
+                body: JSON.stringify({"id": 2, 'ratings': [{'clarity': 4}, {'fluency': 2}]}),
                 credentials: 'include'
             })
     
