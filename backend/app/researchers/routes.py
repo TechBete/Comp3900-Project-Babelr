@@ -32,3 +32,32 @@ def getResearchers():
         "Uploaded Audio Clips": [uac.value for uac in user.uploaded_video] if user.uploaded_video else [], # list of audio clips user has uploaded
         "Gender": user.gender.value if user.gender is not None else None
     } for user in users])
+
+@researchersBp.route('/updateOrganisation', methods=['POST'])
+@jwt_required()
+def updateOrganisation():
+    data = request.json
+    required_fields = ['new_organisation']
+
+    validation_error = helpers.validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+
+    researcher_id = get_jwt_identity()
+    researcher_id = uuid.UUID(researcher_id) # ensure type consistency
+
+    # search researcher name from researcher uuid
+    researcher = session.get(Researcher, researcher_id)
+    if not researcher:
+        return jsonify({"error": "Researcher does not exist on database!"}), 400
+
+    try:
+        researcher.organisation = data['new_organisation']
+        flag_modified(researcher, "organisation")
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"An error occurred while updating researcher's organisation: {e}")
+        return jsonify({"error": "Error: 500, An error occurred while updating the researcher's organisation"}), 500
+
+    return jsonify({"message": "Researcher organisation updated successfully"}), 200

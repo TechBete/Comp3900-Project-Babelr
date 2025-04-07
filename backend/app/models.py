@@ -2,7 +2,7 @@ import enum, uuid
 from sqlalchemy.dialects.postgresql import UUID, ENUM
 from sqlalchemy import DDL, event
 from app import db
- 
+
 #========== 1. Python Enums ==========
 class PermissionLevel(enum.Enum):
     admin = "admin"
@@ -105,8 +105,7 @@ class Demographic(db.Model):
     id = db.Column(db.Integer, primary_key=True, nullable=False) # ID of demographic record
     listener_id = db.Column(UUID(as_uuid=True), db.ForeignKey("listeners.id"))
     listener = db.relationship("Listener", back_populates="demographic")
-    age = db.Column(db.Integer, nullable=False)
+    date_of_birth = db.Column(db.String(15), nullable=False)
     gender = db.Column(gender_enum)
     country_of_residence = db.Column(db.String(30), nullable=False)
-    address = db.Column(db.String(128), nullable=False)
     education = db.Column(db.String(128), nullable=False)
