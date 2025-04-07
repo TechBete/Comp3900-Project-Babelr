@@ -114,6 +114,7 @@ class Demographic(db.Model):
 
 class Admin(db.Model):
     __tablename__ = "admin"
+    id = db.Column(UUID(as_uuid=True), nullable=False) # admin's uuid
     first_name = db.Column(db.String(128), nullable=False)
     last_name = db.Column(db.String(128), nullable=False)
     email = db.Column(db.String(128), primary_key=True, nullable=False)

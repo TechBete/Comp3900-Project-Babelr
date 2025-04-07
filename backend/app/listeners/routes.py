@@ -13,7 +13,9 @@ from app import db
 @userBp.route('/getListeners', methods=['GET'])
 @jwt_required()
 def getListeners():
-    if not helpers.is_admin():
+    admin = get_jwt_identity()
+    admin_id = uuid.UUID(admin)
+    if not helpers.is_admin(admin_id):
         return jsonify({"error": "Unauthorized access"}), 403
     
     users = Listener.query.all()
