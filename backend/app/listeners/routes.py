@@ -364,16 +364,63 @@ def changeDemographics():
     assert data is not None
     try:
         # mandatory fields information (nullable=False)
-        demographic.first_name = data['first_name']
-        demographic.last_name = data['last_name']
+        listener.first_name = data['first_name']
+        listener.last_name = data['last_name']
         demographic.date_of_birth = data['date_of_birth']
         demographic.country_of_residence = data['country_of_residence']
         demographic.education = data['education']
         # optional fields (nullable=True)
         demographic.gender = data['gender']
-        demographic.background_info = data['background_info']
+        listener.background_info = data['background_info']
 
-        for field in ["first_name", "last_name", "date_of_birth", "country_of_residence", "education", "gender", "background_info"]:
+        for field in ["first_name", "last_name", "background_info"]:
+            flag_modified(listener, field)
+        for field in ["date_of_birth", "country_of_residence", "education", "gender"]:
+            flag_modified(demographic, field)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"An error has occurred while updating the demographics: {e}"}), 500
+    return jsonify({"message": "Demographic Edit successful"}), 200
+
+def testChangeDemographics():
+    data = {
+        "first_name": "new",
+        "last_name": "new",
+        "date_of_birth": "0000-00-00",
+        "country_of_residence": "HERE",
+        "education" : "STUDY",
+        "gender": None,
+        "background_info": "whatever"
+    }
+
+    user_id = "736259a4-aea2-4de7-aa87-5764e1db624b"
+
+    listener = Listener.query.filter_by(id=user_id).first()
+    if not listener:
+        return jsonify({"error": "Listener not found"}), 404
+
+    demographic: Demographic | None = Demographic.query.filter_by(listener_id = user_id).first()
+    if not demographic:
+        return jsonify({"error": f"Demographic data for the user {listener.id} was not found"}), 400
+
+    # Convince the type system that these exists
+    assert demographic is not None
+    assert data is not None
+    try:
+        # mandatory fields information (nullable=False)
+        listener.first_name = data['first_name']
+        listener.last_name = data['last_name']
+        demographic.date_of_birth = data['date_of_birth']
+        demographic.country_of_residence = data['country_of_residence']
+        demographic.education = data['education']
+        # optional fields (nullable=True)
+        demographic.gender = data['gender']
+        listener.background_info = data['background_info']
+
+        for field in ["first_name", "last_name", "background_info"]:
+            flag_modified(listener, field)
+        for field in ["date_of_birth", "country_of_residence", "education", "gender"]:
             flag_modified(demographic, field)
         db.session.commit()
     except Exception as e:

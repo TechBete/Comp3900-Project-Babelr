@@ -3,6 +3,7 @@ from app import create_app, db
 from flask import render_template_string
 from app.auth.routes import createTestUser
 from app.projects.routes import testUploadAudioFile
+from app.listeners.routes import testChangeDemographics
 from sqlalchemy.exc import OperationalError
 
 # '''
@@ -791,8 +792,8 @@ if __name__ == '__main__':
                 # testEditLanguage()
                 # creates test user for frontend testing, verification for this account is waived
                 # testAddLanguage() # for testing add language functionality; To be removed
-                print("HELLOOOOOOOOO")
                 testUploadAudioFile()
+                testChangeDemographics()
             break
         except OperationalError as e:
             print("Database not ready yet, retrying...")
