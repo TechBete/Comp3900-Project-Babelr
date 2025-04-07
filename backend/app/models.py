@@ -80,6 +80,9 @@ class Researcher(db.Model):
     jti = db.Column(db.String(36))  # JWT ID to store in the database to prevent reuse and duplicate active tokens
     blindlogin = db.Column(UUID(as_uuid=True)) # generate a random uuid for blind login
     first_time = db.Column(db.Boolean, nullable=False)
+    
+    # one-to-one relationship of researchers-demographics
+    demographic = db.relationship("ResearcherDemographic", back_populates="researcher", uselist=False)
 
 class Listener(db.Model):
     __tablename__ = "listeners"
@@ -99,13 +102,30 @@ class Listener(db.Model):
     first_time = db.Column(db.Boolean, nullable=False)
     
     # one-to-one relationship of listeners-demographics
-    demographic = db.relationship("Demographic", back_populates="listener", uselist=False)
+    demographic = db.relationship("ListenerDemographic", back_populates="listener", uselist=False)
 
-class Demographic(db.Model):
-    __tablename__ = "demographics"
+# consider updating the demographic model to polymorphic model to reduce redundancy
+# in later iterations but this is fine for now
+
+# ========== 4. Demographics Models ==========
+
+# Demographics model for Listeners
+class ListenerDemographic(db.Model):
+    __tablename__ = "listener_demographics"
     id = db.Column(db.Integer, primary_key=True, nullable=False) # ID of demographic record
-    listener_id = db.Column(UUID(as_uuid=True), db.ForeignKey("listeners.id"))
+    listener_id = db.Column(UUID(as_uuid=True), db.ForeignKey("listeners.id"), unique=True, nullable=False)
     listener = db.relationship("Listener", back_populates="demographic")
+    date_of_birth = db.Column(db.String(15), nullable=False)
+    gender = db.Column(gender_enum)
+    country_of_residence = db.Column(db.String(30), nullable=False)
+    education = db.Column(db.String(128), nullable=False)
+
+# Demographics model for Researchers
+class ResearcherDemographic(db.Model):
+    __tablename__ = "researcher_demographics"
+    id = db.Column(db.Integer, primary_key=True, nullable=False) # ID of demographic record
+    researcher_id = db.Column(UUID(as_uuid=True), db.ForeignKey("researchers.id"), unique=True, nullable=False)
+    researcher = db.relationship("Researcher", back_populates="demographic")
     date_of_birth = db.Column(db.String(15), nullable=False)
     gender = db.Column(gender_enum)
     country_of_residence = db.Column(db.String(30), nullable=False)
