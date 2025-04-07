@@ -3,7 +3,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.exc import IntegrityError
 from flask import jsonify, request
 from app.listeners import userBp
-from app.models import Demographic, Gender, Listener
+from app.models import ListenerDemographic, Gender, Listener
 import app.helpers as helper
 import uuid, logging, os
 from app import db
@@ -17,6 +17,10 @@ def getListeners():
         "is_verified": user.is_verified,
         "Uuid": str(user.id),
         "Demographic ID": user.demographic.id if user.demographic else None,
+        "Date of Birth": user.demographic.date_of_birth if user.demographic else None,
+        "Country of Residence": user.demographic.country_of_residence if user.demographic else None,
+        "Education": user.demographic.education if user.demographic else None,
+        "Gender": str(user.demographic.gender.value) if user.demographic else None,
         "First Name": user.first_name,
         "Last Name": user.last_name,
         "Email": user.email,
@@ -24,10 +28,9 @@ def getListeners():
         "Role": user.permission.value,
         "Background Info": user.background_info,
         "Reward Points": user.reward_points,
-        "languages_list": [lang for lang in user.languages_list] if user.languages_list else [], # list of languages user speaks
-        "languages_proficiency": [lp.value for lp in user.languages_proficiency] if user.languages_proficiency else [], # Convert enum array
+        "languages": [lang for lang in user.languages] if user.languages else [], # list of languages user speaks
         "is_verified": user.is_verified,
-        "allocated audio": [audio.value for audio in user.allocated_audio] if user.allocated_audio else [], # Convert enum array
+        "allocated audio": [audio.value for audio in user.assigned_audio] if user.assigned_audio else [], # Convert enum array
     } for user in users])
 '''
 # test route to get a listener by id once listener cookie is implemented
@@ -313,7 +316,7 @@ def registerDemographics():
         listener.first_name = data['first_name']
         listener.last_name = data['last_name']
         listener.background_info = data['education'] # changed from data['background_info']
-        listener.demographic = Demographic(
+        listener.demographic = ListenerDemographic(
             date_of_birth=data['date_of_birth'],
             country_of_residence=data['country_of_residence'],
             education=data['education'],
@@ -356,7 +359,7 @@ def changeDemographics():
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
-    demographic: Demographic | None = Demographic.query.filter_by(listener_id = user_id).first()
+    demographic: ListenerDemographic | None = ListenerDemographic.query.filter_by(listener_id = user_id).first()
     if not demographic:
         return jsonify({"error": f"Demographic data for the user {listener.id} was not found"}), 400
 
@@ -389,7 +392,7 @@ def testChangeDemographics():
         "date_of_birth": "0000-00-00",
         "country_of_residence": "HERE",
         "education" : "STUDY",
-        "gender": None,
+        "gender": "female",
         "background_info": "whatever"
     }
 
@@ -399,7 +402,7 @@ def testChangeDemographics():
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
-    demographic: Demographic | None = Demographic.query.filter_by(listener_id = user_id).first()
+    demographic: ListenerDemographic | None = ListenerDemographic.query.filter_by(listener_id = user_id).first()
     if not demographic:
         return jsonify({"error": f"Demographic data for the user {listener.id} was not found"}), 400
 

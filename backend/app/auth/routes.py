@@ -1,5 +1,5 @@
 from flask import request, jsonify, url_for, redirect
-from app.models import Researcher, Listener, PermissionLevel, Demographic
+from app.models import Researcher, Listener, PermissionLevel, ListenerDemographic, Gender
 from app import db, jwt
 from app.auth import authBp
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, decode_token, set_access_cookies, get_jwt
@@ -165,7 +165,7 @@ def createListener():
         first_time =True,
     )
 
-    demo = Demographic(
+    demo = ListenerDemographic(
         listener_id=user.id,
         date_of_birth="",
         gender=None,
@@ -294,14 +294,14 @@ def createTestUser():
         "gender": "female"
     }
 
-    demo = Demographic(
+    demo = ListenerDemographic(
         date_of_birth=demo_data['date_of_birth'],
         country_of_residence=demo_data['country_of_residence'],
         education=demo_data['education'],
         gender=demo_data['gender']
     )
 
-    demo2 = Demographic(
+    demo2 = ListenerDemographic(
         date_of_birth=demo_data2['date_of_birth'],
         country_of_residence=demo_data2['country_of_residence'],
         education=demo_data2['education'],
