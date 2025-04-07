@@ -2,7 +2,7 @@ import time
 from app import create_app, db
 from app.auth.routes import createTestUser
 from app.projects.routes import testUploadAudioFile
-from app.listeners.routes import testChangeDemographics
+from app.listeners.routes import testChangeDemographics, testGetListener
 from sqlalchemy.exc import OperationalError
 
 

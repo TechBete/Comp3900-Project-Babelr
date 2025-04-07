@@ -109,3 +109,14 @@ class Demographic(db.Model):
     gender = db.Column(gender_enum)
     country_of_residence = db.Column(db.String(30), nullable=False)
     education = db.Column(db.String(128), nullable=False)
+
+class Admin(db.Model):
+    __tablename__ = "admin"
+    first_name = db.Column(db.String(128), nullable=False)
+    last_name = db.Column(db.String(128), nullable=False)
+    email = db.Column(db.String(128), primary_key=True, nullable=False)
+    pw_hash = db.Column(db.String(128), nullable=False) # Argon2 hash string is 97 char long
+    permission = db.Column(permission_level_enum, nullable=False)
+    jti = db.Column(db.String(36))  # JWT ID to store in the database to prevent reuse and duplicate active tokens
+    is_verified = db.Column(db.Boolean, nullable=False)
+    

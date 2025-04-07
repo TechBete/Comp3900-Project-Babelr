@@ -11,7 +11,11 @@ from app import db
 # this may need to be changed to only return the 'listener' who is calling the route
 # this route may only be used by the admin to get all listeners
 @userBp.route('/getListeners', methods=['GET'])
+@jwt_required()
 def getListeners():
+    if not helpers.is_admin():
+        return jsonify({"error": "Unauthorized access"}), 403
+    
     users = Listener.query.all()
     return jsonify([{
         "is_verified": user.is_verified,
@@ -30,28 +34,71 @@ def getListeners():
         "allocated audio": [audio.value for audio in user.allocated_audio] if user.allocated_audio else [], # Convert enum array
     } for user in users])
 
-'''
+
 # test route to get a listener by id once listener cookie is implemented
 @userBp.route('/getListener/<uuid:listener_id>', methods=['GET'])
-def getListener(listener_id):
-    user = Listener.query.get(listener_id)
+def getListener():
+    # get user information from the given uuid
+    id = get_jwt_identity()
+    user_id = uuid.UUID(id)
+    
+    # check if listener is valid user
+    user = helpers.is_listener(user_id)
+    
     if user is None:
         return jsonify({"error": "Listener not found"}), 404
     return jsonify({
         "Uuid": str(user.id),
-        "Demographic ID": user.demographic.id if user.demographic else None,
         "First Name": user.first_name,
         "Last Name": user.last_name,
         "Email": user.email,
         "Password": user.pw_hash,
-        "Role": user.permission.value,
+        "Demographics": {
+            "Date of Birth": user.demographic.date_of_birth,
+            "Gender": str(user.demographic.gender.value) if user.demographic else None,
+            "Country of Residence": user.demographic.country_of_residence,
+            "Education": user.demographic.education,},
         "Background Info": user.background_info,
         "Reward Points": user.reward_points,
-        "languages_list": user.languages_list,
-        "languages_proficiency": [lp.value for lp in user.languages_proficiency] if user.languages_proficiency else []  # Convert enum array
-    })
-'''
+        "languages": [user.languages] if user.languages else [],  # list of languages user speaks
+        "assigned audio": [str(audio.value) for audio in user.assigned_audio] if user.assigned_audio else [],  # Convert enum array
+        "completed audio": [str(audio.value) for audio in user.completed_audio] if user.completed_audio else [],  # Convert enum array
+        })
 
+# Test route for /getListener/<uuid:listener_id> , remove for final
+@userBp.route('/testGetListener', methods=['GET'])
+def testGetListener():
+    # Hardcoded UUID for testing purposes
+    test_listener_id = "20658871-860a-4a87-a520-11800b9f3632"
+
+    # Convert the string to a UUID object
+    listener_id = uuid.UUID(test_listener_id)
+
+    # Check if the listener exists
+    listener = Listener.query.filter_by(id=listener_id).first()
+
+    if not listener:
+        return jsonify({"error": "Listener not found"}), 404
+
+    # Construct the response
+    return jsonify({
+        "Uuid": str(listener.id),
+        "First Name": listener.first_name,
+        "Last Name": listener.last_name,
+        "Email": listener.email,
+        "Password": listener.pw_hash,
+        "Demographics": {
+            "Date of Birth": listener.demographic.date_of_birth if listener.demographic else None,
+            "Gender": str(listener.demographic.gender.value) if listener.demographic else None,
+            "Country of Residence": listener.demographic.country_of_residence if listener.demographic else None,
+            "Education": listener.demographic.education if listener.demographic else None,
+        },
+        "Background Info": listener.background_info,
+        "Reward Points": listener.reward_points,
+        "languages": listener.languages if listener.languages else [],
+        "assigned audio": [str(audio.value) for audio in listener.assigned_audio] if listener.assigned_audio else [],
+        "completed audio": [str(audio.value) for audio in listener.completed_audio] if listener.completed_audio else [],
+    }), 200
 
 @userBp.route('/addLanguage', methods=['POST'])
 @jwt_required()

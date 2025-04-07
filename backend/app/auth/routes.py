@@ -259,8 +259,14 @@ def createTestUser():
 
     test_lang = [
     {
-        "language": "English",
-        "proficiency": "Native"
+        "language": "English", 
+        "proficiency": "Native", 
+    }, {
+        "language": "Japanese",
+        "proficiency": "Elementary",
+    }, {
+        "language": "German",
+        "proficiency": "Bilingual",
     }]
 
     data2 = {
@@ -336,7 +342,7 @@ def createTestUser():
         background_info="ayo",
         reward_points=0,
         is_verified=True,
-        languages=[],
+        languages=test_lang,
         demographic=demo2,
         assigned_audio=([] if not data.get('assigned_audio') else data['assigned_audio']),
     )

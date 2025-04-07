@@ -74,6 +74,9 @@ def is_researcher(email):
 
 def is_listener(email):
     return Listener.query.filter_by(email=email).first()
+
+def is_admin(email):
+    return admin.query.filter_by(email=email).first()
     
 def blind_login(id):
     existing_listener = Listener.query.filter_by(blind_login=id).first()
