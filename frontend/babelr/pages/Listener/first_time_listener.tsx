@@ -37,7 +37,7 @@ export default function First_time() {
     
             if (response.ok) {
                 // const response = await response.json()
-                router.push('first_time_listener_lg')// FOR NOW BEFORE OTHER ADD API CALLS ARE DEVELOPED
+                router.push('first_time_listener_lg')
             } else {
                 const error = await response.json();
                 setError(error.error);
