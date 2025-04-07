@@ -94,6 +94,7 @@ def addLanguage():
         return jsonify({"error": "Error Code: 500"}), 500
     return jsonify({"message": "Add language Successful"}), 200
 
+# dont forget to remove this test route for final version
 def testAddLanguage():
     try:
         listener = db.session.query(Listener).filter_by(first_name="Alice").first()
@@ -160,6 +161,7 @@ def editLanguage():
         return jsonify({"error": "Error Code: 500"}), 500
     return jsonify({"message": "Edit language Successful"}), 200
 
+# dont forget to remove this test route for final version
 def testEditLanguage():
     data = {
         "language": "Japanese",
@@ -234,6 +236,7 @@ def deleteLanguage():
         return jsonify({"error": "Error Code: 500"}), 500
     return jsonify({"message": "Delete language Successful"}), 200
 
+# dont forget to remove this test route for final version
 def testDeleteLanguage():
     try:
         listener = db.session.query(Listener).filter_by(first_name="Alice").first()
@@ -384,6 +387,7 @@ def changeDemographics():
         return jsonify({"error": f"An error has occurred while updating the demographics: {e}"}), 500
     return jsonify({"message": "Demographic Edit successful"}), 200
 
+# dont forget to remove this test route for final version
 def testChangeDemographics():
     data = {
         "first_name": "new",
