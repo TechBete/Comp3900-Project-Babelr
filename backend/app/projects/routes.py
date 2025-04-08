@@ -681,14 +681,15 @@ def testUploadAudioFile():
     else:
         return jsonify({"error": "Researcher does not exist on database!"}), 400
 
-    audio_file_path = "../audioData" # root directory path for all audio files
-    researcher_dir = os.path.join(audio_file_path, researcher_name)
-
-    # if directory with researcher name doesn't exist, make directory
+    # NOTE: file path syntax = /root/audioData/researcherId/projectName/researcherName/fileName
+    file_path = "../../../audioData" # root directory path for all audio files
+    researcher_dir = os.path.join(file_path, researcher_id)
+    # if directory with researcher id doesn't exist, make directory
     os.makedirs(researcher_dir, exist_ok=True)
-
-    file_path = os.path.join(researcher_dir, "test")
-    # file.save(file_path)
+    researcher_name_dir = os.path.join(researcher_dir, researcher_name)
+    os.makedirs(researcher_name_dir, exist_ok=True)
+    file_path = os.path.join(researcher_name_dir, "testfile")
+    # file.save(file_path) # save the file in the directory
 
     try:
         project_dict = {project["name"]: project for project in researcher.project_list}
