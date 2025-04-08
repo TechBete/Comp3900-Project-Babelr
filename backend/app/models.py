@@ -12,29 +12,28 @@ class PermissionLevel(enum.Enum):
 
 @total_ordering
 class ProficiencyLevel(enum.Enum):
-    _ORDERING = {
-        "elementary": 0,
-        "limited_working": 1,
-        "professional": 2,
-        "native": 3,
-        "bilingual": 4,
-    }
-
-    elementary = "elementary"
-    limited_working = "limited_working"
-    professional = "professional"
-    native = "native"
-    bilingual = "bilingual"
-
+    elementary = ("elementary", 0)
+    limited_working = ("limited_working", 1)
+    professional = ("professional", 2)
+    native = ("native", 3)
+    bilingual = ("bilingual", 4)
+    
+    def __init__(self, label, order):
+        self._label = label
+        self._order = order
+    
     def __eq__(self, other):
         if isinstance(other, ProficiencyLevel):
-            return self.value == other.value
+            return self._order == other._order
         return NotImplemented
-
+    
     def __lt__(self, other):
         if isinstance(other, ProficiencyLevel):
-            return self.__class__._ORDERING[self.value] < self.__class__._ORDERING[other.value]
+            return self._order < other._order
         return NotImplemented
+    
+    def __hash__(self):
+        return hash(self.name)
 
 class Gender(enum.Enum):
     male = "male"
