@@ -30,7 +30,7 @@ def createProject():
     researcherId = researcher_id   #FRONTEND TESTING
 
     # Check if researcher exists
-    researcher = Researcher.query.filter_by(id=researcherId).first()
+    researcher = helper.is_researcher_id(researcherId)
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404  # disallow project creation if researcher does not exist
 
@@ -65,12 +65,34 @@ def createProject():
                                             "status": "Draft",
                                             "tags": [], # big set of tags used for each audio files in the project
                                             "metrics": {
-                                                "Naturalness": 0,
-                                                "Intelligibility": 0,
-                                                "Clarity": 0
+                                                "Naturalness": {
+                                                    "min": 1,
+                                                    "max": 5,
+                                                    "minimum label": "Robotic",
+                                                    "maximum label": "Natural",
+                                                    "description": "How natural the audio sounds"
+                                                    },
+                                                "Intelligibility": {
+                                                    "min": 1,
+                                                    "max": 5,
+                                                    "minimum label": "Unintelligible",
+                                                    "maximum label": "Intelligible",
+                                                    "description": "How easy it is to understand the audio"
+                                                    },
+                                                "Clarity": {
+                                                    "min": 1,
+                                                    "max": 5,
+                                                    "minimum label": "Unclear",
+                                                    "maximum label": "Clear",
+                                                    "description": "How clear the audio sounds"
+                                                    },
                                             },
                                             "creator id": int(researcher.id),# updated to include creator id (researcher id)
-                                            "creator": researcher.first_name
+                                            "creator": researcher.first_name,
+                                            "assigned audio": {
+                                                "audio": [],
+                                                "allocated listeners": []
+                                            }
                                             }) # updated to include creator name
 
             flag_modified(researcher, "project_list")
@@ -96,7 +118,7 @@ def updateProject():
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
 
-    researcher = Researcher.query.filter_by(id=researcher_id).first()
+    researcher = helper.is_researcher_id(researcher_id)
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
 
@@ -153,7 +175,7 @@ def addProjectTags():
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
 
-    researcher = Researcher.query.filter_by(id=researcher_id).first()
+    researcher = helper.is_researcher_id(researcher_id)
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
 
@@ -202,7 +224,7 @@ def removeProjectTags():
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
 
-    researcher = Researcher.query.filter_by(id=researcher_id).first()
+    researcher = helper.is_researcher_id(researcher_id)
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
 
@@ -250,7 +272,7 @@ def searchProjectByTag():
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
 
-    researcher = Researcher.query.filter_by(id=researcher_id).first()
+    researcher = helper.is_researcher_id(researcher_id)
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
 
@@ -279,7 +301,7 @@ def updateProjectStatus():
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
 
-    researcher = Researcher.query.filter_by(id=researcher_id).first()
+    researcher = helper.is_researcher_id(researcher_id)
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
 
@@ -315,12 +337,13 @@ def getProjects():
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
 
-    researcher = Researcher.query.filter_by(id=researcher_id).first()
+    researcher = helper.is_researcher_id(researcher_id)
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
 
     return jsonify({"projects_list": researcher.project_list})
 
+# this route is to get a specific project of a researcher
 @projectsBp.route('/getProject' , methods=['POST'])
 @jwt_required()
 def getProject():
@@ -333,7 +356,7 @@ def getProject():
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
 
-    researcher_exists = Researcher.query.filter_by(id=researcher_id).first()
+    researcher_exists = helper.is_researcher_id(researcher_id)
     if not researcher_exists:
         return jsonify({"error": "Researcher not found"}), 404
 
@@ -395,62 +418,7 @@ def deleteProject():
 
     return jsonify({"message": "Project deleted successfully", "projects_list": researcher.project_list})
 
-# update this route as we get more information on how the metrics should be stored
-# this route is to set the metrics for a project once a project has been created.
-@projectsBp.route('/setProjectMetricField', methods=['POST'])
-@jwt_required()
-def setProjectMetricsField():
-    data = request.json
-    required_fields = ['project_name', 'metrics']
-    validation_error = helper.validate_required_fields(data, required_fields)
-    if validation_error:
-        logging.debug("Validation error: Missing required fields")
-        return validation_error
-
-    researcher_id = get_jwt_identity()
-    researcher_id = uuid.UUID(researcher_id)
-
-    researcher = Researcher.query.filter_by(id=researcher_id).first()
-    if not researcher:
-        return jsonify({"error": "Researcher not found"}), 404
-
-    projectName = data['project_name']
-
-    try:
-        with db.session.begin_nested():
-            # Check if project exists
-            project_dict = {project["name"]: project for project in researcher.project_list}
-            project = project_dict.get(projectName)
-            if project is None:
-                return jsonify({"error": "Project not found"}), 404
-
-            # Process metrics from the frontend
-            frontend_metrics = data['metrics']
-            if not isinstance(frontend_metrics, dict):
-                return jsonify({"error": "Metrics must be a dictionary"}), 400
-
-            # Convert frontend metrics to a dictionary with integer values
-            metrics_dict = {metric: 0 for metric in frontend_metrics}
-
-            # Merge with existing metrics
-            existing_metrics = project.get('metrics', {})
-            if not isinstance(existing_metrics, dict):
-                return jsonify({"error": "Existing metrics are not in a valid format"}), 500
-            existing_metrics.update(metrics_dict)
-
-            # Update the project's metrics
-            project['metrics'] = existing_metrics
-
-            # Mark the project_list as modified and commit changes
-            flag_modified(researcher, "project_list")
-            db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        logging.debug(f"Error: {e}")
-        return jsonify({"error": "Error: 500, An error occurred while setting the project metrics"}), 500
-
-    return jsonify({"message": "Project metrics set successfully", "metrics": project['metrics']})
-
+# this route is to get the metrics for a specific project
 @projectsBp.route('/getProjectMetrics', methods=['POST'])
 @jwt_required()
 def getProjectMetrics():
@@ -483,6 +451,95 @@ def getProjectMetrics():
         return jsonify({"error": "Error: 500, An error occurred while retrieving the project metrics"}), 500
 
     return jsonify({"metrics": metrics})
+
+# this route is to set the metrics for a project once a project has been created.
+# this will set the metrics for the project
+# this will be called when the project is created
+# metrics should be a dictionary with the following keys:
+# Naturalness, Intelligibility, Clarity hard coded as default values per instructions
+# metric structure: metric name {min, max, minimum label, maximum label, description}
+@projectsBp.route('/setProjectMetricField', methods=['POST'])
+@jwt_required()
+def setProjectMetricsField():
+    data = request.json
+    required_fields = ['project_name', 'metrics']
+    validation_error = helper.validate_required_fields(data, required_fields)
+    if validation_error:
+        logging.debug("Validation error: Missing required fields")
+        return validation_error
+
+    researcher_id = get_jwt_identity()
+    researcher_id = uuid.UUID(researcher_id)
+
+    researcher = helper.is_researcher_id(researcher_id)
+    if not researcher:
+        return jsonify({"error": "Researcher not found"}), 404
+
+    projectName = data['project_name']
+
+    try:
+        with db.session.begin_nested():
+            # Check if project exists
+            project_dict = {project["name"]: project for project in researcher.project_list}
+            project = project_dict.get(projectName)
+            if project is None:
+                return jsonify({"error": "Project not found"}), 404
+
+            # Process metrics from the frontend
+            frontend_metrics = data['metrics']
+            if not isinstance(frontend_metrics, dict):
+                return jsonify({"error": "Metrics must be a dictionary"}), 400
+
+            # Convert frontend metrics to a dictionary with integer values
+            metrics_dict = {}
+            for metric_name, metric_data in frontend_metrics.items():
+                if not isinstance(metric_data, dict):
+                    return jsonify({"error": "Metrics data must be a dictionary"}), 400
+                
+                # validate metric data
+                required_fields = ['min', 'max', 'minimum label', 'maximum label', 'description']
+                for field in required_fields:
+                    if field not in metric_data:
+                        return jsonify({"error": "Missing required field: {} for metric {}".format(field, metric_name)}), 400
+                
+                # Ensure min and max are numeric (in this case floats so as to handle future cases)
+                try:
+                    metric_data['min'] = float(metric_data['min'])
+                    metric_data['max'] = float(metric_data['max'])
+                except ValueError:
+                    return jsonify({"error": "Min and max values must be numeric"}), 400
+                
+                # Ensure min is less than max
+                if metric_data['min'] >= metric_data['max']:
+                    return jsonify({"error": "Min value must be less than max value"}), 400
+                
+                # Add the metric to the dictionary
+                metrics_dict[metric_name] = {
+                    "min": metric_data['min'],
+                    "max": metric_data['max'],
+                    "minimum label": metric_data['minimum label'],
+                    "maximum label": metric_data['maximum label'],
+                    "description": metric_data['description']
+                }
+                
+            # Merge with existing metrics
+            existing_metrics = project.get('metrics', {})
+            if not isinstance(existing_metrics, dict):
+                return jsonify({"error": "Existing metrics are not in a valid format"}), 500
+            existing_metrics.update(metrics_dict)
+
+            # Update the project's metrics
+            project['metrics'] = existing_metrics
+
+            # Mark the project_list as modified and commit changes
+            flag_modified(researcher, "project_list")
+            db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(f"Error: {e}")
+        return jsonify({"error": "Error: 500, An error occurred while setting the project metrics"}), 500
+
+    return jsonify({"message": "Project metrics set successfully", "metrics": project['metrics']})
 
 # this route is to update the project metrics
 # this will add values to each of the fields in the metrics dictionary
@@ -524,19 +581,25 @@ def updateProjectMetrics():
             if not isinstance(frontend_metrics, dict):
                 return jsonify({"error": "Metrics must be a dictionary of numeric values"}), 400
 
-            frontend_metrics = {key: float(value) for key, value in frontend_metrics.items()}
-            logging.debug(f"Frontend metrics: {frontend_metrics}")
 
             # Validate and update metrics
             existing_metrics = project.get('metrics', {})
             if not isinstance(existing_metrics, dict):
                 logging.error("Existing metrics must be a dictionary")
                 return jsonify({"error": "Existing metrics must be a dictionary"}), 500
+            for metric_name, metric_value in frontend_metrics.items():
+                if metric_name in existing_metrics:
+                   existing_metrics[metric_name].update({
+                       "min": metric_value.get('min', existing_metrics[metric_name]['min']),
+                        "max": metric_value.get('max', existing_metrics[metric_name]['max']),
+                        "minimum label": metric_value.get('minimum label', existing_metrics[metric_name]['minimum label']),
+                        "maximum label": metric_value.get('maximum label', existing_metrics[metric_name]['maximum label']),
+                        "description": metric_value.get('description', existing_metrics[metric_name]['description'])
+                   })
             existing_metrics.update(frontend_metrics)
 
             # Mark the project_list as modified and commit changes
             flag_modified(researcher, "project_list")
-            #TODO: update all audio files to have same updated metrics
             db.session.commit()
     except Exception as e:
         db.session.rollback()
@@ -915,8 +978,6 @@ def getAudioFileData():
             # check if audio file metrics are in a valid format
             if not isinstance(audio_file['metrics'], dict):
                 return jsonify({"error": "Audio file metrics are not in a valid format"}), 500
-            # update audio file metrics with project metrics
-            audio_file['metrics'] = project['metrics']
             
     except Exception as e:
         logging.debug(e)
@@ -968,3 +1029,131 @@ def testgetAudioFileData():
         return jsonify({"error": "Error: 500, An error has occured while retrieving the audio file"}), 500
 
     return jsonify({"audio_file": audio_file})
+
+# this function is used to update the metrics of a specific audio file in a project
+@projectsBp.route('/updateAudioMetrics', methods=['POST'])
+@jwt_required()
+def updateAudioMetrics():
+    data = request.json
+    required_fields = ['project_name', 'audio_file_name']
+    validation_error = helper.validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+    
+    researcher_id = get_jwt_identity()
+    researcher_id = uuid.UUID(researcher_id)
+    researcher = helper.is_researcher_id(researcher_id)
+    
+    # Validate researcher
+    if not researcher:
+        return jsonify({"error": "Researcher not found"}), 404
+    
+    # set local variables to the data fields
+    project_name = data['project_name']
+    audio_file_name = data['audio_file_name']
+    
+    try:
+        with db.session.begin_nested():
+            # Check if project exists
+            project_dict = {project["name"]: project for project in researcher.project_list}
+            project = project_dict.get(project_name)
+            
+            # Check if project exists
+            if project is None:
+                return jsonify({"error": "Project not found"}), 404
+            # Check if audio file exists
+            audio_files = [audio for audio in researcher.uploaded_audio if audio['name'] == audio_file_name]
+            if not audio_files:
+                return jsonify({"error": "Audio file not found"}), 404
+            
+            # Get the specified audio file
+            audio_file = audio_files[0]
+            
+            # check if audio file metrics are in a valid format
+            if not isinstance(audio_file['metrics'], dict):
+                return jsonify({"error": "Audio file metrics are not in a valid format"}), 500
+            
+            # check if project metrics are in a valid format
+            if not isinstance(project['metrics'], dict):
+                return jsonify({"error": "Project metrics are not in a valid format"}), 500
+ 
+            # Validate the structure of project metrics
+            required_fields = ['min', 'max', 'minimum label', 'maximum label', 'description']
+            for metric_name, metric_data in project['metrics'].items():
+                if not isinstance(metric_data, dict):
+                    return jsonify({"error": "Metric {} is not in a valid format".format(metric_data)}), 500
+                for field in required_fields:
+                    if field not in metric_data:
+                        return jsonify({"error": "Metric {} is missing required field {}".format(metric_name, field)}), 500
+            
+            # update audio file metrics from project metrics
+            # this is to ensure metrics are consistent
+            audio_file['metrics'] = project['metrics']
+            
+            # Mark the project_list as modified and commit changes
+            flag_modified(researcher, "uploaded_audio")
+            db.session.commit()
+    # handle any errors that occur during the process    
+    except Exception as e:
+            logging.debug(e)
+            return jsonify({"error": "Error: 500, An error has occured while updating the audio file metrics"}), 500
+    return jsonify({"message": "Audio metrics updated successfully"}), 200
+
+# this function is used to update the metrics of all audio files in a project
+# this will be called when the project is set to Published
+@projectsBp.route('/updateAllAudioMetrics', methods=['POST'])
+@jwt_required()
+def updateAllAudioMetrics():
+    data = request.json
+    required_fields = ['project_name']
+    validation_error = helper.validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+    
+    researcher_id = get_jwt_identity()
+    researcher_id = uuid.UUID(researcher_id)
+    researcher = helper.is_researcher_id(researcher_id)
+    
+    # Validate researcher
+    if not researcher:
+        return jsonify({"error": "Researcher not found"}), 404
+    # set local variables to the data fields
+    project_name = data['project_name']
+    
+    try:
+        with db.session.begin_nested():
+            # Check if project exists
+            project_dict = {project["name"]: project for project in researcher.project_list}
+            project = project_dict.get(project_name)
+            
+            # Check if project exists
+            if project is None:
+                return jsonify({"error": "Project not found"}), 404
+            
+            # check if audio file metrics are in a valid format
+            if not isinstance(project['metrics'], dict):
+                return jsonify({"error": "Project metrics are not in a valid format"}), 500
+            
+            # Validate the structure of project metrics
+            required_fields = ['min', 'max', 'minimum label', 'maximum label', 'description']
+            for metric_name, metric_data in project['metrics'].items():
+                if not isinstance(metric_data, dict):
+                    return jsonify({"error": "Metric {} is not in a valid format".format(metric_data)}), 500
+                for field in required_fields:
+                    if field not in metric_data:
+                        return jsonify({"error": "Metric {} is missing required field {}".format(metric_name, field)}), 500
+            
+            # update audio file metrics from project metrics
+            # this is to ensure metrics are consistent across all audio files in the project
+            for audio_file in researcher.uploaded_audio:
+                if audio_file['project_name'] == project_name:
+                    audio_file['metrics'] = project['metrics']
+                    
+            # Mark the project_list as modified and commit changes
+            flag_modified(researcher, "uploaded_audio")
+            db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Error: 500, An error has occured while updating the audio file metrics"}), 500
+    return jsonify({"message": "Audio metrics updated successfully"}), 200

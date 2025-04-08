@@ -356,9 +356,27 @@ def createTestUser():
             "status": "Draft",
             "tags": [],
             "metrics": {
-                "Naturalness": 0,
-                "Intelligibility": 0,
-                "Clarity": 0
+                        "Naturalness": {
+                        "min": 1,
+                        "max": 5,
+                        "minimum label": "Robotic",
+                        "maximum label": "Natural",
+                        "description": "How natural the audio sounds"
+                        },
+                        "Intelligibility": {
+                        "min": 1,
+                        "max": 5,
+                        "minimum label": "Unintelligible",
+                        "maximum label": "Intelligible",
+                        "description": "How easy it is to understand the audio"
+                        },
+                        "Clarity": {
+                        "min": 1,
+                        "max": 5,
+                        "minimum label": "Unclear",
+                        "maximum label": "Clear",
+                        "description": "How clear the audio sounds"
+                        },
             },
             "creator id": "20658111-860a-4a87-a520-11800b9f36e9",
             "creator": data2['first_name'],
