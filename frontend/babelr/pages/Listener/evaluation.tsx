@@ -21,7 +21,7 @@ export default function Evaluation() {
     async function submitRating() {
         console.log("Submit rating was hit!!!")
         try {
-            const response = await fetch(`http://localhost:8016/listener/submitRating}`, {
+            const response = await fetch(`http://localhost:8016/listener/submitRating`, {
                 method:"POST",
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({"id": 2, 'ratings': [{'clarity': 4}, {'fluency': 2}]}),
@@ -47,7 +47,7 @@ export default function Evaluation() {
 
     async function Audio_Receiver() {
         try {
-            const response = await fetch(`http://localhost:8016/audioAllocate}`, {
+            const response = await fetch(`http://localhost:8016/audioAllocate`, {
                 method:"GET",
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({}),
@@ -92,7 +92,7 @@ export default function Evaluation() {
                     <div className={styles["information-container"]}>
                         <div className={styles["header-wrapper"]}>
                             <h1>Evaluation</h1>
-                            <p>Please start your evaluation below.</p>
+                            <p>Please play the audio clip and rate it based on the metrics provided below.</p>
                             <form className={styles["login-form"]} method="post" onSubmit={submitRating}>
                                 <audio id="audio" src="ch_0.wav"></audio>
                                 <Button variant="contained" id='playButton'>Play</Button>

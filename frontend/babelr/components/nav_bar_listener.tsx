@@ -16,7 +16,7 @@ export default function Navbar_Listener() {
         console.log("Return prev points");
         console.log(Points);
         try {
-            const response = await fetch(`http://localhost:8016/getCurrentPoints}`, {
+            const response = await fetch(`http://localhost:8016/getCurrentPoints`, {
                 method:"GET",
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({}),
