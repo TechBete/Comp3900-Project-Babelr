@@ -12,10 +12,12 @@
     "@emotion/cache": "^11.14.0",
     "@emotion/server": "^11.11.0",
     "@emotion/styled": "^11.14.0",
+    "@mui/icons-material": "^7.0.1",
     "@mui/material-nextjs": "^6.4.3",
     "@mui/x-date-pickers": "^7.28.0",
     "dayjs": "^1.11.13",
-    "next": "^15.2.4",
+    "material-react-table": "^3.2.1",
+    "next": "15.2.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

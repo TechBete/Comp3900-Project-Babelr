@@ -36,6 +36,17 @@
   overflow: hidden;
 }
 
+.table th {
+  border-right: 1px solid black;
+  border-bottom: 1px solid black;
+
+}
+
+.table td {
+  border-right: 1px solid black;
+  border-bottom: 1px solid black;
+}
+
 .tableHeader th {
   padding: 12px;
   text-align: left;
