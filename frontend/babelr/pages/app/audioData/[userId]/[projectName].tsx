@@ -61,7 +61,7 @@ export default function FileUploadPage() {
         formData.append("fileName", newFileName);
         formData.append("tags", tags);
         if (typeof projectName === 'string') {
-            formData.append("projectName", projectName);
+            formData.append("project_name", projectName);
         }
 
         for (const [key, value] of formData.entries()) {

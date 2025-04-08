@@ -6,7 +6,7 @@ import os, uuid, shutil, logging
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt, jwt_required, get_jwt_identity
 from sqlalchemy.orm.attributes import flag_modified
 from app.projects import projectsBp
-
+import filetype
 
 @projectsBp.route('/createProject', methods=['POST'])
 @jwt_required()
@@ -601,47 +601,51 @@ def deleteProjectMetrics():
 @projectsBp.route('/uploadAudioFile', methods=['POST'])
 @jwt_required()
 def uploadAudioFile():
-    data = request.json
+    data = request.form
     required_fields = ['project_name', 'tags']
 
     validation_error = helper.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
 
+    # file availibility validation
     if "file" not in request.files:
         return jsonify({"error": "File doesn't exists."}), 400
-
     file = request.files["file"]
     if file.filename == "":
         return jsonify({"error": "There is no selected file."}), 400
 
-    # assign local variables to the data fields
+    # Get researcher information using uuid
     researcher_id = get_jwt_identity()
-    researcher_id = uuid.UUID(researcher_id) # ensure type consistency
-
+    researcher_id = uuid.UUID(researcher_id)
     # search researcher name from researcher uuid
+
     researcher = helper.is_researcher_id(researcher_id)
+
     if researcher:
         researcher_name = researcher.first_name + researcher.last_name
     else:
         return jsonify({"error": "Researcher does not exist on database!"}), 400
 
-    audio_file_path = "../audioData" # root directory path for all audio files
-    researcher_dir = os.path.join(audio_file_path, researcher_name)
+    # NOTE: file path syntax = /root/audioData/researcherId/projectName/researcherName/fileName
+    file_path = "/app/audioData" # root directory path for all audio files
+    researcher_dir = os.path.join(file_path, str(researcher_id))
+    # if directory with researcher id doesn't exist, make directory
+    project_path_dir = os.path.join(researcher_dir, data['project_name'])
 
-    # if directory with researcher name doesn't exist, make directory
-    os.makedirs(researcher_dir, exist_ok=True)
-
-    file_path = os.path.join(researcher_dir, file.filename)
+    researcher_name_dir = os.path.join(project_path_dir, researcher_name)
+    os.makedirs(researcher_name_dir, exist_ok=True)
+    file_path = os.path.join(researcher_name_dir, file.filename)
     file.save(file_path) # save the file in the directory
-
     try:
         project_dict = {project["name"]: project for project in researcher.project_list}
+
         project = project_dict.get(data['project_name'])
+
         if project is None:
             return jsonify({"error": "Project not found"}), 404
 
-        if project.status != 'Draft':
+        if project['status'] != 'Draft':
             return jsonify({"error": "The Project status must be set to 'Draft' to delete metrics"}), 400
 
         audio_data = {
@@ -653,9 +657,8 @@ def uploadAudioFile():
             "tags": [data['tags']]
             # subset of the project tags, these tags are specific tags for each audio file
         }
-
-        if audio_data not in researcher["uploaded_audio"]:
-            researcher["uploaded_audio"].append(audio_data)
+        if audio_data not in researcher.uploaded_audio:
+            researcher.uploaded_audio.append(audio_data)
             flag_modified(researcher, "uploaded_audio")
             db.session.commit()
         else:
@@ -680,14 +683,15 @@ def testUploadAudioFile():
     else:
         return jsonify({"error": "Researcher does not exist on database!"}), 400
 
-    audio_file_path = "../audioData" # root directory path for all audio files
-    researcher_dir = os.path.join(audio_file_path, researcher_name)
-
-    # if directory with researcher name doesn't exist, make directory
+    # NOTE: file path syntax = /root/audioData/researcherId/projectName/researcherName/fileName
+    file_path = "../../../audioData" # root directory path for all audio files
+    researcher_dir = os.path.join(file_path, researcher_id)
+    # if directory with researcher id doesn't exist, make directory
     os.makedirs(researcher_dir, exist_ok=True)
-
-    file_path = os.path.join(researcher_dir, "test")
-    # file.save(file_path)
+    researcher_name_dir = os.path.join(researcher_dir, researcher_name)
+    os.makedirs(researcher_name_dir, exist_ok=True)
+    file_path = os.path.join(researcher_name_dir, "testfile")
+    # file.save(file_path) # save the file in the directory
 
     try:
         project_dict = {project["name"]: project for project in researcher.project_list}
@@ -778,7 +782,6 @@ def getProjectAudioFiles():
 
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
-
     researcher = helper.is_researcher_id(researcher_id)
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
@@ -786,8 +789,7 @@ def getProjectAudioFiles():
     projectName = data['project_name']
     
     try:
-        with db.session.begin_nested():
-            
+        with db.session.begin_nested(): 
              # Check if project exists
             project_dict = {project["name"]: project for project in researcher.project_list}
             logging.debug(project_dict)
