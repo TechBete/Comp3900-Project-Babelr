@@ -1,5 +1,6 @@
+from typing import Set
 from flask import jsonify, request
-from backend.app.models import Researcher
+from backend.app.models import Listener, ProficiencyLevel, Researcher
 from backend.app import db, jwt
 import app.helpers as helpers
 import os, uuid, shutil, logging
@@ -600,6 +601,18 @@ def deleteProjectMetrics():
 @projectsBp.route('/uploadAudioFile', methods=['POST'])
 @jwt_required()
 def uploadAudioFile():
+    def getRequirements(tags) -> tuple[str, ProficiencyLevel]:
+        language = tags[2];
+        proficiency_level = ProficiencyLevel[tags[3]]
+        return (language, proficiency_level)
+    def getQualifiedListeners(requirements: tuple[str, ProficiencyLevel]) -> list[Listener]:
+        from sqlalchemy import case
+        (lang, min_proficiency) = requirements
+
+        result = Listener.query.filter(ProficiencyLevel[Listener.languages[lang].astext] >= min_proficiency).distinct().all()
+
+        return result
+
     data = request.form
     required_fields = ['project_name', 'tags']
 
@@ -636,6 +649,9 @@ def uploadAudioFile():
     os.makedirs(researcher_name_dir, exist_ok=True)
     file_path = os.path.join(researcher_name_dir, file.filename)
     file.save(file_path) # save the file in the directory
+
+    requirements = getRequirements(data['tags'])
+    qualifiedListenners = getRequirements(requirements)
     try:
         project_dict = {project["name"]: project for project in researcher.project_list}
 
@@ -651,7 +667,7 @@ def uploadAudioFile():
             "name": file.filename,
             "file_extension": filetype.guess(file_path).extension,
             "file_path": file_path,
-            "allocated_listeners": [],
+            "allocated_listeners": qualifiedListenners,
             "metrics": project["metrics"], # metrics for the audio file set here
             "tags": [data['tags']]
             # subset of the project tags, these tags are specific tags for each audio file
