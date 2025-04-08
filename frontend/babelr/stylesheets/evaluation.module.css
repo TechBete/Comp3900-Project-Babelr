@@ -64,6 +64,16 @@
     margin-top: 10px;
 }
 
+.metric-name h2 {
+    font-size: 20px;
+    align-self: flex-start;
+    margin-top: 10px;
+}
+
+.metric-description h2 {
+    align-self: flex-start;
+}
+
 .header-wrapper p {
     align-self: flex-start;
 }
