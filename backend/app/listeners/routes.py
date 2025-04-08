@@ -2,11 +2,11 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, jwt_required, get
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.exc import IntegrityError
 from flask import jsonify, request
-from app.listeners import userBp
-from app.models import Listener
+from backend.app.listeners import userBp
+from backend.app.models import Listener
 import app.helpers as helpers
 import uuid, logging
-from app import db
+from backend.app import db
 
 # this may need to be changed to only return the 'listener' who is calling the route
 # this route may only be used by the admin to get all listeners

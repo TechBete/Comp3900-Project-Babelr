@@ -1,10 +1,10 @@
 from flask import jsonify
-from app.models import Researcher
-import app.helpers as helpers
-from app.researchers import researchersBp
+from backend.app.models import Researcher
+import backend.app.helpers as helpers
+from backend.app.researchers import researchersBp
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from sqlalchemy.exc import IntegrityError
-from app import db
+from backend.app import db
 
 
 # this route may only be used by the admin to get all researchers

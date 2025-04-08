@@ -1,7 +1,7 @@
 from flask import request, jsonify, url_for, redirect
-from app.models import Researcher, Listener, PermissionLevel
-from app import db, jwt
-from app.auth import authBp
+from backend.app.models import Researcher, Listener, PermissionLevel
+from backend.app import db, jwt
+from backend.app.auth import authBp
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, decode_token, set_access_cookies, get_jwt
 from email_validator import validate_email, EmailNotValidError
 from sqlalchemy.exc import IntegrityError

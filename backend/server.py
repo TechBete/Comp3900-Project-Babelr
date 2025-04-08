@@ -1,8 +1,8 @@
 import time
-from app import create_app, db
+from backend.app import create_app, db
 from flask import render_template_string
-from app.auth.routes import createTestUser
-from app.listeners.routes import testEditLanguage
+from backend.app.auth.routes import createTestUser
+from backend.app.listeners.routes import testEditLanguage
 from sqlalchemy.exc import OperationalError
 
 # ======== TESTING ROUTES ========

@@ -1,6 +1,6 @@
 from flask import Blueprint
-from app import db, jwt
+from backend.app import db, jwt
 
 userBp = Blueprint("listeners", __name__)
 
-from app.listeners import routes
+from backend.app.listeners import routes
