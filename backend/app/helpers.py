@@ -2,7 +2,7 @@ from flask import jsonify
 from email.mime.text import MIMEText
 from itsdangerous import URLSafeTimedSerializer
 from password import PasswordHash
-from app.models import Researcher, Listener
+from backend.app.models import Researcher, Listener
 import os, smtplib
 
 # ========== 0. Helper Functions ==========

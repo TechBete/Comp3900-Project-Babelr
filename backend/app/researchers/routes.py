@@ -1,12 +1,13 @@
-from flask import jsonify, request
+from flask import jsonify
+from backend.app.models import Researcher
+import backend.app.helpers as helpers
+from backend.app.researchers import researchersBp
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.exc import IntegrityError
-from app.researchers import researchersBp
-from app.models import Researcher
-from app import db
 import app.helpers as helper
 import uuid, logging
+from backend.app import db
 
 # this route may only be used by the admin to get all researchers
 # update to only allow admin to access this route once single researcher recall route has been implemented
@@ -82,4 +83,3 @@ def updateResearcherProfile():
         return jsonify({"error": "Error: 500, An error occurred while updating the researcher's organisation"}), 500
 
     return jsonify({"message": "Researcher organisation updated successfully"}), 200
-

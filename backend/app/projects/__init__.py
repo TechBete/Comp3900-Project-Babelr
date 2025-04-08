@@ -1,6 +1,6 @@
 from flask import Blueprint
-from app import db, jwt
+from backend.app import db, jwt
 
 projectsBp = Blueprint("projects", __name__)
 
-from app.projects import routes
+from backend.app.projects import routes
