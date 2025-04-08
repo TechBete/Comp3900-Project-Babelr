@@ -70,7 +70,7 @@ def createProject():
                                                 "Clarity": 0
                                             },
                                             "creator id": int(researcher.id),# updated to include creator id (researcher id)
-                                            "creator": researcher.first_name
+                                            "creator": researcher.first_name,
                                             }) # updated to include creator name
 
             flag_modified(researcher, "project_list")
@@ -603,6 +603,7 @@ def deleteProjectMetrics():
 def uploadAudioFile():
     data = request.form
     required_fields = ['project_name', 'tags']
+    logging.debug("HAHAHAHAHAHHA2")
 
     validation_error = helper.validate_required_fields(data, required_fields)
     if validation_error:
@@ -793,7 +794,7 @@ def getProjectAudioFiles():
              # Check if project exists
             project_dict = {project["name"]: project for project in researcher.project_list}
             logging.debug(project_dict)
-            
+            logging.debug('name is %s',projectName)
             # Get project details if name exists
             project = project_dict.get(projectName)
             if project is None:

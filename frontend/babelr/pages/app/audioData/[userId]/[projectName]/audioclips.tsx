@@ -1,4 +1,4 @@
-import { useState, FormEvent, ChangeEvent } from "react";
+import { useState, FormEvent, ChangeEvent, useEffect } from "react";
 import { useRouter } from 'next/router';
 import Navbar from "components/nav_bar_researcher";
 // import Sidebar from "components/side_bar";
@@ -19,9 +19,12 @@ interface AudioData {
     rating: number;
 }
 
+
+
 export default function FileUploadPage() {
     const router = useRouter();
     const { projectName } = router.query; //  project name
+    console.log(projectName)
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [file, setFile] = useState<File | null>(null);
@@ -32,10 +35,40 @@ export default function FileUploadPage() {
         { name: "Screaming.mp3", tags: ["Fast Speech", "Child", "asdasdasda", "asjdhasjdh", "asdasd", "asjdhjasdhasjd"], dateAdded: "2/5/2025", evaluated: "48/50", rating: 3.6 },
         { name: "Asong.wav", tags: ["Style Speech", "Adult"], dateAdded: "5/4/2025", evaluated: "30/50", rating: 2.375 }
     ]);
+    
+
+    useEffect(() => {
+        if (typeof projectName === 'string') {
+            getAudioClips();
+        }
+    })
 
     if (typeof projectName !== 'string') {
         return <div>Loading?</div>;
     }
+
+    async function getAudioClips() {
+        console.log('project name is ',JSON.stringify({project_name: projectName}))
+        try {
+            const response = await fetch('http://localhost:8016/projects/getProjectAudioFiles' , {
+                method:"POST",
+                credentials: 'include',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({project_name: projectName}),
+            })
+            if (response.ok) {
+                const audioClips = await response.json();
+                setAudioData(audioClips);
+                console.log('clips are',audioClips)
+            } else {
+                const error = await response.json()
+                console.log(error)
+            }
+        } catch {
+
+        }
+    } 
+    
 
     function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
         if (event.target.files && event.target.files.length > 0) {
@@ -133,8 +166,6 @@ export default function FileUploadPage() {
                             <Button className={styles.addAudioBtn} sx={{ marginLeft: "auto" }}  onClick={() => setIsModalOpen(true)}> + </Button>
                         </Box>
 
-                        {/* <AudioTable audioData={audioData}/> */}
-                        {/* <AudioClipsTable></AudioClipsTable> */}
                         <TableTest audioData={audioData}></TableTest>
                         <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} hasCloseBtn>
                             <h2 className={styles.modalTitle}>Upload New Audio</h2>
