@@ -8,7 +8,7 @@ export default function Rewards_shop() {
 
     async function Redeem(id: number) {
         try {
-            const response = await fetch(`http://localhost:8016/redeemRewards}`, {
+            const response = await fetch(`http://localhost:8016/listener/redeemRewards}`, {
                 method:"POST",
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({'reward_id': id}),

@@ -1,0 +1,187 @@
+.slidecontainer {
+    width: 100%; /* Width of the outside container */
+}
+
+/* The slider itself */
+.slider {
+    -webkit-appearance: none;  /* Override default CSS styles */
+    appearance: none;
+    width: 100%; /* Full-width */
+    height: 25px; /* Specified height */
+    background: #d3d3d3; /* Grey background */
+    outline: none; /* Remove outline */
+    opacity: 0.7; /* Set transparency (for mouse-over effects on hover) */
+    -webkit-transition: .2s; /* 0.2 seconds transition on hover */
+    transition: opacity .2s;
+}
+
+/* Mouse-over effects */
+.slider:hover {
+    opacity: 1; /* Fully shown on mouse-over */
+}
+
+/* The slider handle (use -webkit- (Chrome, Opera, Safari, Edge) and -moz- (Firefox) to override default look) */ 
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none; /* Override default look */
+    appearance: none;
+    width: 25px; /* Set a specific slider handle width */
+    height: 25px; /* Slider handle height */
+    background: #04AA6D; /* Green background */
+    cursor: pointer; /* Cursor on hover */
+}
+
+.body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #000026;
+    overflow: hidden;
+}
+
+.form-container {
+    flex:1;
+    margin-right: 50px;
+    margin-left: 50px;
+    max-width: 30%;
+    background-color: #f4f4f4;
+    border-radius: 10%;
+}
+
+.header-wrapper {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 500px;
+}
+
+.header-wrapper h1 {
+    font-size: 24px;
+    align-self: flex-start;
+    margin-top: 10px;
+}
+
+.header-wrapper p {
+    align-self: flex-start;
+}
+
+.information-container {
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    margin: 40px;
+    margin-left: 20px;
+    margin-right: 20px;
+    place-items: center;
+}
+
+.demographics-forms {
+    
+    display:flex;
+    flex-direction: column;
+    width: 100%;
+    color: black;
+}
+
+.demographics-forms input:required {
+    border: 1px solid #ccc;
+    outline: none;
+}
+.demographics-forms input:required:user-invalid { /*change to regular invalid and replace with react/javascript*/
+    border: 1px solid red;
+    outline: none;
+}
+.demographics-forms input:focus {
+    outline: none;
+    border: 2px solid black;
+}
+.label {
+    margin-top: 10px;
+    font-size: large;
+    margin-bottom: 2px;
+}
+
+.input, .select {
+    margin-bottom: 10px;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.button {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: #618f9e;
+    color: white;
+    border: none;
+    border-color: rgba(211,98,51,255);
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.button:hover {
+    background-color: #2d3a4a;
+    color: white;
+}
+
+.image-container {
+    flex: 1;
+    display:flex;
+    justify-content:flex-end;
+    align-items:flex-end;
+    min-width:40vw;
+    min-height: 40vw;
+}
+
+.image-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 5px;
+}
+
+
+
+/* Add Languages */
+.language-box {
+    border: 1px solid #ccc;
+    padding: 15px;
+    width: 100%;
+    max-height: 300px; 
+    overflow-y: auto;
+    background-color: #ffffff;
+    border-radius: 8px;
+}
+.language-box select, .language-box button {
+    width: 100%;
+    margin-top: 10px;
+    padding: 8px;
+}
+
+.language-box::-webkit-scrollbar {
+    width: 8px;
+}
+
+.language-box::-webkit-scrollbar-thumb {
+    background-color: #aaa;
+    border-radius: 4px;
+}
+
+.language-box::-webkit-scrollbar-track {
+    background-color: #f1f1f1;
+}
+
+.next-button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    background-color: #ddd;
+    border: none;
+    cursor: pointer;
+}
+.next-button:hover {
+    background-color: #bbb;
+}
+

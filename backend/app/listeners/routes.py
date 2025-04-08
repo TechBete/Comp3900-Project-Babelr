@@ -429,3 +429,26 @@ def testChangeDemographics():
         db.session.rollback()
         return jsonify({"error": f"An error has occurred while updating the demographics: {e}"}), 500
     return jsonify({"message": "Demographic Edit successful"}), 200
+
+@userBp.route('/submitRating', methods=['POST'])
+@jwt_required()
+def submitRating():
+    data = request.json
+
+    print("**********************************************")
+    print(data['id'])
+
+    listener_id = get_jwt_identity()
+    listener_id = uuid.UUID(listener_id)
+    listener = Listener.query.filter_by(id=listener_id).first()
+    listener.reward_points = listener.reward_points + 1
+    db.session.commit()
+
+    return jsonify({'message': 'reward_id is: ' + str(listener.reward_points)})
+
+@userBp.route('/redeemRewards', methods=['POST', 'OPTIONS'])
+@jwt_required()
+def redeemRewards():
+    data = request.json
+
+    return jsonify({'message': 'reward_id is: ' + data.reward_id})
