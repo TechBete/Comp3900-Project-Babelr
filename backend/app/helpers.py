@@ -62,19 +62,25 @@ def send_verification_email(receiver_email, verification_url):
     except Exception as e:
         return f"Error: {e}"
     
-def is_existing_user(email):
+def is_existing_user_email(email):
     existing_listener = Listener.query.filter_by(email=email).first()
     existing_researcher = Researcher.query.filter_by(email=email).first()
     if existing_listener or existing_researcher:
         return True
     return False
 
-def is_researcher(email):
+def is_researcher_email(email):
     return Researcher.query.filter_by(email=email).first()
 
-def is_listener(email):
+def is_listener_email(email):
     return Listener.query.filter_by(email=email).first()
-    
+
+def is_researcher_id(id):
+    return Researcher.query.filter_by(id=id).first()
+
+def is_listener_id(id):
+    return Listener.query.filter_by(id=id).first()
+
 def blind_login(id):
     existing_listener = Listener.query.filter_by(blind_login=id).first()
     existing_researcher = Researcher.query.filter_by(blind_login=id).first()

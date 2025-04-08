@@ -3,9 +3,9 @@ from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.exc import IntegrityError
 from flask import jsonify, request
 from app.listeners import userBp
-from app.models import Demographic, Gender, Listener
-import app.helpers as helpers
-import uuid, logging
+from app.models import ListenerDemographic, Gender, Listener
+import app.helpers as helper
+import uuid, logging, os
 from app import db
 
 # this may need to be changed to only return the 'listener' who is calling the route
@@ -17,6 +17,10 @@ def getListeners():
         "is_verified": user.is_verified,
         "Uuid": str(user.id),
         "Demographic ID": user.demographic.id if user.demographic else None,
+        "Date of Birth": user.demographic.date_of_birth if user.demographic else None,
+        "Country of Residence": user.demographic.country_of_residence if user.demographic else None,
+        "Education": user.demographic.education if user.demographic else None,
+        "Gender": str(user.demographic.gender.value) if user.demographic else None,
         "First Name": user.first_name,
         "Last Name": user.last_name,
         "Email": user.email,
@@ -24,10 +28,9 @@ def getListeners():
         "Role": user.permission.value,
         "Background Info": user.background_info,
         "Reward Points": user.reward_points,
-        "languages_list": [lang for lang in user.languages_list] if user.languages_list else [], # list of languages user speaks
-        "languages_proficiency": [lp.value for lp in user.languages_proficiency] if user.languages_proficiency else [], # Convert enum array
+        "languages": [lang for lang in user.languages] if user.languages else [], # list of languages user speaks
         "is_verified": user.is_verified,
-        "allocated audio": [audio.value for audio in user.allocated_audio] if user.allocated_audio else [], # Convert enum array
+        "allocated audio": [audio.value for audio in user.assigned_audio] if user.assigned_audio else [], # Convert enum array
     } for user in users])
 '''
 # test route to get a listener by id once listener cookie is implemented
@@ -59,7 +62,7 @@ def addLanguage():
     required_fields = ['language', 'proficiency']
 
     # check validation error
-    validation_error = helpers.validate_required_fields(data, required_fields)
+    validation_error = helper.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
 
@@ -67,7 +70,7 @@ def addLanguage():
     listener_id = uuid.UUID(listener_id)
 
     # check if listener is valid user
-    listener = Listener.query.filter_by(id=listener_id).first()
+    listener = helper.is_listener_id(listener_id)
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
@@ -125,7 +128,7 @@ def editLanguage():
     required_fields = ['language', 'new_proficiency']
 
     # check validation error
-    validation_error = helpers.validate_required_fields(data, required_fields)
+    validation_error = helper.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
 
@@ -133,7 +136,7 @@ def editLanguage():
     listener_id = uuid.UUID(listener_id)
 
     # check if listener is valid user
-    listener = Listener.query.filter_by(id=listener_id).first()
+    listener = helper.is_listener_id(listener_id)
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
@@ -197,7 +200,7 @@ def deleteLanguage():
     required_fields = ['language', 'proficiency']
 
     # check validation error
-    validation_error = helpers.validate_required_fields(data, required_fields)
+    validation_error = helper.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
 
@@ -205,7 +208,7 @@ def deleteLanguage():
     listener_id = uuid.UUID(listener_id)
 
     # check if listener is valid user
-    listener = Listener.query.filter_by(id=listener_id).first()
+    listener = helper.is_listener_id(listener_id)
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
@@ -268,7 +271,7 @@ def getCurrentPoints():
     listener_id = get_jwt_identity()
     listener_id = uuid.UUID(listener_id)
 
-    listener = Listener.query.filter_by(id=listener_id).first()
+    listener = helper.is_listener_id(listener_id)
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
@@ -282,10 +285,9 @@ def registerDemographics():
     required_fields = ['first_name', 'last_name', 'date_of_birth', 'country_of_residence', 'education']
     # optional demograhics
     gender = data['gender']
-    background_info = data['background_info']
 
     # check validation error
-    validation_error = helpers.validate_required_fields(data, required_fields)
+    validation_error = helper.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
 
@@ -314,7 +316,7 @@ def registerDemographics():
         listener.first_name = data['first_name']
         listener.last_name = data['last_name']
         listener.background_info = data['education'] # changed from data['background_info']
-        listener.demographic = Demographic(
+        listener.demographic = ListenerDemographic(
             date_of_birth=data['date_of_birth'],
             country_of_residence=data['country_of_residence'],
             education=data['education'],
@@ -353,11 +355,11 @@ def changeDemographics():
     user_id = uuid.UUID(user_id)
 
     # check if listener is valid user
-    listener = Listener.query.filter_by(id=user_id).first()
+    listener = helper.is_listener_id(user_id)
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
-    demographic: Demographic | None = Demographic.query.filter_by(listener_id = user_id).first()
+    demographic: ListenerDemographic | None = ListenerDemographic.query.filter_by(listener_id = user_id).first()
     if not demographic:
         return jsonify({"error": f"Demographic data for the user {listener.id} was not found"}), 400
 
@@ -366,8 +368,6 @@ def changeDemographics():
     assert data is not None
     try:
         # mandatory fields information (nullable=False)
-        listener.first_name = data['first_name']
-        listener.last_name = data['last_name']
         demographic.date_of_birth = data['date_of_birth']
         demographic.country_of_residence = data['country_of_residence']
         demographic.education = data['education']
@@ -392,7 +392,7 @@ def testChangeDemographics():
         "date_of_birth": "0000-00-00",
         "country_of_residence": "HERE",
         "education" : "STUDY",
-        "gender": None,
+        "gender": "female",
         "background_info": "whatever"
     }
 
@@ -402,7 +402,7 @@ def testChangeDemographics():
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
-    demographic: Demographic | None = Demographic.query.filter_by(listener_id = user_id).first()
+    demographic: ListenerDemographic | None = ListenerDemographic.query.filter_by(listener_id = user_id).first()
     if not demographic:
         return jsonify({"error": f"Demographic data for the user {listener.id} was not found"}), 400
 
@@ -411,8 +411,8 @@ def testChangeDemographics():
     assert data is not None
     try:
         # mandatory fields information (nullable=False)
-        listener.first_name = data['first_name']
-        listener.last_name = data['last_name']
+        listener.first_name = data['first_name'] # removed and added to update listener profile 
+        listener.last_name = data['last_name'] # removed and added to update listener profile
         demographic.date_of_birth = data['date_of_birth']
         demographic.country_of_residence = data['country_of_residence']
         demographic.education = data['education']
@@ -429,3 +429,196 @@ def testChangeDemographics():
         db.session.rollback()
         return jsonify({"error": f"An error has occurred while updating the demographics: {e}"}), 500
     return jsonify({"message": "Demographic Edit successful"}), 200
+
+# This route is used to update the audio metrics for a listener
+# Args:
+#    Mandatory fields: assigned_audio_src, metrics
+# 
+# NOTE: 
+#    Assigned_audio is the file path of the audio file allocated to the listener
+#    Metrics field is a dictionary of audio assigned metrics and values pulled from the audio JSON
+#    Metrics are updated in the listener's assigned_audio column
+#    General idea for the route is so the user can "save" the metrics
+#    Then the user can submit the evaluation using submit evaluation route (TBD)
+#
+# side NOTE:
+#    real devs test in prod(demo)
+# 
+# Returns:
+#    400: Error: Audio file is not allocated to the listener
+#    400: Error: Metrics must be a dictionary of numeric values
+#    400: Invalid metric: metric must be a string and value must be numeric
+#
+#    404: Listener not found
+#
+#    200: Audio metrics updated successfully and updated metrics
+#
+#    500: Existing metrics must be a dictionary
+#    500: Error: An error occurred while updating the project metrics
+
+@userBp.route('/userAudioEval', methods=['POST'])
+@jwt_required()
+def userAudioEval():
+    data = request.json
+    required_fields = ['audio_name', 'audio_path', 'metrics']
+    validation_error = helper.validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+
+    listener_id = get_jwt_identity()
+    listener_id = uuid.UUID(listener_id)
+    
+    # Validate listener
+    listener = helper.is_listener_id(listener_id)
+    if not listener:
+        return jsonify({"error": "Listener not found"}), 404
+    
+    audio_file_path = data['audio_path']
+    audio_file_name = data['audio_name']
+    frontend_metrics = data['metrics']
+    logging.debug(audio_file_path)
+    logging.debug(frontend_metrics)
+    
+    # ensure audio files are allocated to the listener
+    if listener.assigned_audio is None:
+        return jsonify({"error": "User has no audio assigned yet"}), 400
+    
+    # check if audio file path and name are in the listener's assigned audio list
+    for audio_file in listener.assigned_audio:
+        if listener.assigned_audio.name != audio_file_name or listener.assigned_audio.file_path != audio_file_path:
+            return jsonify({"error": "Audio file is not allocated to the listener"}), 400
+        elif audio_file['file_path'] == audio_file_path and audio_file['name'] == audio_file_name:
+            assigned_audio_file = audio_file
+        else:
+            return jsonify({"error": "Audio file is not allocated to the listener"}), 400
+    
+    # Validate metrics from the frontend
+    if not isinstance(frontend_metrics, dict):
+        return jsonify({"error": "Metrics must be a dictionary of numeric values"}), 400
+    
+    # Check if all keys are strings and values are numeric
+    for key, value in frontend_metrics.items():
+        if not isinstance(key, str) or not isinstance(value, (int, float)):
+            return jsonify({"error": "Invalid metric: {} must be a string and {} must be numeric".format(key, value)}), 400
+
+    try:
+        with db.session.begin_nested():
+            # Convert metrics to float
+            
+            frontend_metrics = {key: float(value) for key, value in frontend_metrics.items()}
+            logging.debug(frontend_metrics)
+
+            # Check if existing metrics are present
+            existing_metrics = assigned_audio_file.get('metrics', {})
+            
+            # Validate and update metrics
+            if not isinstance(existing_metrics, dict):
+                logging.error("Existing metrics must be a dictionary")
+                return jsonify({"error": "Existing metrics must be a dictionary"}), 500
+            existing_metrics.update(frontend_metrics)
+            
+            # Mark the assigned_audio as modified and commit changes
+            flag_modified(listener, "assigned_audio")
+            
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"An error occurred while updating project metrics: {e}")
+        return jsonify({"error": "Error: 500, An error occurred while updating the project metrics"}), 500
+    
+    return jsonify({"message": "Audio metrics updated successfully", "metrics": listener.assigned_audio['metrics']})
+
+# This route is used to get the assigned audio file for a listener so that it can be played on the frontend
+# Args:
+#    Mandatory fields: None
+#    Optional fields: None
+#
+# NOTE: The route will return the first audio file assigned to the listener in the user's allocated audio list
+#       The route will return the file source path of the audio file for the frontend to play
+#
+# Returns:
+#    200: Audio file srcs path
+#    404: Listener not found
+#    400: Error: No audio file assigned to the listener
+#    400: Error: Invalid audio file format
+#    400: Error: Audio file does not exist
+#    500: Error: An error occurred while getting the audio file
+
+@userBp.route('/getAssignedAudioFile', methods=['GET'])
+@jwt_required()
+def getAssignedAudio():
+    try:
+        listener_id = get_jwt_identity()
+        listener_id = uuid.UUID(listener_id)
+
+        # check if listener is valid user
+        listener = helper.is_listener_id(listener_id)
+        if not listener:
+            return jsonify({"error": "Listener not found"}), 404
+
+        # check if listener has any assigned audio
+        if not listener.assigned_audio:
+            return jsonify({"error": "No audio file assigned to the listener"}), 400
+
+        # check if listener assigned audio is a list
+        if not isinstance(listener.assigned_audio, list):
+            return jsonify({"error": "Invalid audio file format"}), 400
+        
+        audio_file = listener.assigned_audio[0]
+        # check if listener assigned audio has the correct fields
+        if not all(key in listener.assigned_audio[0] for key in ['file_path', 'name', 'file_extension']):
+            return jsonify({"error": "Invalid audio file format"}), 400
+        # get the first audio file assigned to the listener
+
+        audio_file_path = audio_file['file_path']
+        audio_file_name = audio_file['name']
+        audio_file_extension = audio_file['file_extension']
+
+        audio_file_src = os.path.join(
+            audio_file_path,
+            audio_file_name + '.' + audio_file_extension
+        )
+        logging.debug(audio_file_src)
+
+        # check if the audio file exists
+        if not os.path.exists(audio_file_src):
+            logging.warning("Audio file does not exist: {}".format(audio_file_src))
+            return jsonify({"error": "Audio file does not exist"}), 400
+        
+    except Exception as e:
+        logging.error("An error occurred while getting the audio file: {}".format(e))
+        return jsonify({"error": "Error: 500, An error occurred while getting the audio file"}), 500
+    
+    # return the audio file src
+    return jsonify({"audio_file: {}".format(audio_file_src)}), 200
+
+# update listener profile
+# update listener languages to be done in a different route
+@userBp.route('/updateListenerProfile', methods=['POST'])
+@jwt_required()
+def updateListenerProfile():
+    data = request.json
+
+    listener_id = get_jwt_identity()
+    listener_id = uuid.UUID(listener_id)
+
+    # check if listener is valid user
+    listener = helper.is_listener_id(listener_id)
+    if not listener:
+        return jsonify({"error": "Listener does not exist on database!"}), 400
+
+    try:
+        listener.first_name = data['first_name']
+        listener.last_name = data['last_name']
+        listener.email = data['email']
+        listener.background_info = data['background_info']
+        for key, value in data.items():
+            if getattr(listener, key, None) != value:
+                setattr(listener, key, value)
+                flag_modified(listener, key)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"An error occurred while updating researcher's organisation: {e}")
+        return jsonify({"error": "Error: 500, An error occurred while updating the researcher's organisation"}), 500
+
+    return jsonify({"message": "Listener profile updated successfully"}), 200

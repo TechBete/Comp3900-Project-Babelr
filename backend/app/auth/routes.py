@@ -1,5 +1,5 @@
 from flask import request, jsonify, url_for, redirect
-from app.models import Researcher, Listener, PermissionLevel, Demographic
+from app.models import Researcher, Listener, PermissionLevel, ListenerDemographic, Gender
 from app import db, jwt
 from app.auth import authBp
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, decode_token, set_access_cookies, get_jwt
@@ -55,7 +55,7 @@ def login():
         return jsonify({"Email entered is not of proper format. Email": str(Email)}), 400
 
     # check if email is already registered
-    if not helper.is_existing_user(Email):
+    if not helper.is_existing_user_email(Email):
         return jsonify({"error": "Invalid email-password combination"}), 401
 
     # check if user is verified
@@ -63,9 +63,9 @@ def login():
         return jsonify({"error": "User has not verified account"}), 401
 
     # assign user to either researcher or listener
-    existing_researcher = helper.is_researcher(Email)
+    existing_researcher = helper.is_researcher_email(Email)
     logging.debug(existing_researcher)
-    existing_listener = helper.is_listener(Email)
+    existing_listener = helper.is_listener_email(Email)
     logging.debug(existing_listener)
 
     # updated for researcher login; check if user is a listener or researcher,
@@ -138,7 +138,7 @@ def createListener():
 
     Email = data['email']
     # Check if email already exists in the database
-    if helper.is_existing_user(Email):
+    if helper.is_existing_user_email(Email):
         return jsonify({"error": "Email already registered"}), 400
 
     # check if email is structured correctly
@@ -165,7 +165,7 @@ def createListener():
         first_time =True,
     )
 
-    demo = Demographic(
+    demo = ListenerDemographic(
         listener_id=user.id,
         date_of_birth="",
         gender=None,
@@ -203,7 +203,7 @@ def createResearcher():
 
     Email = data['email']
     # Check if email already exists
-    if helper.is_existing_user(Email):
+    if helper.is_existing_user_email(Email):
         return jsonify({"error": "Email already registered"}), 400
 
     # check if email is structured correctly
@@ -294,14 +294,14 @@ def createTestUser():
         "gender": "female"
     }
 
-    demo = Demographic(
+    demo = ListenerDemographic(
         date_of_birth=demo_data['date_of_birth'],
         country_of_residence=demo_data['country_of_residence'],
         education=demo_data['education'],
         gender=demo_data['gender']
     )
 
-    demo2 = Demographic(
+    demo2 = ListenerDemographic(
         date_of_birth=demo_data2['date_of_birth'],
         country_of_residence=demo_data2['country_of_residence'],
         education=demo_data2['education'],
@@ -362,6 +362,8 @@ def createTestUser():
             },
             "creator id": "20658111-860a-4a87-a520-11800b9f36e9",
             "creator": data2['first_name'],
+            "Audio File Name": "testFile1",
+            "Audio File Path": "./audioData/Bill/TestProject1/",
         }],
         uploaded_audio=[{
             "name": "testFile1",
@@ -380,13 +382,13 @@ def createTestUser():
 
     try:
         with db.session.begin_nested():
-            existing_listener = helper.is_listener(user.email)
+            existing_listener = helper.is_listener_email(user.email)
             if not existing_listener:
                 db.session.add(user)
-            existing_researcher = helper.is_researcher(user2.email)
+            existing_researcher = helper.is_researcher_email(user2.email)
             if not existing_researcher:
                 db.session.add(user2)
-            existing_listener = helper.is_listener(allocated_listener.email)
+            existing_listener = helper.is_listener_email(allocated_listener.email)
             if not existing_listener:
                 db.session.add(allocated_listener)
             db.session.commit()
@@ -429,8 +431,8 @@ def userResetPassword():
         return jsonify({"error": "Passwords do not match"}), 400
 
     # check to see if user exists
-    isListener = helper.is_listener(Email)
-    isResearcher = helper.is_researcher(Email)
+    isListener = helper.is_listener_email(Email)
+    isResearcher = helper.is_researcher_email(Email)
 
     # Check if user is a listener or researcher, assign as existing_user
     existing_user = isListener if isListener else isResearcher
@@ -475,11 +477,11 @@ def blindEmailParse():
         return jsonify({"Email entered is not of proper format. Email": str(Email)}), 400
 
     # check if email is in the database
-    if helper.is_existing_user(Email):
+    if helper.is_existing_user_email(Email):
         return jsonify({"error": "Email not found"}), 404
 
-    existing_listener = helper.is_listener(Email)
-    existing_researcher = helper.is_researcher(Email)
+    existing_listener = helper.is_listener_email(Email)
+    existing_researcher = helper.is_researcher_email(Email)
 
     # return blind login uuid
     # update to new logic once decentralization is implemented
@@ -529,14 +531,15 @@ def blindPasswordReset():
             return jsonify({"error": "Error: 500, An error has occured while updating the password"}), 500
 
 # Helper function to get user role from uuid
-@authBp.route('/getRoleFromID', methods=['GET'])
+# should be moved to helpers.py
+@authBp.route('/getRoleFromID')
 @jwt_required()
 def getRoleFromID():
     user_id = get_jwt_identity()
     user_id = uuid.UUID(user_id)
 
-    listener = Listener.query.filter_by(id=user_id).first()
-    researcher = Researcher.query.filter_by(id=user_id).first()
+    listener = helper.is_listener_id(user_id)
+    researcher = helper.is_researcher_id(user_id)
 
     user = listener if listener else researcher
     first_time = user.first_time
@@ -545,8 +548,10 @@ def getRoleFromID():
         db.session.commit()
 
     if listener and not researcher:
-        return jsonify({"role": "listener", "first_time": first_time})
-    elif not listener and researcher:       
-        return jsonify({"role": "researcher", "first_time": first_time})
+        role = listener.permission.value
+        return jsonify({"role": str(role), "first_time": first_time})
+    elif not listener and researcher:
+        role = researcher.permission.value       
+        return jsonify({"role": str(role), "first_time": first_time})
     else:
         return jsonify({"error": "User ID not found"}), 404
