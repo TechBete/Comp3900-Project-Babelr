@@ -375,7 +375,11 @@ def createTestUser():
                 "Intelligibility": 0,
                 "Clarity": 0
             },
-            "tags": ["model3A", "Japanese"]
+            "tags": ["model3A", "Japanese"],
+            "project_name": "Test Project 1",
+            "project_path": "projects/Test Project 1/",
+            "Researcher": "20658111-860a-4a87-a520-11800b9f36e9",
+            
         }],
         first_time=False,
     )
