@@ -362,6 +362,8 @@ def createTestUser():
             },
             "creator id": "20658111-860a-4a87-a520-11800b9f36e9",
             "creator": data2['first_name'],
+            "Audio File Name": "testFile1",
+            "Audio File Path": "./audioData/Bill/TestProject1/",
         }],
         uploaded_audio=[{
             "name": "testFile1",
@@ -530,7 +532,7 @@ def blindPasswordReset():
 
 # Helper function to get user role from uuid
 # should be moved to helpers.py
-@authBp.route('/getRoleFromID', methods=['GET'])
+@authBp.route('/getRoleFromID')
 @jwt_required()
 def getRoleFromID():
     user_id = get_jwt_identity()
