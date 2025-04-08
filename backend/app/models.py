@@ -82,10 +82,28 @@ class Researcher(db.Model):
         "status": "Draft",
         "tags": [], # big set of tags used for each audio files in the project
         "metrics": {
-            "Naturalness": 0,
-            "Intelligibility": 0,
-            "Clarity": 0
-        },
+                    "Naturalness": {
+                    "min": 1,
+                    "max": 5,
+                    "minimum label": "Robotic",
+                    "maximum label": "Natural",
+                    "description": "How natural the audio sounds"
+                    },
+                    "Intelligibility": {
+                    "min": 1,
+                    "max": 5,
+                    "minimum label": "Unintelligible",
+                    "maximum label": "Intelligible",
+                    "description": "How easy it is to understand the audio"
+                    },
+                    "Clarity": {
+                    "min": 1,
+                    "max": 5,
+                    "minimum label": "Unclear",
+                    "maximum label": "Clear",
+                    "description": "How clear the audio sounds"
+                    },
+            },
         "creator id": int(researcher.id),# updated to include creator id (researcher id)
         "creator": researcher.first_name
     }
@@ -97,8 +115,12 @@ class Researcher(db.Model):
         "file_extension": filetype.guess(file_path).extension,
         "file_path": file_path,
         "allocated_listeners": [],
-        "metrics": project["metrics"],
-        "tags": [data['tags']]
+        "metrics": project["metrics"], # metrics for the audio file set here
+        "tags": [data['tags']],
+        "Researcher": researcher.id,
+        "project_name": data['project_name'],
+        "project_path": project_path_dir,
+
         # subset of the project tags, these tags are specific tags for each audio file
     }
     '''
