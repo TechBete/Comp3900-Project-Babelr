@@ -608,17 +608,16 @@ def uploadAudioFile():
     if validation_error:
         return validation_error
 
+    # file availibility validation
     if "file" not in request.files:
         return jsonify({"error": "File doesn't exists."}), 400
-
     file = request.files["file"]
     if file.filename == "":
         return jsonify({"error": "There is no selected file."}), 400
 
-    # assign local variables to the data fields
+    # Get researcher information using uuid
     researcher_id = get_jwt_identity()
-    researcher_id = uuid.UUID(researcher_id) # ensure type consistency
-
+    researcher_id = uuid.UUID(researcher_id)
     # search researcher name from researcher uuid
     researcher = session.get(Researcher, researcher_id)
     if researcher:
@@ -626,13 +625,14 @@ def uploadAudioFile():
     else:
         return jsonify({"error": "Researcher does not exist on database!"}), 400
 
-    audio_file_path = "../audioData" # root directory path for all audio files
-    researcher_dir = os.path.join(audio_file_path, researcher_name)
-
-    # if directory with researcher name doesn't exist, make directory
+    # NOTE: file path syntax = /root/audioData/researcherId/projectName/researcherName/fileName
+    file_path = "../../../audioData" # root directory path for all audio files
+    researcher_dir = os.path.join(file_path, researcher_id)
+    # if directory with researcher id doesn't exist, make directory
     os.makedirs(researcher_dir, exist_ok=True)
-
-    file_path = os.path.join(researcher_dir, file.filename)
+    researcher_name_dir = os.path.join(researcher_dir, researcher_name)
+    os.makedirs(researcher_name_dir, exist_ok=True)
+    file_path = os.path.join(researcher_name_dir, file.filename)
     file.save(file_path) # save the file in the directory
 
     try:
@@ -718,3 +718,38 @@ def testUploadAudioFile():
         return jsonify({"error": "Error Code: 500"}), 500
 
     return jsonify({"message": "file is successfully uploaded and stored!"}), 200
+
+@projectsBp.route('/getAudioFileList', methods=['GET'])
+@jwt_required()
+def getAudioFileList():
+    data = request.json
+    required_fields = ['project_name']
+
+    validation_error = helpers.validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+
+    researcher_id = get_jwt_identity()
+    researcher_id = uuid.UUID(researcher_id)
+
+    researcher = Researcher.query.filter_by(id=researcher_id).first()
+    if not researcher:
+        return jsonify({"error": "Researcher not found"}), 404
+
+    try:
+        # initialise empty list to return audio list
+        audio_list = []
+        with db.session.begin_nested():
+            if researcher.project_list is None or researcher.project_list == []:
+                return jsonify({"error": "No project found from the researcher database"}), 404
+            if not any(project["name"] == data['project_name'] for project in researcher.project_list):
+                return jsonify({"error": "Project not found"}), 404
+            for audio in researcher.uploaded_audio:
+                path_hierarchy = audio["file_path"].split("/")
+                # NOTE: path string syntax = audioData/researcherId/projectName/researcherName/fileName
+                if path_hierarchy[3] == data['project_name']:
+                    audio_list.append(audio)
+            return jsonify({"audio_file_list": audio_list})
+    except Exception as e:
+        logging.debug(e)
+        return jsonify({"error": "Error: 500, An error has occured while retrieving the project"}), 500
