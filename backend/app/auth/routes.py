@@ -90,7 +90,7 @@ def login():
             # set the access token as a cookie in the response
             response = jsonify({"Login": "Successful"})
             set_access_cookies(response,token)
-            response.set_cookie("accesstoken", token, samesite="None")
+            # response.set_cookie("accesstoken", token, samesite="None")
 
             return response
     else:
@@ -112,7 +112,7 @@ def login():
             # set the access token as a cookie in the response
             response = jsonify({"Login": "Successful"})
             set_access_cookies(response,token)
-            response.set_cookie("accesstoken", token, samesite="None")
+            # response.set_cookie("accesstoken", token, samesite="None")
 
             return response
     return jsonify({"error": "Failed Login. Either Email or password was incorrect"}), 401   # update frontend for error message popup
