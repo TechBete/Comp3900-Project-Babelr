@@ -19,6 +19,17 @@ interface AudioData {
     rating: number;
 }
 
+type RawAudioClip = {
+    name: string;
+    tags: string[]; // update this based on actual structure if needed
+    Researcher: string;
+    file_extension: string;
+    file_path: string;
+    allocated_listeners: never[];
+    project_name: string;
+    project_path: string;
+    metrics: never; // or type it properly if you use it
+};
 
 
 export default function FileUploadPage() {
@@ -31,17 +42,15 @@ export default function FileUploadPage() {
     const [fileName, setFileName] = useState("");
     const [tags, setTags] = useState("");
     const [uploadError, setUploadError] = useState("");
-    const [audioData, setAudioData] = useState<AudioData[]>([
-        { name: "Screaming.mp3", tags: ["Fast Speech", "Child", "asdasdasda", "asjdhasjdh", "asdasd", "asjdhjasdhasjd"], dateAdded: "2/5/2025", evaluated: "48/50", rating: 3.6 },
-        { name: "Asong.wav", tags: ["Style Speech", "Adult"], dateAdded: "5/4/2025", evaluated: "30/50", rating: 2.375 }
-    ]);
+    const [audioData, setAudioData] = useState<AudioData[]>([]);
+    const [isStarted, setIsStarted] = useState(false);
     
 
     useEffect(() => {
         if (typeof projectName === 'string') {
             getAudioClips();
         }
-    })
+    }, [projectName]); // <- only runs when projectName changes
 
     if (typeof projectName !== 'string') {
         return <div>Loading?</div>;
@@ -56,10 +65,19 @@ export default function FileUploadPage() {
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({project_name: projectName}),
             })
+            
             if (response.ok) {
-                const audioClips = await response.json();
-                setAudioData(audioClips);
-                console.log('clips are',audioClips)
+                const { audio_files }: { audio_files: RawAudioClip[] } = await response.json();
+                console.log('raw audioClips:', audio_files);
+                const formattedClips: AudioData[] = audio_files.map(clip => ({
+                    name: clip.name,
+                    tags: clip.tags?.map(tag => tag.trim()).filter(Boolean) ?? [],
+                    dateAdded: new Date().toLocaleDateString(),
+                    evaluated: "0/50",
+                    rating: 0,
+                }));
+                setAudioData(formattedClips);
+                console.log('clips are',formattedClips)
             } else {
                 const error = await response.json()
                 console.log(error)
@@ -115,16 +133,7 @@ export default function FileUploadPage() {
             const result = await response.json();
             console.log("Upload successful:", result);
 
-            // Update state with the new audio file
-            const newAudio: AudioData = {
-                name: newFileName,
-                tags: tags.split(",").map(tag => tag.trim()).filter(tag => tag),
-                dateAdded: new Date().toLocaleDateString(),
-                evaluated: "0/50",
-                rating: 0
-            };
-
-            setAudioData([...audioData, newAudio]);
+            getAudioClips()
             setIsModalOpen(false);
             setFile(null);
             setFileName("");
@@ -162,8 +171,11 @@ export default function FileUploadPage() {
                             </div>
                         </div>
 
-                        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                            <Button className={styles.addAudioBtn} sx={{ marginLeft: "auto" }}  onClick={() => setIsModalOpen(true)}> + </Button>
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end' }}>
+                            <Button className={`${styles.startButton} ${isStarted ? styles.inProgress : ''}`} sx={{ marginLeft: "auto" }}  onClick={() => setIsStarted(!isStarted)}>
+                                {isStarted ? "In Progress" : "Start"} 
+                            </Button>
+                            <Button className={styles.addAudioBtn} sx={{ marginLeft: "20px" }}  onClick={() => setIsModalOpen(true)}> + </Button>
                         </Box>
 
                         <TableTest audioData={audioData}></TableTest>
