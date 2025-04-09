@@ -19,7 +19,7 @@ def create_app(config_class=Config):
     db.init_app(app)
     jwt.init_app(app)
     CORS(app, supports_credentials=True, 
-         origins=["http://localhost:3000", "https://localhost:8016", "*"])
+         resources={r"/*": {"origins":["http://localhost:3000", "https://localhost:8016", "*"]}})
 
     # Register blueprints
     from app.auth.routes import authBp
