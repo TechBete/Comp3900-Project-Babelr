@@ -121,7 +121,7 @@ export default function Evaluation() {
                             <p>Play the audio clip and rate it based on the provided metrics.</p>
                             <form className={styles["login-form"]} method="post" onSubmit={submitRating}>
                                 {/*audioUrl && <audio controls src={audioUrl}></audio>*/}
-                                {/*<audio controls id="audio" src="ch_0.wav"></audio>*/}
+                                {<audio controls id="audio" src="./ch_0.wav"></audio>}
                                 {/*<Button variant="contained" id='playButton'>Play</Button>*/}
                                 {metric_grid}
 
@@ -137,15 +137,3 @@ export default function Evaluation() {
         </div>
     );
 }
-
-
-/*
-{test_metric_names.map((metric, index) => (
-    <div key={index}>
-        <label>Slider: {metric}</label>
-        <div>
-            <input type="range" min="1" max="5" value="3" id={metric}></input>
-        </div>
-    </div>
-))}
-*/
