@@ -1,63 +1,59 @@
-// import styles from "../stylesheets/nav_bar.module.css"
-// import HomeIcon from "./homeicon"
-// import Link from "next/link"
 
-// export default function Navbar() {
-//     return ( 
-//         <div className={styles["nav-bar"]}>
-//             <Link href='/Listener/clip_list'><HomeIcon/></Link>
-//             <div className={styles["top-nav-right"]}>
+import { useState, useEffect } from "react";
+import styles from "../stylesheets/nav_bar.module.css"
+import HomeIcon from "../components/homeicon"
+import Link from "next/link"
 
-//                 <div className={styles["profile-options"]}>
-//                     <span>Points</span>
-//                     <span><Link href='/Listener/profile'>My Profile</Link></span>
-//                     <span><Link href='/'>Logout</Link></span>
-//                 </div>
-//             </div>
-//         </div>
-//     )
-// } 
-
-import { useEffect, useState } from "react";
-import styles from "../stylesheets/nav_bar.module.css";
-import HomeIcon from "./homeicon";
-import Link from "next/link";
-
-export default function Navbar() {
-    const [points, setPoints] = useState(null);
+export default function Navbar_Listener() {
+    const [Error, setError] = useState("");
+    const [Points, setPoints] = useState(0);
 
     useEffect(() => {
-        const fetchPoints = async () => {
-            try {
-                const res = await fetch("http://localhost:8016/listener/getCurrentPoints", {
-                    method: "GET",
-                    credentials: "include",  // important for cookie-based JWTs
-                });
+        getCurrentPoints();
+    });
 
-                if (!res.ok) {
-                    throw new Error("Failed to fetch points");
-                }
-
-                const data = await res.json();
-                setPoints(data.reward_points);
-            } catch (error) {
-                console.error("Error fetching points:", error);
+    async function getCurrentPoints() {
+        console.log("Return prev points");
+        console.log(Points);
+        try {
+            const response = await fetch(`http://localhost:8016/getCurrentPoints`, {
+                method:"GET",
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({}),
+                credentials: 'include'
+            })
+    
+            if (response.ok) {
+                console.log("reached?")
+                const res = await response.json()
+                console.log(res);
+                console.log(res.reward_points);
+                setPoints(res.reward_points);
+                return // change later maybe
+            } else {
+                console.log("iss issue?");
+                const error = await response.json();
+                setError(error.error);
             }
-        };
+    
+        } catch {
+            console.log("an error occured in call to getCurrentPoints");
+            // setError("Network Error: Fetch Request Failed");
+            return Error;
+        }
+    }
 
-        fetchPoints();
-    }, []);
-
+git 
     return ( 
         <div className={styles["nav-bar"]}>
             <Link href='/Listener/clip_list'><HomeIcon/></Link>
             <div className={styles["top-nav-right"]}>
                 <div className={styles["profile-options"]}>
-                    <span>Points: {points !== null ? points : "..."}</span>
+                    <span><Link href='/Listener/rewards_shop'>Points: {Points}</Link></span>
                     <span><Link href='/Listener/profile'>My Profile</Link></span>
                     <span><Link href='/'>Logout</Link></span>
                 </div>
             </div>
         </div>
-    );
+    )
 }
