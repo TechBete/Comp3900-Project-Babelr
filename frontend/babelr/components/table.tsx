@@ -15,22 +15,6 @@ interface AudioData {
     rating: number;
 }
 
-// const data: AudioData[] = [
-//     {
-//       name: "Screaming.mp3",
-//       tags: ["Fast Speech", "Child"],
-//       dateAdded: "2/5/2025",
-//       evaluated: "48/50",
-//       rating: 3.6,
-//     },
-//     {
-//       name: "A song.wav",
-//       tags: ["Style Speech", "Adult"],
-//       dateAdded: "5/4/2025",
-//       evaluated: "90/50",
-//       rating: 2.375,
-//     },
-//   ];
 
 
 
@@ -149,21 +133,22 @@ export default function TableTest({ audioData }: { audioData: AudioData[] }) {
     enableFullScreenToggle: false,
     initialState: {density:'compact', showColumnFilters: true},
     muiTableBodyCellProps: {sx: {whiteSpace: 'normal', verticalAlign: 'top',    }},
+    enableDensityToggle: false,
     enableExpanding: true,
-    getRowCanExpand: () => true,
-    renderDetailPanel: ({ row }) => {
-        const tags = row.original.tags;
-        return (
-        <Box sx={{ padding: 2 }}>
-            <Stack direction="row" spacing={1} flexWrap="wrap">
-            {tags.map((tag, index) => (
-                <Chip key={index} label={tag} size="small"
-                sx={{ bgcolor: "#e0f7fa", color: "#00796b", fontWeight: "bold" }}/>
-            ))}
-            </Stack>
-        </Box>
-        );
-    },
+    // getRowCanExpand: () => true,
+    // renderDetailPanel: ({ row }) => {
+    //     const tags = row.original.tags;
+    //     return (
+    //     <Box sx={{ padding: 2 }}>
+    //         <Stack direction="row" spacing={1} flexWrap="wrap">
+    //         {tags.map((tag, index) => (
+    //             <Chip key={index} label={tag} size="small"
+    //             sx={{ bgcolor: "#e0f7fa", color: "#00796b", fontWeight: "bold" }}/>
+    //         ))}
+    //         </Stack>
+    //     </Box>
+    //     );
+    // },
   });
 
   return <MaterialReactTable table={table} />;
