@@ -624,6 +624,7 @@ def uploadAudioFile():
                     qualified_listeners.append(listener)
                     break
 
+        logging.debug(f'qualified listeners: {qualified_listeners}')
         return qualified_listeners
 
     data = request.form
@@ -634,6 +635,7 @@ def uploadAudioFile():
         return validation_error
 
     # file availibility validation
+    # TODO: @halliya i think this is what you need to fix?
     if "file" not in request.files:
         return jsonify({"error": "File doesn't exists."}), 400
     file = request.files["file"]
