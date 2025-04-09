@@ -620,7 +620,7 @@ def uploadAudioFile():
             for language in listener.languages:
                 # language = json.loads(language)
                 if language['language'] == lang and ProficiencyLevel[language['proficiency'].lower()] >= min_proficiency:
-                    logging.debug(f'{listener}')
+                    logging.debug(f'{listener} is qualified')
                     qualified_listeners.append(listener)
                     break
 
@@ -666,7 +666,7 @@ def uploadAudioFile():
     file.save(file_path) # save the file in the directory
 
     requirements = getRequirements(data['tags'])
-    qualifiedListenners = getQualifiedListeners(requirements)
+    qualified_listeners = getQualifiedListeners(requirements)
     try:
         project_dict = {project["name"]: project for project in researcher.project_list}
 
@@ -682,7 +682,7 @@ def uploadAudioFile():
             "name": file.filename,
             "file_extension": filetype.guess(file_path).extension,
             "file_path": file_path,
-            "allocated_listeners": qualifiedListenners,
+            "allocated_listeners": qualified_listeners,
             "metrics": project["metrics"], # metrics for the audio file set here
             "tags": [data['tags']]
             # subset of the project tags, these tags are specific tags for each audio file
@@ -690,6 +690,9 @@ def uploadAudioFile():
         if audio_data not in researcher.uploaded_audio:
             researcher.uploaded_audio.append(audio_data)
             flag_modified(researcher, "uploaded_audio")
+            for listener in qualified_listeners:
+                listener.assigned_audio.append(audio_data)
+                logging.debug(f'listener {listener} has assigned audio files {listener.assigned_audio}')
             db.session.commit()
         else:
             return jsonify({"message": "Audio file already exist"}), 400
