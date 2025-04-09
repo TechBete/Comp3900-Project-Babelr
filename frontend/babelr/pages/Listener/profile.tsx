@@ -1,5 +1,6 @@
 import RoleCheck from "components/role_checker";
 import Link from "next/link";
+import Navbar from "components/nav_bar_listener";
 
 export default function ClipList() {
     return (
