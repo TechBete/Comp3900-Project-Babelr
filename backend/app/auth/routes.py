@@ -318,7 +318,7 @@ def createTestUser():
         pw_hash=hashed_password.value,
         permission=PermissionLevel.listener,
         background_info="ahhhhhhhhhhhh",
-        reward_points=0,
+        reward_points=5,
         is_verified=True,
         languages=test_lang,
         demographic=demo,
