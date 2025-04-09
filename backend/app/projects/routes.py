@@ -609,8 +609,17 @@ def uploadAudioFile():
         from sqlalchemy import case
         (lang, min_proficiency) = requirements
 
-        result = Listener.query.filter(ProficiencyLevel[Listener.languages[lang].astext] >= min_proficiency).distinct().all()
-
+        proficiency_order = case(
+                [ 
+                 (Listener.languages[lang].astext == "elementary", 0),
+                 (Listener.languages[lang].astext == "limited_working", 1),
+                 (Listener.languages[lang].astext == "professional", 2),
+                 (Listener.languages[lang].astext == "native", 3),
+                 (Listener.languages[lang].astext == "bilingual", 4),
+                 ], 
+                else_=None
+        )
+        result = Listener.query.filter(proficiency_order >= min_proficiency._order).all()
         return result
 
     data = request.form
