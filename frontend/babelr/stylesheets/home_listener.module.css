@@ -1,0 +1,38 @@
+.body {
+    font-family: Arial;
+    background-color: #f4f4f4;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #000026;
+    /* all:unset */
+}
+
+.container {
+    background-color: #fff;
+    padding: 50px;
+    border-radius: 20px;
+    width: 450px;
+    /* height: 567px; */
+    text-align: center;
+}
+
+.header {
+    font-size: 32px;
+    margin-bottom: 25px;
+    margin-top:25px;
+    font-weight: bold;
+}
+
+.button {
+    background-color: #618f9e;
+    color: white;
+    margin-top: 10px;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 20px;
+}
