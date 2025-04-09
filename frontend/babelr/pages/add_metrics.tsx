@@ -131,7 +131,7 @@ const MetricsPage = () => {
               setModalOpen(true);
             }}
           >
-            +
+            + Create New Metric
           </Button>
         </Box>
 
