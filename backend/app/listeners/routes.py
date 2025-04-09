@@ -506,40 +506,49 @@ def userAudioEval():
     if listener.assigned_audio is None:
         return jsonify({"error": "User has no audio assigned yet"}), 400
     
+    assigned_audio_file = None
     # check if audio file path and name are in the listener's assigned audio list
     for audio_file in listener.assigned_audio:
-        if listener.assigned_audio.name != audio_file_name or listener.assigned_audio.file_path != audio_file_path:
-            return jsonify({"error": "Audio file is not allocated to the listener"}), 400
-        elif audio_file['file_path'] == audio_file_path and audio_file['name'] == audio_file_name:
+        if audio_file['file_path'] == audio_file_path and audio_file['name'] == audio_file_name:
             assigned_audio_file = audio_file
-        else:
+            break
+    if assigned_audio_file is None:
             return jsonify({"error": "Audio file is not allocated to the listener"}), 400
     
     # Validate metrics from the frontend
     if not isinstance(frontend_metrics, dict):
-        return jsonify({"error": "Metrics must be a dictionary of numeric values"}), 400
+        return jsonify({
+            "error": "Metrics must include metric name, min, max, minimum label, maximum label, and description"
+            }), 400
     
-    # Check if all keys are strings and values are numeric
-    for key, value in frontend_metrics.items():
-        if not isinstance(key, str) or not isinstance(value, (int, float)):
-            return jsonify({"error": "Invalid metric: {} must be a string and {} must be numeric".format(key, value)}), 400
-
     try:
         with db.session.begin_nested():
-            # Convert metrics to float
-            
-            frontend_metrics = {key: float(value) for key, value in frontend_metrics.items()}
-            logging.debug(frontend_metrics)
-
             # Check if existing metrics are present
             existing_metrics = assigned_audio_file.get('metrics', {})
             
-            # Validate and update metrics
-            if not isinstance(existing_metrics, dict):
-                logging.error("Existing metrics must be a dictionary")
-                return jsonify({"error": "Existing metrics must be a dictionary"}), 500
-            existing_metrics.update(frontend_metrics)
+            # Validate metrics
+            required_fields = ['min', 'max', 'minimum label', 'maximum label', 'description']
+            for metric_name, metric_value in frontend_metrics.items():
+                if not isinstance(metric_name, str):
+                    return jsonify({"error": "Invalid metric: {} must be a string".format(metric_name)}), 400
+                for field in required_fields:
+                    if field not in metric_value:
+                        return jsonify({"error": "Invalid metric: {} must include {}".format(metric_name, field)}), 400
             
+            # update the existing metrics with the new metrics set by the user
+            for metric_name, metric_value in frontend_metrics.items():
+                if metric_name in existing_metrics:
+                   existing_metrics[metric_name].update({
+                       "min": metric_value.get('min', existing_metrics[metric_name]['min']),
+                        "max": metric_value.get('max', existing_metrics[metric_name]['max']),
+                        "minimum label": metric_value.get('minimum label', existing_metrics[metric_name]['minimum label']),
+                        "maximum label": metric_value.get('maximum label', existing_metrics[metric_name]['maximum label']),
+                        "description": metric_value.get('description', existing_metrics[metric_name]['description'])
+                   })
+                else:
+                    existing_metrics[metric_name] = metric_value
+            existing_metrics.update(frontend_metrics)
+                        
             # Mark the assigned_audio as modified and commit changes
             flag_modified(listener, "assigned_audio")
             
