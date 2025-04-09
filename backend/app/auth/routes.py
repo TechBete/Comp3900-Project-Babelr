@@ -554,7 +554,7 @@ def blindPasswordReset():
 
 # Helper function to get user role from uuid
 # should be moved to helpers.py
-@authBp.route('/getRoleFromID')
+@authBp.route('/getRoleFromID', methods=['GET'])
 @jwt_required()
 def getRoleFromID():
     user_id = get_jwt_identity()
