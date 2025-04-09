@@ -21,7 +21,7 @@ def getListeners():
         "Date of Birth": user.demographic.date_of_birth if user.demographic else None,
         "Country of Residence": user.demographic.country_of_residence if user.demographic else None,
         "Education": user.demographic.education if user.demographic else None,
-        "Gender": str(user.demographic.gender.value) if user.demographic else 'other',
+        "Gender": str(user.demographic.gender.value) if user.demographic else None,
         "First Name": user.first_name,
         "Last Name": user.last_name,
         "Email": user.email,

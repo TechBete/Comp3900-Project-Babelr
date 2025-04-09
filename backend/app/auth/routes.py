@@ -229,16 +229,8 @@ def createResearcher():
         first_time =True,
     )
     
-    demo = ResearcherDemographic(
-        listener_id=user.id,
-        date_of_birth="",
-        gender='other',
-        country_of_residence="",
-        education=""
-    )
     try:
         db.session.add(user)
-        db.session.add(demo)
         db.session.commit()
 
         # Generate token and send verification email
