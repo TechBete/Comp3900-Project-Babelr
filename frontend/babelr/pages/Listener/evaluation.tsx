@@ -3,23 +3,29 @@ import Navbar_Listener from "components/nav_bar_listener";
 import { useState, useEffect } from "react";
 import { Button } from "@mui/material";
 import Slider from '@mui/material/Slider';
-// import Box from '@mui/material/Box';
+// import ch_0 from 'ch_0.wav';
 
 export default function Evaluation() {
     const [Error, setError] = useState("");
-    // const [value, setValue] = useState(3);
+    // const [audioUrl, setAudioUrl] = useState("");
+
+    /*
+    const fetchAudio = async () => {
+        const response = await fetch('http://127.0.0.1:8016/listener/getAudio', {
+            method:"GET",
+            credentials: 'include'
+        });
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        setAudioUrl(url);
+        console.log("url is: ", url);
+    };
+    */
 
     useEffect(() => {
-        Audio_Receiver();
-        /*
-        const el = document.getElementById("audio");
-
-        if (el != null) {
-            el.addEventListener("click", playAudio, false);
-            // el.attachEvent('onclick', playAudio);
-        }
-        */
-    });
+        // fetchAudio();
+        // Audio_Receiver();
+    }, []);
 
     async function submitRating() {
         console.log("Submit rating was hit!!!")
@@ -48,9 +54,10 @@ export default function Evaluation() {
         }
     }
 
+    /*
     async function Audio_Receiver() {
         try {
-            const response = await fetch(`http://localhost:8016/audioAllocate`, {
+            const response = await fetch(`http://localhost:8016/listener/getAudio`, {
                 method:"GET",
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({}),
@@ -58,8 +65,13 @@ export default function Evaluation() {
             })
     
             if (response.ok) {
+                const response = await response.json()
 
-                // const response = await response.json()
+                console.log('what is response?');
+                console.log(response);
+
+                // setAudio(response);
+
                 return // change later maybe
             } else {
                 const error = await response.json();
@@ -70,21 +82,6 @@ export default function Evaluation() {
             setError("Network Error: Fetch Request Failed");
             return Error;
         }
-    }
-
-    /*
-    function playAudio() {
-        const audio_el = document.querySelectorAll('audio'); // .getElementById('audio')
-        
-        if (audio_el[0] != null) {
-            audio_el[0].play(); // eslint-disable-line
-        }
-    }
-    */
-
-    /*
-    function valuetext(value: number) {
-        return `${value}°C`;
     }
     */
 
@@ -123,27 +120,14 @@ export default function Evaluation() {
                             <h1>Evaluation</h1>
                             <p>Play the audio clip and rate it based on the provided metrics.</p>
                             <form className={styles["login-form"]} method="post" onSubmit={submitRating}>
-                                <audio controls id="audio" src="ch_0.wav"></audio>
+                                {/*audioUrl && <audio controls src={audioUrl}></audio>*/}
+                                {/*<audio controls id="audio" src="ch_0.wav"></audio>*/}
                                 {/*<Button variant="contained" id='playButton'>Play</Button>*/}
                                 {metric_grid}
 
-                                {/*<h2>Clarity</h2> 
-                                <Slider defaultValue={3} step={1} marks min={1} max={5} />*/}
+                                {/*<audio controls src={ch_0}>Play Audio</audio>*/}
 
                                 {/*<button id='playButton'>Play Audio</button>*/}
-                                {/*
-                                <div>
-                                    <h2 className="text-xl font-semibold">Value: {value}</h2>
-                                    <Slider
-                                        value={[value]}
-                                        onValueChange={(val) => setValue(val[0])}
-                                        min={0}
-                                        max={5}
-                                        step={1}
-                                        className="w-64"
-                                    />
-                                </div>
-                                */}
                                 <Button variant="contained" type='submit'>Submit Rating</Button>
                             </form>
                         </div>
