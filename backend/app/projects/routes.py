@@ -1,19 +1,20 @@
 from typing import Set
+import json
 from flask import jsonify, request
-from backend.app.models import Listener, ProficiencyLevel, Researcher
-from backend.app import db, jwt
+from app.models import Listener, ProficiencyLevel, Researcher
+from app import db, jwt
 import app.helpers as helpers
 import os, uuid, shutil, logging
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt, jwt_required, get_jwt_identity
 from sqlalchemy.orm.attributes import flag_modified
-from backend.app.projects import projectsBp
+from app.projects import projectsBp
 
 @projectsBp.route('/createProject', methods=['POST'])
 @jwt_required()
 def createProject():
     data = request.json
     required_fields = ['project_name']
-    validation_error = helper.validate_required_fields(data, required_fields)
+    validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
     
@@ -21,7 +22,7 @@ def createProject():
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id) # ensure type consistency
     required_fields = ['researcher_id']
-    validation_error = helper.validate_required_fields({'researcher_id': researcher_id}, required_fields) # validate researcher_id
+    validation_error = helpers.validate_required_fields({'researcher_id': researcher_id}, required_fields) # validate researcher_id
     if validation_error:
         return validation_error
     # END OF FRONTEND TESTING PART
@@ -89,7 +90,7 @@ def createProject():
 def updateProject():
     data = request.json
     required_fields = ['project_name']
-    validation_error = helper.validate_required_fields(data, required_fields)
+    validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
 
@@ -146,7 +147,7 @@ def updateProject():
 def addProjectTags():
     data = request.json
     required_fields = ['project_name', 'tags']
-    validation_error = helper.validate_required_fields(data, required_fields)
+    validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
 
@@ -195,7 +196,7 @@ def addProjectTags():
 def removeProjectTags():
     data = request.json
     required_fields = ['project_name', 'tags']
-    validation_error = helper.validate_required_fields(data, required_fields)
+    validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
 
@@ -243,7 +244,7 @@ def removeProjectTags():
 def searchProjectByTag():
     data = request.json
     required_fields = ['tag']
-    validation_error = helper.validate_required_fields(data, required_fields)
+    validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
 
@@ -272,7 +273,7 @@ def searchProjectByTag():
 def updateProjectStatus():
     data = request.json
     required_fields = ['project_name', 'status']
-    validation_error = helper.validate_required_fields(data, required_fields)
+    validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
 
@@ -326,7 +327,7 @@ def getProjects():
 def getProject():
     data = request.json
     required_fields = ['project_name']
-    validation_error = helper.validate_required_fields(data, required_fields)
+    validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
 
@@ -359,7 +360,7 @@ def getProject():
 def deleteProject():
     data = request.json
     required_fields = ['project_name']
-    validation_error = helper.validate_required_fields(data, required_fields)
+    validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
 
@@ -402,7 +403,7 @@ def deleteProject():
 def setProjectMetricsField():
     data = request.json
     required_fields = ['project_name', 'metrics']
-    validation_error = helper.validate_required_fields(data, required_fields)
+    validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
         logging.debug("Validation error: Missing required fields")
         return validation_error
@@ -456,7 +457,7 @@ def setProjectMetricsField():
 def getProjectMetrics():
     data = request.json
     required_fields = ['project_name']
-    validation_error = helper.validate_required_fields(data, required_fields)
+    validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
 
@@ -492,7 +493,7 @@ def getProjectMetrics():
 def updateProjectMetrics():
     data = request.json
     required_fields = ['project_name', 'metrics']
-    validation_error = helper.validate_required_fields(data, required_fields)
+    validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
 
@@ -553,7 +554,7 @@ def updateProjectMetrics():
 def deleteProjectMetrics():
     data = request.json
     required_fields = ['project_name', 'metric']
-    validation_error = helper.validate_required_fields(data, required_fields)
+    validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
 
@@ -602,30 +603,33 @@ def deleteProjectMetrics():
 @jwt_required()
 def uploadAudioFile():
     def getRequirements(tags) -> tuple[str, ProficiencyLevel]:
-        language = tags[2];
-        proficiency_level = ProficiencyLevel[tags[3]]
+        tags = tags.split(",")
+        logging.debug(f'tags[1]: {tags[1]}')
+        logging.debug(f'tags[2]: {tags[2]}')
+        language = tags[1];
+        proficiency_level = ProficiencyLevel[f'{tags[2]}']
         return (language, proficiency_level)
     def getQualifiedListeners(requirements: tuple[str, ProficiencyLevel]) -> list[Listener]:
-        from sqlalchemy import case
         (lang, min_proficiency) = requirements
 
-        proficiency_order = case(
-                [ 
-                 (Listener.languages[lang].astext == "elementary", 0),
-                 (Listener.languages[lang].astext == "limited_working", 1),
-                 (Listener.languages[lang].astext == "professional", 2),
-                 (Listener.languages[lang].astext == "native", 3),
-                 (Listener.languages[lang].astext == "bilingual", 4),
-                 ], 
-                else_=None
-        )
-        result = Listener.query.filter(proficiency_order >= min_proficiency._order).all()
-        return result
+        all_listeners = Listener.query.all()
+
+        qualified_listeners = []
+
+        for listener in all_listeners:
+            for language in listener.languages:
+                # language = json.loads(language)
+                if language['language'] == lang and ProficiencyLevel[language['proficiency'].lower()] >= min_proficiency:
+                    logging.debug(f'{listener}')
+                    qualified_listeners.append(listener)
+                    break
+
+        return qualified_listeners
 
     data = request.form
     required_fields = ['project_name', 'tags']
 
-    validation_error = helper.validate_required_fields(data, required_fields)
+    validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
 
@@ -641,7 +645,7 @@ def uploadAudioFile():
     researcher_id = uuid.UUID(researcher_id)
     # search researcher name from researcher uuid
 
-    researcher = helper.is_researcher_id(researcher_id)
+    researcher = helpers.is_researcher_id(researcher_id)
 
     if researcher:
         researcher_name = researcher.first_name + researcher.last_name
@@ -660,7 +664,7 @@ def uploadAudioFile():
     file.save(file_path) # save the file in the directory
 
     requirements = getRequirements(data['tags'])
-    qualifiedListenners = getRequirements(requirements)
+    qualifiedListenners = getQualifiedListeners(requirements)
     try:
         project_dict = {project["name"]: project for project in researcher.project_list}
 
@@ -757,14 +761,14 @@ def testUploadAudioFile():
 def getAudioFileMetrics():
     data = request.json
     required_fields = ['project_name', 'audio_file_name']
-    validation_error = helper.validate_required_fields(data, required_fields)
+    validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
 
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
 
-    researcher = helper.is_researcher_id(researcher_id)
+    researcher = helpers.is_researcher_id(researcher_id)
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
 
@@ -800,13 +804,13 @@ def getAudioFileMetrics():
 def getProjectAudioFiles():
     data = request.json
     required_fields = ['project_name']
-    validation_error = helper.validate_required_fields(data, required_fields)
+    validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
 
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
-    researcher = helper.is_researcher_id(researcher_id)
+    researcher = helpers.is_researcher_id(researcher_id)
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
 
@@ -849,7 +853,7 @@ def getProjectAudioFiles():
 def testgetProjectAudioFiles():
 
     researcher_id = "20658111-860a-4a87-a520-11800b9f36e9"
-    researcher = helper.is_researcher_id(researcher_id)
+    researcher = helpers.is_researcher_id(researcher_id)
 
     projectName = "Test Project 1"
 

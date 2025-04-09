@@ -2,7 +2,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
-from backend.config import Config
+from config import Config
 import logging
 
 # Initialize extensions
@@ -22,10 +22,10 @@ def create_app(config_class=Config):
          origins=["http://localhost:3000", "https://localhost:8016", "*"])
 
     # Register blueprints
-    from backend.app.auth.routes import authBp
-    from backend.app.projects.routes import projectsBp
-    from backend.app.researchers.routes import researchersBp
-    from backend.app.listeners.routes import userBp
+    from app.auth.routes import authBp
+    from app.projects.routes import projectsBp
+    from app.researchers.routes import researchersBp
+    from app.listeners.routes import userBp
 #   from app.admin.routes import adminBp     commenting out for now
     
     # Register the blueprints with their respective URL prefixes

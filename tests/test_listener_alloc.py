@@ -1,6 +1,6 @@
 # from typing import Dict, List
-# from backend.password import PasswordHash
-# from backend.server import Listener, PermissionLevel, db
+# from password import PasswordHash
+# from server import Listener, PermissionLevel, db
 # from sqlalchemy.exc import IntegrityError, OperationalError
 # from flask import jsonify
 # import uuid

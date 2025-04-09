@@ -4,7 +4,7 @@ them.
 """
 
 from pathlib import Path
-from backend.server import Listener, ProficiencyLevel
+from server import Listener, ProficiencyLevel
 
 class AudioFile:
     def __init__(self, path: Path, requirements: dict[str, ProficiencyLevel]) -> None:

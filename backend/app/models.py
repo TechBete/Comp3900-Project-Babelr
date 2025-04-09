@@ -1,7 +1,7 @@
 import enum, uuid
 from sqlalchemy.dialects.postgresql import UUID, ENUM
 from sqlalchemy import DDL, event
-from backend.app import db
+from app import db
 from functools import total_ordering
  
 #========== 1. Python Enums ==========

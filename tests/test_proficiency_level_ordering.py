@@ -1,5 +1,5 @@
 import unittest
-from backend.app.models import ProficiencyLevel
+from app.models import ProficiencyLevel
 # Test cases to enforce the ordering of ProficiencyLevel.
 class TestProficiencyOrdering(unittest.TestCase):
     def test_ordering(self):
