@@ -322,9 +322,9 @@ def registerDemographics():
             education=data['education'],
             gender=gender
         )
-        listener.languages =  data['languages']
+        # listener.languages =  data['languages']
         # raise a flag on listener database to alert that records has been changed.
-        for field in ["first_name", "last_name", "background_info", "demographic", "languages"]:
+        for field in ["first_name", "last_name", "background_info", "demographic"]:
             flag_modified(listener, field)
         db.session.commit()
     except Exception as e:
