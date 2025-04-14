@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import styles from "../stylesheets/nav_bar.module.css"
 import HomeIcon from "../components/homeicon"
 import Link from "next/link"
-import Points from "components/points"
 
 export default function Navbar_Listener() {
     const [Error, setError] = useState("");
