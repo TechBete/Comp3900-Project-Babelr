@@ -1,5 +1,6 @@
 from typing import Set
 import json
+import filetype
 from flask import jsonify, request
 from app.models import Listener, ProficiencyLevel, Researcher
 from app import db, jwt
