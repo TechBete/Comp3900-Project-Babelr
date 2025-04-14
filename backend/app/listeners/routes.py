@@ -356,35 +356,38 @@ def registerDemographics():
         # error begins here. Code is attempting to create 
         # a new demographic record for the listener
         # but does not check if the demographic record already exists
-        logging.debug("no here!")
-        # edge case when optional data fields are null
-        if data['gender'] in Gender._value2member_map_:
-            gender = Gender(data['gender'])
+        logging.debug("in here!")
+        demographic = helper.get_user_demography(listener_id)
+        if demographic:
+            #if demographic record already exists, update
+            demographic.date_of_birth = data['date_of_birth']
+            demographic.country_of_residence = data['country_of_residence']
+            demographic.education = data['education']
+            demographic.gender = Gender(data['gender']) if data['gender'] in Gender._value2member_map_ else None # edge case when optional data fields are null
         else:
-            gender = None
-
-        # all mandatory demographic fields must not be null
-        for field in required_fields:
-            if field is None:
-                return jsonify({"error": "Mandatory demograhic field is missing"}), 400
-
-        # store demograhic information in listener table
+            demographic = ListenerDemographic(
+                listener_id=listener.id,
+                date_of_birth=data['date_of_birth'],
+                country_of_residence=data['country_of_residence'],
+                education=data['education'],
+                gender= Gender(data['gender']) if data['gender'] in Gender._value2member_map_ else None
+            )
+            db.session.add(demographic)
+        
+        # update user profile
         listener.first_name = data['first_name']
         listener.last_name = data['last_name']
-        listener.demographic = ListenerDemographic(
-            date_of_birth=data['date_of_birth'],
-            country_of_residence=data['country_of_residence'],
-            education=data['education'],
-            gender=gender
-        )
-        # raise a flag on listener database to alert that records has been changed.
-        for field in ["first_name", "last_name", "background_info", "demographic"]:
-            flag_modified(listener, field)
+        
+        # removed flag as fields are not JSON
+        #for field in ["first_name", "last_name"]:
+        #    flag_modified(listener, field)
+            
         db.session.commit()
     except Exception as e:
         db.session.rollback()
         logging.debug(e)
         return jsonify({"error": "Error Code: 500"}), 500
+    
     logging.debug("Listener after register %s", repr(listener))
     return jsonify({"message": "Register demographic Successful"}), 200
 
@@ -413,7 +416,7 @@ def changeDemographics():
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
-    demographic: ListenerDemographic | None = ListenerDemographic.query.filter_by(listener_id = user_id).first()
+    demographic: ListenerDemographic | None = helper.get_user_demography(user_id)
     if not demographic:
         return jsonify({"error": f"Demographic data for the user {listener.id} was not found"}), 400
 
@@ -453,11 +456,11 @@ def testChangeDemographics():
 
     user_id = "736259a4-aea2-4de7-aa87-5764e1db624b"
 
-    listener = Listener.query.filter_by(id=user_id).first()
+    listener = helper.is_listener_id(user_id)
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
-    demographic: ListenerDemographic | None = ListenerDemographic.query.filter_by(listener_id = user_id).first()
+    demographic: ListenerDemographic | None = helper.get_user_demography(user_id)
     if not demographic:
         return jsonify({"error": f"Demographic data for the user {listener.id} was not found"}), 400
 
