@@ -1,5 +1,6 @@
 from flask import request, jsonify, url_for, redirect
 from app.models import Researcher, Listener, PermissionLevel, ListenerDemographic, ResearcherDemographic
+
 from app import db, jwt
 from app.auth import authBp
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, decode_token, set_access_cookies, get_jwt

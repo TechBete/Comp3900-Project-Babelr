@@ -3,9 +3,9 @@ from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.exc import IntegrityError
 from flask import jsonify, request
 from app.listeners import userBp
-from app.models import ListenerDemographic, Gender, Listener
-import app.helpers as helper
-import uuid, logging, os
+from app.models import Listener, ListenerDemographic
+import app.helpers as helpers
+import uuid, logging
 from app import db
 
 # This route is used to get all listeners in the database
@@ -112,7 +112,7 @@ def addLanguage():
     required_fields = ['language', 'proficiency']
 
     # check validation error
-    validation_error = helper.validate_required_fields(data, required_fields)
+    validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
 
@@ -120,7 +120,7 @@ def addLanguage():
     listener_id = uuid.UUID(listener_id)
 
     # check if listener is valid user
-    listener = helper.is_listener_id(listener_id)
+    listener = helpers.is_listener_id(listener_id)
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
@@ -179,7 +179,7 @@ def editLanguage():
     required_fields = ['language', 'new_proficiency']
 
     # check validation error
-    validation_error = helper.validate_required_fields(data, required_fields)
+    validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
 
@@ -187,7 +187,7 @@ def editLanguage():
     listener_id = uuid.UUID(listener_id)
 
     # check if listener is valid user
-    listener = helper.is_listener_id(listener_id)
+    listener = helpers.is_listener_id(listener_id)
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
@@ -252,7 +252,7 @@ def deleteLanguage():
     required_fields = ['language', 'proficiency']
 
     # check validation error
-    validation_error = helper.validate_required_fields(data, required_fields)
+    validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
 
@@ -260,7 +260,7 @@ def deleteLanguage():
     listener_id = uuid.UUID(listener_id)
 
     # check if listener is valid user
-    listener = helper.is_listener_id(listener_id)
+    listener = helpers.is_listener_id(listener_id)
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
@@ -324,7 +324,7 @@ def getCurrentPoints():
     listener_id = get_jwt_identity()
     listener_id = uuid.UUID(listener_id)
 
-    listener = helper.is_listener_id(listener_id)
+    listener = helpers.is_listener_id(listener_id)
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
@@ -340,7 +340,7 @@ def registerDemographics():
     gender = data['gender']
 
     # check validation error
-    validation_error = helper.validate_required_fields(data, required_fields)
+    validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
 
@@ -412,7 +412,7 @@ def changeDemographics():
     user_id = uuid.UUID(user_id)
 
     # check if listener is valid user
-    listener = helper.is_listener_id(user_id)
+    listener = helpers.is_listener_id(user_id)
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
@@ -542,7 +542,7 @@ def redeemRewards():
 def userAudioEval():
     data = request.json
     required_fields = ['audio_name', 'audio_path', 'metrics']
-    validation_error = helper.validate_required_fields(data, required_fields)
+    validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
 
@@ -550,7 +550,7 @@ def userAudioEval():
     listener_id = uuid.UUID(listener_id)
     
     # Validate listener
-    listener = helper.is_listener_id(listener_id)
+    listener = helpers.is_listener_id(listener_id)
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
     
@@ -641,7 +641,7 @@ def getAssignedAudio():
         listener_id = uuid.UUID(listener_id)
 
         # check if listener is valid user
-        listener = helper.is_listener_id(listener_id)
+        listener = helpers.is_listener_id(listener_id)
         if not listener:
             return jsonify({"error": "Listener not found"}), 404
 
@@ -692,7 +692,7 @@ def updateListenerProfile():
     listener_id = uuid.UUID(listener_id)
 
     # check if listener is valid user
-    listener = helper.is_listener_id(listener_id)
+    listener = helpers.is_listener_id(listener_id)
     if not listener:
         return jsonify({"error": "Listener does not exist on database!"}), 400
 
