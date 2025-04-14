@@ -14,10 +14,10 @@ from app import db
 @userBp.route('/getListeners', methods=['GET'])
 @jwt_required()
 def getListeners():
-    admin = get_jwt_identity()
-    admin_id = uuid.UUID(admin)
-    if not helper.is_admin(admin_id):
-        return jsonify({"error": "Unauthorized access"}), 403
+    #admin = get_jwt_identity()
+    #admin_id = uuid.UUID(admin)
+    #if not helper.is_admin(admin_id):
+    #    return jsonify({"error": "Unauthorized access"}), 403
     
     users = Listener.query.all()
     return jsonify([{
@@ -330,7 +330,7 @@ def getCurrentPoints():
 
     return jsonify({"reward_points": listener.reward_points})
 
-
+# removed languages and background info since frontend does not parse data on the two fields.
 @userBp.route('/registerDemographics', methods=['POST'])
 @jwt_required()
 def registerDemographics():
@@ -348,11 +348,14 @@ def registerDemographics():
     listener_id = uuid.UUID(listener_id)
 
     # check if listener is valid user
-    listener = Listener.query.filter_by(id=listener_id).first()
+    listener = helper.is_listener_id(listener_id)
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
     logging.debug("Listener before register %s", repr(listener))
     try:
+        # error begins here. Code is attempting to create 
+        # a new demographic record for the listener
+        # but does not check if the demographic record already exists
         logging.debug("no here!")
         # edge case when optional data fields are null
         if data['gender'] in Gender._value2member_map_:
@@ -368,16 +371,14 @@ def registerDemographics():
         # store demograhic information in listener table
         listener.first_name = data['first_name']
         listener.last_name = data['last_name']
-        listener.background_info = data['education'] # changed from data['background_info']
         listener.demographic = ListenerDemographic(
             date_of_birth=data['date_of_birth'],
             country_of_residence=data['country_of_residence'],
             education=data['education'],
             gender=gender
         )
-        listener.languages =  data['languages']
         # raise a flag on listener database to alert that records has been changed.
-        for field in ["first_name", "last_name", "background_info", "demographic", "languages"]:
+        for field in ["first_name", "last_name", "background_info", "demographic"]:
             flag_modified(listener, field)
         db.session.commit()
     except Exception as e:

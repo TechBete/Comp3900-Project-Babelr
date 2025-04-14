@@ -2,7 +2,7 @@ from flask import jsonify
 from email.mime.text import MIMEText
 from itsdangerous import URLSafeTimedSerializer
 from password import PasswordHash
-from app.models import Researcher, Listener, Admin
+from app.models import Researcher, Listener #Admin
 import os, smtplib
 
 # ========== 0. Helper Functions ==========
@@ -75,8 +75,8 @@ def is_researcher_email(email):
 def is_listener_email(email):
     return Listener.query.filter_by(email=email).first()
 
-def is_admin(admin_id):
-    return Admin.query.filter_by(id=admin_id).first()
+#def is_admin(admin_id):
+#    return Admin.query.filter_by(id=admin_id).first()
     
 def is_researcher_id(id):
     return Researcher.query.filter_by(id=id).first()
