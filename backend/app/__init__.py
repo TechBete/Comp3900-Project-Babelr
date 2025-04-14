@@ -20,7 +20,7 @@ def create_app(config_class=Config):
     db.init_app(app)
     jwt.init_app(app)
     CORS(app, supports_credentials=True, 
-         resources={r"/*": {"origins": ["http://localhost:3000", "http://localhost:8016"]}})  # Allow requests from the frontend to the backend
+         resources={r"/*": {"origins": "*"}})  # Allow requests from the frontend to the backend
                                                                                               # Set CORS policy to allow requests from the frontend to the backend
 
     # Register blueprints

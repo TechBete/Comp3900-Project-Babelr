@@ -1,14 +1,16 @@
-from flask import jsonify
-from app.models import Researcher
-import app.helpers as helpers
-from app.researchers import researchersBp
+from flask import jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
+from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.exc import IntegrityError
+from app.researchers import researchersBp
+from app.models import Researcher
 from app import db
-
+import app.helpers as helper
+import uuid, logging
 
 # this route may only be used by the admin to get all researchers
 # update to only allow admin to access this route once single researcher recall route has been implemented
+# move this route to admin route in future
 @researchersBp.route('/getResearchers', methods=['GET'])
 def getResearchers():
     users = Researcher.query.all()
@@ -33,27 +35,46 @@ def getResearchers():
         "Gender": user.gender.value if user.gender is not None else None
     } for user in users])
 
-@researchersBp.route('/updateOrganisation', methods=['POST'])
-@jwt_required()
-def updateOrganisation():
-    data = request.json
-    required_fields = ['new_organisation']
+# this route is used to get the researcher's profile
+# TODO: add a route to get the researcher's profile
 
-    validation_error = helpers.validate_required_fields(data, required_fields)
-    if validation_error:
-        return validation_error
+
+# this route is used to update the researcher's profile, changed from updateOrganisation
+# I dont see a justification for researcher to update the researchers organisation by itself,
+# its better to allow the researcher to call route to update entire profile and let researcher
+# choose what fields to update
+
+@researchersBp.route('/updateResearcherProfile', methods=['POST'])
+@jwt_required()
+def updateResearcherProfile():
+    data = request.json
+    
+    # check if request body is empty
+    if not data:
+        return jsonify({"error": "No data was provided"}), 400
 
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id) # ensure type consistency
 
     # search researcher name from researcher uuid
-    researcher = session.get(Researcher, researcher_id)
+    researcher = helper.is_researcher_id(researcher_id)
     if not researcher:
         return jsonify({"error": "Researcher does not exist on database!"}), 400
 
     try:
+        researcher.first_name = data['first_name']
+        researcher.last_name = data['last_name']
+        researcher.email = data['email']
         researcher.organisation = data['new_organisation']
-        flag_modified(researcher, "organisation")
+        researcher.demographic.date_of_birth = data['date_of_birth']
+        researcher.demographic.gender = data['gender']
+        researcher.demographic.country = data['country']
+        researcher.demographic.education = data['education']
+        
+        for key, value in data.items():
+            if getattr(researcher, key, None) != value:
+                setattr(researcher, key, value)
+                flag_modified(researcher, key)
         db.session.commit()
     except Exception as e:
         db.session.rollback()
@@ -61,3 +82,4 @@ def updateOrganisation():
         return jsonify({"error": "Error: 500, An error occurred while updating the researcher's organisation"}), 500
 
     return jsonify({"message": "Researcher organisation updated successfully"}), 200
+

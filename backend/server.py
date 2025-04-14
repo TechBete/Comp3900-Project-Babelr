@@ -5,8 +5,9 @@ from app.projects.routes import testUploadAudioFile
 from app.listeners.routes import testChangeDemographics, testGetListener
 from sqlalchemy.exc import OperationalError
 
-
 # ========== Flask App Initialization ==========
+# This is the entry point for the Flask application.
+# It creates the Flask app and initializes the database.
 
 app = create_app()
 
