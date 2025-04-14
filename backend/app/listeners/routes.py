@@ -8,8 +8,9 @@ import app.helpers as helpers
 import uuid, logging
 from app import db
 
-# this may need to be changed to only return the 'listener' who is calling the route
+# This route is used to get all listeners in the database
 # this route may only be used by the admin to get all listeners
+# This should be moved to admin in next sprint
 @userBp.route('/getListeners', methods=['GET'])
 def getListeners():
     users = Listener.query.all()
@@ -32,28 +33,71 @@ def getListeners():
         "is_verified": user.is_verified,
         "allocated audio": [audio.value for audio in user.assigned_audio] if user.assigned_audio else [], # Convert enum array
     } for user in users])
-'''
-# test route to get a listener by id once listener cookie is implemented
-@userBp.route('/getListener/<uuid:listener_id>', methods=['GET'])
-def getListener(listener_id):
-    user = Listener.query.get(listener_id)
+
+# This route is used to get a specific listener by their UUID
+@userBp.route('/getListener', methods=['GET'])
+@jwt_required()
+def getListener():
+    # get user information from the given uuid
+    id = get_jwt_identity()
+    user_id = uuid.UUID(id)
+    
+    # check if listener is valid user
+    user = helper.is_listener_id(user_id)
+    
     if user is None:
         return jsonify({"error": "Listener not found"}), 404
     return jsonify({
         "Uuid": str(user.id),
-        "Demographic ID": user.demographic.id if user.demographic else None,
         "First Name": user.first_name,
         "Last Name": user.last_name,
         "Email": user.email,
         "Password": user.pw_hash,
-        "Role": user.permission.value,
+        "Demographics": {
+            "Date of Birth": user.demographic.date_of_birth,
+            "Gender": str(user.demographic.gender.value) if user.demographic else None,
+            "Country of Residence": user.demographic.country_of_residence,
+            "Education": user.demographic.education,},
         "Background Info": user.background_info,
         "Reward Points": user.reward_points,
-        "languages_list": user.languages_list,
-        "languages_proficiency": [lp.value for lp in user.languages_proficiency] if user.languages_proficiency else []  # Convert enum array
-    })
-'''
+        "languages": [user.languages] if user.languages else [],  # list of languages user speaks
+        "assigned audio": [str(audio.value) for audio in user.assigned_audio] if user.assigned_audio else [],  # Convert enum array
+        "completed audio": [str(audio.value) for audio in user.completed_audio] if user.completed_audio else [],  # Convert enum array
+        })
 
+# Test route for /getListener/<uuid:listener_id> , remove for final
+@userBp.route('/testGetListener', methods=['GET'])
+def testGetListener():
+    # Hardcoded UUID for testing purposes
+    test_listener_id = "20658871-860a-4a87-a520-11800b9f3632"
+
+    # Convert the string to a UUID object
+    listener_id = uuid.UUID(test_listener_id)
+
+    # Check if the listener exists
+    listener = helper.is_listener_id(listener_id)
+    if not listener:
+        return jsonify({"error": "Listener not found"}), 404
+
+    # Construct the response
+    return jsonify({
+        "Uuid": str(listener.id),
+        "First Name": listener.first_name,
+        "Last Name": listener.last_name,
+        "Email": listener.email,
+        "Password": listener.pw_hash,
+        "Demographics": {
+            "Date of Birth": listener.demographic.date_of_birth if listener.demographic else None,
+            "Gender": str(listener.demographic.gender.value) if listener.demographic else None,
+            "Country of Residence": listener.demographic.country_of_residence if listener.demographic else None,
+            "Education": listener.demographic.education if listener.demographic else None,
+        },
+        "Background Info": listener.background_info,
+        "Reward Points": listener.reward_points,
+        "languages": listener.languages if listener.languages else [],
+        "assigned audio": [str(audio.value) for audio in listener.assigned_audio] if listener.assigned_audio else [],
+        "completed audio": [str(audio.value) for audio in listener.completed_audio] if listener.completed_audio else [],
+    }), 200
 
 @userBp.route('/addLanguage', methods=['POST'])
 @jwt_required()
@@ -430,6 +474,29 @@ def testChangeDemographics():
         return jsonify({"error": f"An error has occurred while updating the demographics: {e}"}), 500
     return jsonify({"message": "Demographic Edit successful"}), 200
 
+@userBp.route('/submitRating', methods=['POST'])
+@jwt_required()
+def submitRating():
+    data = request.json
+
+    print("**********************************************")
+    print(data['id'])
+
+    listener_id = get_jwt_identity()
+    listener_id = uuid.UUID(listener_id)
+    listener = Listener.query.filter_by(id=listener_id).first()
+    listener.reward_points = listener.reward_points + 1
+    db.session.commit()
+
+    return jsonify({'message': 'reward_id is: ' + str(listener.reward_points)})
+
+@userBp.route('/redeemRewards', methods=['POST', 'OPTIONS'])
+@jwt_required()
+def redeemRewards():
+    data = request.json
+
+    return jsonify({'message': 'reward_id is: ' + data.reward_id})
+
 # This route is used to update the audio metrics for a listener
 # Args:
 #    Mandatory fields: assigned_audio_src, metrics
@@ -483,40 +550,49 @@ def userAudioEval():
     if listener.assigned_audio is None:
         return jsonify({"error": "User has no audio assigned yet"}), 400
     
+    assigned_audio_file = None
     # check if audio file path and name are in the listener's assigned audio list
     for audio_file in listener.assigned_audio:
-        if listener.assigned_audio.name != audio_file_name or listener.assigned_audio.file_path != audio_file_path:
-            return jsonify({"error": "Audio file is not allocated to the listener"}), 400
-        elif audio_file['file_path'] == audio_file_path and audio_file['name'] == audio_file_name:
+        if audio_file['file_path'] == audio_file_path and audio_file['name'] == audio_file_name:
             assigned_audio_file = audio_file
-        else:
+            break
+    if assigned_audio_file is None:
             return jsonify({"error": "Audio file is not allocated to the listener"}), 400
     
     # Validate metrics from the frontend
     if not isinstance(frontend_metrics, dict):
-        return jsonify({"error": "Metrics must be a dictionary of numeric values"}), 400
+        return jsonify({
+            "error": "Metrics must include metric name, min, max, minimum label, maximum label, and description"
+            }), 400
     
-    # Check if all keys are strings and values are numeric
-    for key, value in frontend_metrics.items():
-        if not isinstance(key, str) or not isinstance(value, (int, float)):
-            return jsonify({"error": "Invalid metric: {} must be a string and {} must be numeric".format(key, value)}), 400
-
     try:
         with db.session.begin_nested():
-            # Convert metrics to float
-            
-            frontend_metrics = {key: float(value) for key, value in frontend_metrics.items()}
-            logging.debug(frontend_metrics)
-
             # Check if existing metrics are present
             existing_metrics = assigned_audio_file.get('metrics', {})
             
-            # Validate and update metrics
-            if not isinstance(existing_metrics, dict):
-                logging.error("Existing metrics must be a dictionary")
-                return jsonify({"error": "Existing metrics must be a dictionary"}), 500
-            existing_metrics.update(frontend_metrics)
+            # Validate metrics
+            required_fields = ['min', 'max', 'minimum label', 'maximum label', 'description']
+            for metric_name, metric_value in frontend_metrics.items():
+                if not isinstance(metric_name, str):
+                    return jsonify({"error": "Invalid metric: {} must be a string".format(metric_name)}), 400
+                for field in required_fields:
+                    if field not in metric_value:
+                        return jsonify({"error": "Invalid metric: {} must include {}".format(metric_name, field)}), 400
             
+            # update the existing metrics with the new metrics set by the user
+            for metric_name, metric_value in frontend_metrics.items():
+                if metric_name in existing_metrics:
+                   existing_metrics[metric_name].update({
+                       "min": metric_value.get('min', existing_metrics[metric_name]['min']),
+                        "max": metric_value.get('max', existing_metrics[metric_name]['max']),
+                        "minimum label": metric_value.get('minimum label', existing_metrics[metric_name]['minimum label']),
+                        "maximum label": metric_value.get('maximum label', existing_metrics[metric_name]['maximum label']),
+                        "description": metric_value.get('description', existing_metrics[metric_name]['description'])
+                   })
+                else:
+                    existing_metrics[metric_name] = metric_value
+            existing_metrics.update(frontend_metrics)
+                        
             # Mark the assigned_audio as modified and commit changes
             flag_modified(listener, "assigned_audio")
             

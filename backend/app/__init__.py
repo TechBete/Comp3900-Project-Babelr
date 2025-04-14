@@ -19,7 +19,8 @@ def create_app(config_class=Config):
     db.init_app(app)
     jwt.init_app(app)
     CORS(app, supports_credentials=True, 
-         origins=["http://localhost:3000", "https://localhost:8016", "*"])
+         resources={r"/*": {"origins": "*"}})  # Allow requests from the frontend to the backend
+                                                                                              # Set CORS policy to allow requests from the frontend to the backend
 
     # Register blueprints
     from app.auth.routes import authBp
@@ -36,7 +37,3 @@ def create_app(config_class=Config):
 #   app.register_blueprint(adminBp, url_prefix='/admin') commenting out for now
 
     return app
-
-# this should allow for importing the create_app function from the app package
-#from . import create_app, db
-#__all__ = ['create_app', 'db', 'jwt']
