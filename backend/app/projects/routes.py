@@ -89,11 +89,10 @@ def createProject():
                                                     "description": "How clear the audio sounds"
                                                     },
                                             },
-                                            "creator id": int(researcher.id),# updated to include creator id (researcher id)
+                                            "creator_id": str(researcher.id),# updated to include creator id (researcher id)
                                             "creator": researcher.first_name,
-                                            "assigned audio": {
-                                                "audio": [],
-                                                "allocated listeners": []
+                                            "assigned_audio": {
+                                                "audio": []
                                             }
                                             }) # updated to include creator name
 

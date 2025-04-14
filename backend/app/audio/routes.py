@@ -7,7 +7,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt, jwt_requ
 from sqlalchemy.orm.attributes import flag_modified
 
 
-
+# dont forget to add docstrings to the routes
 @audioBp.route('/uploadAudioFile', methods=['POST'])
 @jwt_required()
 def uploadAudioFile():
@@ -79,6 +79,21 @@ def uploadAudioFile():
             db.session.commit()
         else:
             return jsonify({"message": "Audio file already exist"}), 400
+        
+        # add audio file to project assigned_audio
+        if "assigned_audio" not in project:
+            project["assigned_audio"] = {
+                "audio": [],
+            }
+        # check if audio file already exists in the project
+        if file.filename not in project["assigned_audio"]["audio"]:
+            project["assigned_audio"]["audio"].append(file.filename)
+            db.session.commit()
+        else:
+            return jsonify({"message": "Audio file already exist in project"}), 400
+        
+        #flag_modified(researcher, "project_list")
+        
     except Exception as e:
         db.session.rollback()
         logging.debug(e)
@@ -127,6 +142,8 @@ def testUploadAudioFile():
             "metrics": project["metrics"],
             "tags": [data['tags']]
             # subset of the project tags, these tags are specific tags for each audio file
+            # data and file are throwing errors because test function is not getting data from request
+            # nor is file being passed in
         }
 
         if audio_data not in researcher["uploaded_audio"]:
@@ -135,6 +152,21 @@ def testUploadAudioFile():
             db.session.commit()
         else:
             return jsonify({"message": "Audio file already exist"}), 400
+
+        # add audio file to project assigned_audio
+        # add audio file to project assigned_audio
+        if "assigned_audio" not in project:
+            project["assigned_audio"] = {
+                "audio": []
+            }
+        # check if audio file already exists in the project
+        if file.filename not in project["assigned_audio"]["audio"]:
+            project["assigned_audio"]["audio"].append(file.filename)
+            flag_modified(researcher, "project_list")
+            db.session.commit()
+        else:
+            return jsonify({"message": "Audio file already exist in project"}), 400
+        
     except Exception as e:
         db.session.rollback()
         logging.debug(e)
@@ -190,6 +222,7 @@ def getAudioFileMetrics():
 
 # this route is to get the audio files for a specific project
 # this will return the audio files for the project
+# might need to check this route, pretty sure it is broken
 @audioBp.route('/getProjectAudioFiles', methods=['POST'])
 @jwt_required()
 def getProjectAudioFiles():
@@ -220,7 +253,13 @@ def getProjectAudioFiles():
                 return jsonify({"error": "Project not found"}), 404
 
             # Check if audio files exist for project
-            audio_file_names = project.get('Audio File Name', [])
+            # this needs to be changed to checking the dict
+            assigned_audio_files = project.get('assigned_audio', {}).get('audio', [])
+            logging.debug(assigned_audio_files)
+            
+            
+            audio_file_names = [audio['name'] for audio in assigned_audio_files if audio['name'] in assigned_audio_files]
+            logging.debug(audio_file_names)
             
             # search for audio files in the uploaded_audio list in the researcher object
             # Check if audio files exist
@@ -228,18 +267,19 @@ def getProjectAudioFiles():
                 return jsonify({"error": "No audio files found for this project"}), 404
             
             # Get the audio files for the specified project
-            audio_files = [audio for audio in researcher.uploaded_audio if audio['name'] in audio_file_names]
-            logging.debug(audio_files)
-            if not audio_files:
-                return jsonify({"error": "Audio file not found"}), 404
+            #audio_files = [audio for audio in researcher.uploaded_audio if audio['name'] in audio_file_names]
+            #logging.debug(audio_files)
+            #if not audio_files:
+            #    return jsonify({"error": "Audio file not found"}), 404
             
     except Exception as e:
         logging.debug(e)
         return jsonify({"error": "Error: 500, An error has occured while retrieving the audio files"}), 500
     
-    return jsonify({"audio_files": audio_files})
+    return jsonify({"audio_files": audio_file_names})
 
 # test route to get the audio files for a specific project
+# this is broken, need to fix
 @audioBp.route('/testgetProjectAudioFiles', methods=['GET'])
 def testgetProjectAudioFiles():
 
@@ -258,25 +298,25 @@ def testgetProjectAudioFiles():
                 logging.debug(project)
                 return jsonify({"error": "Project not found"}), 404
 
-            # Check if audio files exist
-            audio_file_names = project.get('Audio File Name', [])
+            # Check if audio files exist for project
+            # this needs to be changed to checking the dict
+            assigned_audio_files = project.get('assigned_audio', {}).get('audio', [])
+            logging.debug(assigned_audio_files)
+            
+            
+            audio_file_names = [audio['name'] for audio in assigned_audio_files if audio['name'] in assigned_audio_files]
+            logging.debug(audio_file_names)
             
             # search for audio files in the uploaded_audio list in the researcher object
             # Check if audio files exist
             if not audio_file_names:
                 return jsonify({"error": "No audio files found for this project"}), 404
-            
-            # Get the audio files for the specified project
-            audio_files = [audio for audio in researcher.uploaded_audio if audio['name'] in audio_file_names]
-            logging.debug(audio_files)
-            if not audio_files:
-                return jsonify({"error": "Audio file not found"}), 404
 
     except Exception as e:
         logging.debug(e)
         return jsonify({"error": "Error: 500, An error has occured while retrieving the audio file metrics"}), 500
 
-    return jsonify({"audio_file_metrics": audio_files})
+    return jsonify({"audio_file_metrics": audio_file_names})
 
 # this route is to get specific audio file from a project 
 # and return the audio data so that it can be allocated to the users
