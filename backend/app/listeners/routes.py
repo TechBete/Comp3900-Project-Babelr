@@ -12,7 +12,13 @@ from app import db
 # this route may only be used by the admin to get all listeners
 # This should be moved to admin in next sprint
 @userBp.route('/getListeners', methods=['GET'])
+@jwt_required()
 def getListeners():
+    #admin = get_jwt_identity()
+    #admin_id = uuid.UUID(admin)
+    #if not helper.is_admin(admin_id):
+    #    return jsonify({"error": "Unauthorized access"}), 403
+    
     users = Listener.query.all()
     return jsonify([{
         "is_verified": user.is_verified,
@@ -34,9 +40,9 @@ def getListeners():
         "allocated audio": [audio.value for audio in user.assigned_audio] if user.assigned_audio else [], # Convert enum array
     } for user in users])
 
-# This route is used to get a specific listener by their UUID
-@userBp.route('/getListener', methods=['GET'])
-@jwt_required()
+
+# test route to get a listener by id once listener cookie is implemented
+@userBp.route('/getListener/<uuid:listener_id>', methods=['GET'])
 def getListener():
     # get user information from the given uuid
     id = get_jwt_identity()
@@ -140,6 +146,7 @@ def addLanguage():
         return jsonify({"error": "Error Code: 500"}), 500
     return jsonify({"message": "Add language Successful"}), 200
 
+# dont forget to remove this test route for final version
 def testAddLanguage():
     try:
         listener = db.session.query(Listener).filter_by(first_name="Alice").first()
@@ -206,6 +213,7 @@ def editLanguage():
         return jsonify({"error": "Error Code: 500"}), 500
     return jsonify({"message": "Edit language Successful"}), 200
 
+# dont forget to remove this test route for final version
 def testEditLanguage():
     data = {
         "language": "Japanese",
@@ -280,6 +288,7 @@ def deleteLanguage():
         return jsonify({"error": "Error Code: 500"}), 500
     return jsonify({"message": "Delete language Successful"}), 200
 
+# dont forget to remove this test route for final version
 def testDeleteLanguage():
     try:
         listener = db.session.query(Listener).filter_by(first_name="Alice").first()
@@ -321,7 +330,7 @@ def getCurrentPoints():
 
     return jsonify({"reward_points": listener.reward_points})
 
-
+# removed languages and background info since frontend does not parse data on the two fields.
 @userBp.route('/registerDemographics', methods=['POST'])
 @jwt_required()
 def registerDemographics():
@@ -339,42 +348,46 @@ def registerDemographics():
     listener_id = uuid.UUID(listener_id)
 
     # check if listener is valid user
-    listener = Listener.query.filter_by(id=listener_id).first()
+    listener = helper.is_listener_id(listener_id)
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
     logging.debug("Listener before register %s", repr(listener))
     try:
-        logging.debug("no here!")
-        # edge case when optional data fields are null
-        if data['gender'] in Gender._value2member_map_:
-            gender = Gender(data['gender'])
+        # error begins here. Code is attempting to create 
+        # a new demographic record for the listener
+        # but does not check if the demographic record already exists
+        logging.debug("in here!")
+        demographic = helper.get_user_demography(listener_id)
+        if demographic:
+            #if demographic record already exists, update
+            demographic.date_of_birth = data['date_of_birth']
+            demographic.country_of_residence = data['country_of_residence']
+            demographic.education = data['education']
+            demographic.gender = Gender(data['gender']) if data['gender'] in Gender._value2member_map_ else None # edge case when optional data fields are null
         else:
-            gender = None
-
-        # all mandatory demographic fields must not be null
-        for field in required_fields:
-            if field is None:
-                return jsonify({"error": "Mandatory demograhic field is missing"}), 400
-
-        # store demograhic information in listener table
+            demographic = ListenerDemographic(
+                listener_id=listener.id,
+                date_of_birth=data['date_of_birth'],
+                country_of_residence=data['country_of_residence'],
+                education=data['education'],
+                gender= Gender(data['gender']) if data['gender'] in Gender._value2member_map_ else None
+            )
+            db.session.add(demographic)
+        
+        # update user profile
         listener.first_name = data['first_name']
         listener.last_name = data['last_name']
-        listener.background_info = data['education'] # changed from data['background_info']
-        listener.demographic = ListenerDemographic(
-            date_of_birth=data['date_of_birth'],
-            country_of_residence=data['country_of_residence'],
-            education=data['education'],
-            gender=gender
-        )
-        listener.languages =  data['languages']
-        # raise a flag on listener database to alert that records has been changed.
-        for field in ["first_name", "last_name", "background_info", "demographic", "languages"]:
-            flag_modified(listener, field)
+        
+        # removed flag as fields are not JSON
+        #for field in ["first_name", "last_name"]:
+        #    flag_modified(listener, field)
+            
         db.session.commit()
     except Exception as e:
         db.session.rollback()
         logging.debug(e)
         return jsonify({"error": "Error Code: 500"}), 500
+    
     logging.debug("Listener after register %s", repr(listener))
     return jsonify({"message": "Register demographic Successful"}), 200
 
@@ -403,7 +416,7 @@ def changeDemographics():
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
-    demographic: ListenerDemographic | None = ListenerDemographic.query.filter_by(listener_id = user_id).first()
+    demographic: ListenerDemographic | None = helper.get_user_demography(user_id)
     if not demographic:
         return jsonify({"error": f"Demographic data for the user {listener.id} was not found"}), 400
 
@@ -429,6 +442,7 @@ def changeDemographics():
         return jsonify({"error": f"An error has occurred while updating the demographics: {e}"}), 500
     return jsonify({"message": "Demographic Edit successful"}), 200
 
+# dont forget to remove this test route for final version
 def testChangeDemographics():
     data = {
         "first_name": "new",
@@ -442,11 +456,11 @@ def testChangeDemographics():
 
     user_id = "736259a4-aea2-4de7-aa87-5764e1db624b"
 
-    listener = Listener.query.filter_by(id=user_id).first()
+    listener = helper.is_listener_id(user_id)
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
-    demographic: ListenerDemographic | None = ListenerDemographic.query.filter_by(listener_id = user_id).first()
+    demographic: ListenerDemographic | None = helper.get_user_demography(user_id)
     if not demographic:
         return jsonify({"error": f"Demographic data for the user {listener.id} was not found"}), 400
 
