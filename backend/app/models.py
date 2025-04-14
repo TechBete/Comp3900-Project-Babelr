@@ -2,19 +2,38 @@ import enum, uuid
 from sqlalchemy.dialects.postgresql import UUID, ENUM
 from sqlalchemy import DDL, event
 from app import db
-
+from functools import total_ordering
+ 
 #========== 1. Python Enums ==========
 class PermissionLevel(enum.Enum):
     admin = "admin"
     listener = "listener"
     researcher = "researcher"
 
+@total_ordering
 class ProficiencyLevel(enum.Enum):
-    elementary = "elementary"
-    limited_working = "limited_working"
-    professional = "professional"
-    native = "native"
-    bilingual = "bilingual"
+    elementary = ("elementary", 0)
+    limited_working = ("limited_working", 1)
+    professional = ("professional", 2)
+    native = ("native", 3)
+    bilingual = ("bilingual", 4)
+    
+    def __init__(self, label, order):
+        self._label = label
+        self._order = order
+    
+    def __eq__(self, other):
+        if isinstance(other, ProficiencyLevel):
+            return self._order == other._order
+        return NotImplemented
+    
+    def __lt__(self, other):
+        if isinstance(other, ProficiencyLevel):
+            return self._order < other._order
+        return NotImplemented
+    
+    def __hash__(self):
+        return hash(self.name)
 
 class Gender(enum.Enum):
     male = "male"

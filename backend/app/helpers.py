@@ -90,4 +90,3 @@ def blind_login(id):
         return existing_researcher.blindlogin
     else:
         return None
-
