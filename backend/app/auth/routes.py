@@ -128,24 +128,26 @@ def logout():
     db.session.query(Researcher).filter_by(jti=jti).update({'jti': None})
     db.session.commit()
     return jsonify({"message": "Logout successful"}), 200
-
+def assignQualifiedAudio(listener: Listener):
+        def getAllAudioData():
+            allResearchers = Researcher.query.all()
+            allAudio = list()
+            for researcher in allResearchers:
+                uploadedAudio = researcher.uploaded_audio
+                allAudio.extend(uploadedAudio)
+            return allAudio
+        logging.debug('assiging qualified audio to the new listener')
+        allAudio = getAllAudioData()
+        logging.debug(f"{allAudio}")
+        for audio in allAudio:
+            (lang, min_proficiency) = getRequirements(audio['tags'])
+            logging.debug(f'audio {audio} requires {min_proficiency} in {lang}')
+            if isQualified(listener, lang, min_proficiency):
+                audio['allocated_listeners'].append(listener)
+                listener.assigned_audio.append(audio)
+        logging.debug(f'listener {listener} is assigned {listener.assigned_audio}')
 @authBp.route('/registerListener', methods=['POST'])
 def createListener():
-    def getAllAudioData():
-        allResearchers = Researcher.query.all()
-        allAudio = list()
-        for researcher in allResearchers:
-            uploadedAudio = researcher.uploaded_audio.query.all()
-            allAudio.append(uploadedAudio)
-        return allAudio
-    def assignQualifiedAudio(listener: Listener):
-        allAudio = getAllAudioData()
-        for audio in allAudio:
-            (lang, min_proficiency) = getRequirements(audio.tags)
-            if isQualified(listener, lang, min_proficiency):
-                audio.allocated_listeners.insert(listener)
-                listener.assigned_audio.insert(audio)
-
     data = request.json
 
     required_fields = ['first_name', 'last_name', 'email', 'pw']
@@ -418,7 +420,7 @@ def createTestUser():
                 "Intelligibility": 0,
                 "Clarity": 0
             },
-            "tags": ["model3A", "Japanese"],
+            "tags": ["model3A", "Japanese", "elementary"],
             "project_name": "Test Project 1",
             "project_path": "projects/Test Project 1/",
             "Researcher": "20658111-860a-4a87-a520-11800b9f36e9",

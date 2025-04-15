@@ -4,6 +4,7 @@ from itsdangerous import URLSafeTimedSerializer
 from password import PasswordHash
 import app.models as mod # models
 import os, smtplib
+import secrets
 
 # ========== 0. Helper Functions ==========
 
@@ -100,3 +101,7 @@ def get_user_demography(id):
 
 def get_researcher_demography(id):
     return mod.ResearcherDemographic.query.filter_by(researcher_id=id).first()
+
+def get_random_audio(listener: mod.Listener) -> dict:
+    audios = listener.assigned_audio
+    return secrets.SystemRandom().sample(audios, 1)[0]

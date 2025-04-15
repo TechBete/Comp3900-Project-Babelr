@@ -2,6 +2,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, jwt_required, get
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.exc import IntegrityError
 from flask import jsonify, request
+from app.auth.routes import assignQualifiedAudio
 from app.listeners import userBp
 from app.models import Gender, Listener, ListenerDemographic
 import app.helpers as helpers
@@ -135,6 +136,8 @@ def addLanguage():
         if new_language not in listener.languages:
             listener.languages.append(new_language)
             flag_modified(listener, "languages")
+            assignQualifiedAudio(listener)
+            logging.debug(f"user {listener} is assigned {listener.assigned_audio}")
             db.session.commit()
     except IntegrityError as e:
         db.session.rollback()

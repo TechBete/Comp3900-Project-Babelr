@@ -8,20 +8,20 @@ import app.helpers as helpers
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt, jwt_required, get_jwt_identity
 from sqlalchemy.orm.attributes import flag_modified
 
+def formatTags(tags: str) -> list[str]:
+    return tags.split(",")
 
-def getRequirements(tags) -> tuple[str, ProficiencyLevel]:
-        tags = tags.split(",")
-        logging.debug(f'tags[1]: {tags[1]}')
-        logging.debug(f'tags[2]: {tags[2]}')
-        language = tags[1];
-        proficiency_level = ProficiencyLevel[f'{tags[2]}']
-        return (language, proficiency_level)
+def getRequirements(tags: list[str]) -> tuple[str, ProficiencyLevel]:
+    logging.debug(f'tags[1]: {tags[1]}')
+    logging.debug(f'tags[2]: {tags[2]}')
+    language = tags[1];
+    proficiency_level = ProficiencyLevel[f'{tags[2]}']
+    return (language, proficiency_level)
 def isQualified(listener: Listener, lang, min_proficiency) -> bool:
     for language in listener.languages:
         if language['language'] == lang and ProficiencyLevel[language['proficiency'].lower()] >= min_proficiency:
             return True
     return False
-        
 
 @audioBp.route('/uploadAudioFile', methods=['POST'])
 @jwt_required()
@@ -79,8 +79,13 @@ def uploadAudioFile():
     file_path = os.path.join(researcher_name_dir, file.filename)
     file.save(file_path) # save the file in the directory
 
-    requirements = getRequirements(data['tags'])
-    qualified_listeners = getQualifiedListeners(requirements)
+    tags = formatTags(data['tags'])
+
+    requirements = getRequirements(tags)
+    qualified_listener = getQualifiedListeners(requirements)
+
+    get_id = lambda listener: listener.id.hex
+    qualified_listener_ids = list(map(get_id, qualified_listener))
     try:
         project_dict = {project["name"]: project for project in researcher.project_list}
 
@@ -96,9 +101,9 @@ def uploadAudioFile():
             "name": file.filename,
             "file_extension": filetype.guess(file_path).extension,
             "file_path": file_path,
-            "allocated_listeners": qualified_listeners,
+            "allocated_listeners": qualified_listener_ids,
             "metrics": project["metrics"], # metrics for the audio file set here
-            "tags": [data['tags']],
+            "tags": tags,
             "Researcher": str(researcher.id),
             "project_name": data['project_name'],
             "project_path": project_path_dir,
@@ -107,7 +112,7 @@ def uploadAudioFile():
         if audio_data not in researcher.uploaded_audio:
             researcher.uploaded_audio.append(audio_data)
             flag_modified(researcher, "uploaded_audio")
-            for listener in qualified_listeners:
+            for listener in qualified_listener:
                 listener.assigned_audio.append(audio_data)
                 logging.debug(f'listener {listener} has assigned audio files {listener.assigned_audio}')
             db.session.commit()
