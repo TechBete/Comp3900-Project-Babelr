@@ -9,17 +9,23 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt, jwt_requ
 from sqlalchemy.orm.attributes import flag_modified
 
 
-
-@audioBp.route('/uploadAudioFile', methods=['POST'])
-@jwt_required()
-def uploadAudioFile():
-    def getRequirements(tags) -> tuple[str, ProficiencyLevel]:
+def getRequirements(tags) -> tuple[str, ProficiencyLevel]:
         tags = tags.split(",")
         logging.debug(f'tags[1]: {tags[1]}')
         logging.debug(f'tags[2]: {tags[2]}')
         language = tags[1];
         proficiency_level = ProficiencyLevel[f'{tags[2]}']
         return (language, proficiency_level)
+def isQualified(listener: Listener, lang, min_proficiency) -> bool:
+    for language in listener.languages:
+        if language['language'] == lang and ProficiencyLevel[language['proficiency'].lower()] >= min_proficiency:
+            return True
+    return False
+        
+
+@audioBp.route('/uploadAudioFile', methods=['POST'])
+@jwt_required()
+def uploadAudioFile():
     def getQualifiedListeners(requirements: tuple[str, ProficiencyLevel]) -> list[Listener]:
         (lang, min_proficiency) = requirements
 
@@ -28,12 +34,9 @@ def uploadAudioFile():
         qualified_listeners = []
 
         for listener in all_listeners:
-            for language in listener.languages:
-                # language = json.loads(language)
-                if language['language'] == lang and ProficiencyLevel[language['proficiency'].lower()] >= min_proficiency:
-                    logging.debug(f'{listener} is qualified')
-                    qualified_listeners.append(listener)
-                    break
+            if isQualified(listener, lang, min_proficiency):
+                logging.debug(f'{listener} is qualified')
+                qualified_listeners.append(listener)
 
         logging.debug(f'qualified listeners: {qualified_listeners}')
         return qualified_listeners

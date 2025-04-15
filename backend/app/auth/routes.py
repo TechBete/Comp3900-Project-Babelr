@@ -1,3 +1,4 @@
+from app.audio.routes import getRequirements, isQualified, uploadAudioFile
 from flask import request, jsonify, url_for, redirect
 from app.models import Researcher, Listener, PermissionLevel, ListenerDemographic, ResearcherDemographic
 
@@ -130,6 +131,21 @@ def logout():
 
 @authBp.route('/registerListener', methods=['POST'])
 def createListener():
+    def getAllAudioData():
+        allResearchers = Researcher.query.all()
+        allAudio = list()
+        for researcher in allResearchers:
+            uploadedAudio = researcher.uploaded_audio.query.all()
+            allAudio.append(uploadedAudio)
+        return allAudio
+    def assignQualifiedAudio(listener: Listener):
+        allAudio = getAllAudioData()
+        for audio in allAudio:
+            (lang, min_proficiency) = getRequirements(audio.tags)
+            if isQualified(listener, lang, min_proficiency):
+                audio.allocated_listeners.insert(listener)
+                listener.assigned_audio.insert(audio)
+
     data = request.json
 
     required_fields = ['first_name', 'last_name', 'email', 'pw']
@@ -177,6 +193,7 @@ def createListener():
     try:
         db.session.add(user)
         db.session.add(demo)
+        assignQualifiedAudio(user)
         db.session.commit()
 
         token = helper.generate_verification_token(data['email'])

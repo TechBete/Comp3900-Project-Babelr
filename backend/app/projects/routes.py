@@ -32,7 +32,7 @@ def createProject():
     researcherId = researcher_id   #FRONTEND TESTING
 
     # Check if researcher exists
-    researcher = helper.is_researcher_id(researcherId)
+    researcher = helpers.is_researcher_id(researcherId)
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404  # disallow project creation if researcher does not exist
 
@@ -120,7 +120,7 @@ def updateProject():
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
 
-    researcher = helper.is_researcher_id(researcher_id)
+    researcher = helpers.is_researcher_id(researcher_id)
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
 
@@ -177,7 +177,7 @@ def addProjectTags():
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
 
-    researcher = helper.is_researcher_id(researcher_id)
+    researcher = helpers.is_researcher_id(researcher_id)
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
 
@@ -226,7 +226,7 @@ def removeProjectTags():
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
 
-    researcher = helper.is_researcher_id(researcher_id)
+    researcher = helpers.is_researcher_id(researcher_id)
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
 
@@ -274,7 +274,7 @@ def searchProjectByTag():
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
 
-    researcher = helper.is_researcher_id(researcher_id)
+    researcher = helpers.is_researcher_id(researcher_id)
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
 
@@ -303,7 +303,7 @@ def updateProjectStatus():
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
 
-    researcher = helper.is_researcher_id(researcher_id)
+    researcher = helpers.is_researcher_id(researcher_id)
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
 
@@ -339,7 +339,7 @@ def getProjects():
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
 
-    researcher = helper.is_researcher_id(researcher_id)
+    researcher = helpers.is_researcher_id(researcher_id)
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
 
@@ -358,7 +358,7 @@ def getProject():
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
 
-    researcher_exists = helper.is_researcher_id(researcher_id)
+    researcher_exists = helpers.is_researcher_id(researcher_id)
     if not researcher_exists:
         return jsonify({"error": "Researcher not found"}), 404
 
@@ -426,7 +426,7 @@ def deleteProject():
 def getProjectMetrics():
     data = request.json
     required_fields = ['project_name']
-    validation_error = helper.validate_required_fields(data, required_fields)
+    validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
 
@@ -473,7 +473,7 @@ def setProjectMetricsField():
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
 
-    researcher = helper.is_researcher_id(researcher_id)
+    researcher = helpers.is_researcher_id(researcher_id)
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
 
