@@ -1,9 +1,8 @@
 import time
 from app import create_app, db
-from flask import render_template_string
 from app.auth.routes import createTestUser
-from app.projects.routes import testUploadAudioFile
-from app.listeners.routes import testChangeDemographics
+from app.audio.routes import testUploadAudioFile
+from app.listeners.routes import testChangeDemographics, testGetListener
 from sqlalchemy.exc import OperationalError
 
 # ========== Flask App Initialization ==========

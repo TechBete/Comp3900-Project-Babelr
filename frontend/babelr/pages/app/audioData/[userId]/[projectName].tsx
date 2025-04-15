@@ -69,7 +69,7 @@ export default function FileUploadPage() {
           }
 
         try {
-            const response = await fetch("http://localhost:8016/projects/uploadAudioFile", {
+            const response = await fetch("http://localhost:8016/audio/uploadAudioFile", {
                 method: "POST",
                 body: formData,
                 credentials: 'include'
