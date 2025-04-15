@@ -62,6 +62,7 @@ export default function AnalyticsPage() {
             p: 2,
             backgroundColor: '#e8f5e9',
             boxShadow: 2,
+            width: '100%'
           }}>
             <Typography variant="h6" sx={{ mb: 1 }}>Raw Ratings Data</Typography>
             <Divider sx={{ mb: 2 }} />
