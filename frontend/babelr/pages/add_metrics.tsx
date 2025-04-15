@@ -124,7 +124,13 @@ const MetricsPage = () => {
         <Box mt={4}>
           <Button
             variant="contained"
-            sx={{ boxShadow: 2 }}
+            sx={{ 
+              boxShadow: 2,
+              backgroundColor: '#282d3f',
+              '&:hover': {
+                backgroundColor: '#1a1f2e',
+              }
+            }}
             onClick={() => {
               resetForm();
               setEditingIndex(null);
@@ -159,6 +165,18 @@ const MetricsPage = () => {
                       value={metric.value}
                       onChange={(_, val) => handleSliderChange(index, val)}
                       valueLabelDisplay="auto"
+                      sx={{
+                        color: '#282d3f',
+                        '& .MuiSlider-thumb': {
+                          backgroundColor: '#282d3f',
+                        },
+                        '& .MuiSlider-track': {
+                          backgroundColor: '#282d3f',
+                        },
+                        '& .MuiSlider-rail': {
+                          backgroundColor: '#b0b0b0',
+                        },
+                      }}
                     />
                   </Box>
                   <Typography>
@@ -183,7 +201,16 @@ const MetricsPage = () => {
                 <TextField name="minLabel" label="Minimum Label" value={form.minLabel} onChange={handleInputChange} />
                 <TextField name="maxLabel" label="Maximum Label" value={form.maxLabel} onChange={handleInputChange} />
                 <TextField name="description" label="Description" value={form.description} onChange={handleInputChange} />
-                <Button variant="contained" onClick={handleSave}>
+                <Button 
+                  variant="contained" 
+                  onClick={handleSave}
+                  sx={{ 
+                    boxShadow: 2,
+                    backgroundColor: '#282d3f',
+                    '&:hover': {
+                      backgroundColor: '#1a1f2e',
+                    }
+                  }}>
                   Save
                 </Button>
               </Box>
