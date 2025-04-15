@@ -1,4 +1,4 @@
-import { useState, FormEvent, ChangeEvent } from "react";
+import { useState, FormEvent, ChangeEvent, useEffect } from "react";
 import { useRouter } from 'next/router';
 import Navbar from "components/nav_bar_researcher";
 // import Sidebar from "components/side_bar";
@@ -19,23 +19,87 @@ interface AudioData {
     rating: number;
 }
 
+type RawAudioClip = {
+    name: string;
+    tags: string[]; // update this based on actual structure if needed
+    Researcher: string;
+    file_extension: string;
+    file_path: string;
+    allocated_listeners: never[];
+    project_name: string;
+    project_path: string;
+    metrics: never; // or type it properly if you use it
+};
+
+
+enum LangProf {
+    none = 'none_set',
+    elementary = 'elementary',
+    limited_working = 'limited_working',
+    professional = 'professional',
+    native = 'native',
+    bilingual = 'bilingual',
+}
+
+
 export default function FileUploadPage() {
     const router = useRouter();
     const { projectName } = router.query; //  project name
+    console.log(projectName)
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [file, setFile] = useState<File | null>(null);
     const [fileName, setFileName] = useState("");
     const [tags, setTags] = useState("");
+    const [model, setModel] = useState("");
+    const [language, setLanguage] = useState("");
+    const [langProf, setLangProf] = useState<LangProf>(LangProf.none)
     const [uploadError, setUploadError] = useState("");
-    const [audioData, setAudioData] = useState<AudioData[]>([
-        { name: "Screaming.mp3", tags: ["Fast Speech", "Child", "asdasdasda", "asjdhasjdh", "asdasd", "asjdhjasdhasjd"], dateAdded: "2/5/2025", evaluated: "48/50", rating: 3.6 },
-        { name: "Asong.wav", tags: ["Style Speech", "Adult"], dateAdded: "5/4/2025", evaluated: "30/50", rating: 2.375 }
-    ]);
+    const [audioData, setAudioData] = useState<AudioData[]>([]);
+    const [isStarted, setIsStarted] = useState(false);
+    
+
+    useEffect(() => {
+        if (typeof projectName === 'string') {
+            getAudioClips();
+        }
+    }, [projectName]); // <- only runs when projectName changes
 
     if (typeof projectName !== 'string') {
         return <div>Loading?</div>;
     }
+
+    async function getAudioClips() {
+        console.log('project name is ',JSON.stringify({project_name: projectName}))
+        try {
+            const response = await fetch('http://localhost:8016/audio/getProjectAudioFiles' , {
+                method:"POST",
+                credentials: 'include',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({project_name: projectName}),
+            })
+            
+            if (response.ok) {
+                const { audio_files }: { audio_files: RawAudioClip[] } = await response.json();
+                console.log('raw audioClips:', audio_files);
+                const formattedClips: AudioData[] = audio_files.map(clip => ({
+                    name: clip.name,
+                    tags: clip.tags?.map(tag => tag.trim()).filter(Boolean) ?? [],
+                    dateAdded: new Date().toLocaleDateString(),
+                    evaluated: "0/50",
+                    rating: 0,
+                }));
+                setAudioData(formattedClips);
+                console.log('clips are',formattedClips)
+            } else {
+                const error = await response.json()
+                console.log(error)
+            }
+        } catch {
+
+        }
+    } 
+    
 
     function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
         if (event.target.files && event.target.files.length > 0) {
@@ -55,11 +119,12 @@ export default function FileUploadPage() {
 
         const fileExtension = file.name.split(".").pop(); // Keep original extension
         const newFileName = `${fileName}.${fileExtension}`;
+        const combinedTags = [model, language, langProf, tags].filter(Boolean).join(",");
 
         const formData = new FormData();
         formData.append("file", file);
         formData.append("fileName", newFileName);
-        formData.append("tags", tags);
+        formData.append("tags", combinedTags);
         if (typeof projectName === 'string') {
             formData.append("project_name", projectName);
         }
@@ -82,16 +147,7 @@ export default function FileUploadPage() {
             const result = await response.json();
             console.log("Upload successful:", result);
 
-            // Update state with the new audio file
-            const newAudio: AudioData = {
-                name: newFileName,
-                tags: tags.split(",").map(tag => tag.trim()).filter(tag => tag),
-                dateAdded: new Date().toLocaleDateString(),
-                evaluated: "0/50",
-                rating: 0
-            };
-
-            setAudioData([...audioData, newAudio]);
+            getAudioClips()
             setIsModalOpen(false);
             setFile(null);
             setFileName("");
@@ -129,12 +185,13 @@ export default function FileUploadPage() {
                             </div>
                         </div>
 
-                        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                            <Button className={styles.addAudioBtn} sx={{ marginLeft: "auto" }}  onClick={() => setIsModalOpen(true)}> + </Button>
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end' }}>
+                            <Button className={`${styles.startButton} ${isStarted ? styles.inProgress : ''}`} sx={{ marginLeft: "auto" }}  onClick={() => setIsStarted(!isStarted)}>
+                                {isStarted ? "In Progress" : "Start"} 
+                            </Button>
+                            <Button className={styles.addAudioBtn} sx={{ marginLeft: "20px" }}  onClick={() => setIsModalOpen(true)}> + </Button>
                         </Box>
 
-                        {/* <AudioTable audioData={audioData}/> */}
-                        {/* <AudioClipsTable></AudioClipsTable> */}
                         <TableTest audioData={audioData}></TableTest>
                         <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} hasCloseBtn>
                             <h2 className={styles.modalTitle}>Upload New Audio</h2>
@@ -148,17 +205,43 @@ export default function FileUploadPage() {
                                     onChange={handleFileChange} 
                                 />
 
-                                {file && (
-                                    <>
-                                        <label className={styles.formLabel}>File Name</label>
-                                        <input
-                                            type="text"
-                                            value={fileName}
-                                            onChange={(e) => setFileName(e.target.value)}
-                                            className={styles.inputField}
-                                        />
-                                    </>
-                                )}
+                            <label className={styles.formLabel}>Model</label>
+                                <input
+                                    type="text"
+                                    value={model}
+                                    onChange={(e) => setModel(e.target.value)}
+                                    className={styles.inputField}
+                                    required
+                                />
+
+                                <label className={styles.formLabel}>Language</label>
+                                    <select
+                                        value={language}
+                                        onChange={(e) => setLanguage(e.target.value)}
+                                        className={styles.inputField}
+                                        required
+                                    >
+                                        <option value="">Language</option>
+                                        {["English", "Spanish", "French", "Mandarin", "Hindi", "Arabic", "Other"].map((lang) => (
+                                        <option key={lang} value={lang}>
+                                            {lang}
+                                        </option>
+                                        ))}
+                                    </select>
+
+                                <label className={styles.formLabel}>Language Proficiency</label>
+                                    <select
+                                        value={langProf}
+                                        onChange={(e) => setLangProf(e.target.value as LangProf)}
+                                        className={styles.inputField}
+                                        required
+                                    >
+                                        {Object.values(LangProf).map((level) => (
+                                            <option key={level} value={level}>
+                                                {level.replace('_', ' ')}
+                                            </option>
+                                        ))}
+                                </select>
 
                                 <label className={styles.formLabel}>Tags (comma separated)</label>
                                 <input
