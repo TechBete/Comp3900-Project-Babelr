@@ -715,3 +715,20 @@ def updateListenerProfile():
         return jsonify({"error": "Error: 500, An error occurred while updating the researcher's organisation"}), 500
 
     return jsonify({"message": "Listener profile updated successfully"}), 200
+
+@userBp.route('/getAudioFile')
+@jwt_required()
+def getAudioFile():
+    id = get_jwt_identity()
+    id = uuid.UUID(id)
+    listener = helpers.is_listener_id(id)
+    if not listener:
+        return jsonify({"error": "Listener not found"}), 404
+
+    logging.debug(f"assigned audio {listener.assigned_audio}")
+
+    if len(listener.assigned_audio) == 0:
+        return jsonify({"error": "There is no assigned audio file"}), 404
+
+    audio_file = listener.assigned_audio.pop(0)
+    return jsonify({"audio_file": audio_file})
