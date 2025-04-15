@@ -32,6 +32,16 @@ type RawAudioClip = {
 };
 
 
+enum LangProf {
+    none = 'none_set',
+    elementary = 'elementary',
+    limited_working = 'limited_working',
+    professional = 'professional',
+    native = 'native',
+    bilingual = 'bilingual',
+}
+
+
 export default function FileUploadPage() {
     const router = useRouter();
     const { projectName } = router.query; //  project name
@@ -41,6 +51,9 @@ export default function FileUploadPage() {
     const [file, setFile] = useState<File | null>(null);
     const [fileName, setFileName] = useState("");
     const [tags, setTags] = useState("");
+    const [model, setModel] = useState("");
+    const [language, setLanguage] = useState("");
+    const [langProf, setLangProf] = useState<LangProf>(LangProf.none)
     const [uploadError, setUploadError] = useState("");
     const [audioData, setAudioData] = useState<AudioData[]>([]);
     const [isStarted, setIsStarted] = useState(false);
@@ -59,7 +72,7 @@ export default function FileUploadPage() {
     async function getAudioClips() {
         console.log('project name is ',JSON.stringify({project_name: projectName}))
         try {
-            const response = await fetch('http://localhost:8016/projects/getProjectAudioFiles' , {
+            const response = await fetch('http://localhost:8016/audio/getProjectAudioFiles' , {
                 method:"POST",
                 credentials: 'include',
                 headers: {'Content-Type': 'application/json'},
@@ -106,11 +119,12 @@ export default function FileUploadPage() {
 
         const fileExtension = file.name.split(".").pop(); // Keep original extension
         const newFileName = `${fileName}.${fileExtension}`;
+        const combinedTags = [model, language, langProf, tags].filter(Boolean).join(",");
 
         const formData = new FormData();
         formData.append("file", file);
         formData.append("fileName", newFileName);
-        formData.append("tags", tags);
+        formData.append("tags", combinedTags);
         if (typeof projectName === 'string') {
             formData.append("project_name", projectName);
         }
@@ -191,17 +205,43 @@ export default function FileUploadPage() {
                                     onChange={handleFileChange} 
                                 />
 
-                                {file && (
-                                    <>
-                                        <label className={styles.formLabel}>File Name</label>
-                                        <input
-                                            type="text"
-                                            value={fileName}
-                                            onChange={(e) => setFileName(e.target.value)}
-                                            className={styles.inputField}
-                                        />
-                                    </>
-                                )}
+                            <label className={styles.formLabel}>Model</label>
+                                <input
+                                    type="text"
+                                    value={model}
+                                    onChange={(e) => setModel(e.target.value)}
+                                    className={styles.inputField}
+                                    required
+                                />
+
+                                <label className={styles.formLabel}>Language</label>
+                                    <select
+                                        value={language}
+                                        onChange={(e) => setLanguage(e.target.value)}
+                                        className={styles.inputField}
+                                        required
+                                    >
+                                        <option value="">Language</option>
+                                        {["English", "Spanish", "French", "Mandarin", "Hindi", "Arabic", "Other"].map((lang) => (
+                                        <option key={lang} value={lang}>
+                                            {lang}
+                                        </option>
+                                        ))}
+                                    </select>
+
+                                <label className={styles.formLabel}>Language Proficiency</label>
+                                    <select
+                                        value={langProf}
+                                        onChange={(e) => setLangProf(e.target.value as LangProf)}
+                                        className={styles.inputField}
+                                        required
+                                    >
+                                        {Object.values(LangProf).map((level) => (
+                                            <option key={level} value={level}>
+                                                {level.replace('_', ' ')}
+                                            </option>
+                                        ))}
+                                </select>
 
                                 <label className={styles.formLabel}>Tags (comma separated)</label>
                                 <input
