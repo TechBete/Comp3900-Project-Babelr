@@ -1,3 +1,4 @@
+from sqlalchemy.orm.attributes import flag_modified
 from app.audio.routes import getRequirements, isQualified, uploadAudioFile
 from flask import request, jsonify, url_for, redirect
 from app.models import Researcher, Listener, PermissionLevel, ListenerDemographic, ResearcherDemographic
@@ -143,8 +144,9 @@ def assignQualifiedAudio(listener: Listener):
             (lang, min_proficiency) = getRequirements(audio['tags'])
             logging.debug(f'audio {audio} requires {min_proficiency} in {lang}')
             if isQualified(listener, lang, min_proficiency):
-                audio['allocated_listeners'].append(listener)
+                audio['allocated_listeners'].append(listener.id.hex)
                 listener.assigned_audio.append(audio)
+                flag_modified(listener, "assigned_audio")
         logging.debug(f'listener {listener} is assigned {listener.assigned_audio}')
 @authBp.route('/registerListener', methods=['POST'])
 def createListener():

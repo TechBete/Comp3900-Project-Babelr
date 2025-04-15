@@ -114,6 +114,7 @@ def uploadAudioFile():
             flag_modified(researcher, "uploaded_audio")
             for listener in qualified_listener:
                 listener.assigned_audio.append(audio_data)
+                flag_modified(listener, "assigned_audio")
                 logging.debug(f'listener {listener} has assigned audio files {listener.assigned_audio}')
             db.session.commit()
         else:
@@ -625,3 +626,4 @@ def updateAllAudioMetrics():
         logging.debug(e)
         return jsonify({"error": "Error: 500, An error has occured while updating the audio file metrics"}), 500
     return jsonify({"message": "Audio metrics updated successfully"}), 200
+
