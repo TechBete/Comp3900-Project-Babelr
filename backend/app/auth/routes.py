@@ -1,5 +1,5 @@
 from flask import request, jsonify, url_for, redirect
-from app.models import Researcher, Listener, PermissionLevel, ListenerDemographic, Gender
+from app.models import Researcher, Listener, PermissionLevel, ListenerDemographic, ResearcherDemographic
 from app import db, jwt
 from app.auth import authBp
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, decode_token, set_access_cookies, get_jwt
@@ -168,7 +168,7 @@ def createListener():
     demo = ListenerDemographic(
         listener_id=user.id,
         date_of_birth="",
-        gender=None,
+        gender='other',
         country_of_residence="",
         education=""
     )
@@ -228,6 +228,7 @@ def createResearcher():
         uploaded_audio=[],
         first_time =True,
     )
+    
     try:
         db.session.add(user)
         db.session.commit()
@@ -317,7 +318,7 @@ def createTestUser():
         pw_hash=hashed_password.value,
         permission=PermissionLevel.listener,
         background_info="ahhhhhhhhhhhh",
-        reward_points=0,
+        reward_points=5,
         is_verified=True,
         languages=test_lang,
         demographic=demo,
@@ -554,7 +555,7 @@ def blindPasswordReset():
 
 # Helper function to get user role from uuid
 # should be moved to helpers.py
-@authBp.route('/getRoleFromID')
+@authBp.route('/getRoleFromID', methods=['GET'])
 @jwt_required()
 def getRoleFromID():
     user_id = get_jwt_identity()
