@@ -2,15 +2,16 @@ from flask import jsonify
 from email.mime.text import MIMEText
 from itsdangerous import URLSafeTimedSerializer
 from password import PasswordHash
-from app.models import Researcher, Listener
+import app.models as mod # models
 import os, smtplib
+import secrets
 
 # ========== 0. Helper Functions ==========
 
 
 def check_verified(email):
-    existing_listener = Listener.query.filter_by(email=email).first()
-    existing_researcher = Researcher.query.filter_by(email=email).first()
+    existing_listener = mod.Listener.query.filter_by(email=email).first()
+    existing_researcher = mod.Researcher.query.filter_by(email=email).first()
     if existing_listener and existing_listener.is_verified:
         return True
     if existing_researcher and existing_researcher.is_verified:
@@ -63,27 +64,31 @@ def send_verification_email(receiver_email, verification_url):
         return f"Error: {e}"
     
 def is_existing_user_email(email):
-    existing_listener = Listener.query.filter_by(email=email).first()
-    existing_researcher = Researcher.query.filter_by(email=email).first()
+    existing_listener = mod.Listener.query.filter_by(email=email).first()
+    existing_researcher = mod.Researcher.query.filter_by(email=email).first()
     if existing_listener or existing_researcher:
         return True
     return False
 
 def is_researcher_email(email):
-    return Researcher.query.filter_by(email=email).first()
+    return mod.Researcher.query.filter_by(email=email).first()
 
 def is_listener_email(email):
-    return Listener.query.filter_by(email=email).first()
+    return mod.Listener.query.filter_by(email=email).first()
 
+#def is_admin(admin_id):
+#    return Admin.query.filter_by(id=admin_id).first()
+# admin yet to be implemented
+    
 def is_researcher_id(id):
-    return Researcher.query.filter_by(id=id).first()
+    return mod.Researcher.query.filter_by(id=id).first()
 
 def is_listener_id(id):
-    return Listener.query.filter_by(id=id).first()
+    return mod.Listener.query.filter_by(id=id).first()
 
 def blind_login(id):
-    existing_listener = Listener.query.filter_by(blind_login=id).first()
-    existing_researcher = Researcher.query.filter_by(blind_login=id).first()
+    existing_listener = mod.Listener.query.filter_by(blind_login=id).first()
+    existing_researcher = mod.Researcher.query.filter_by(blind_login=id).first()
     if existing_listener:
         return existing_listener.blindlogin
     elif existing_researcher:
@@ -91,3 +96,8 @@ def blind_login(id):
     else:
         return None
 
+def get_user_demography(id):
+    return mod.ListenerDemographic.query.filter_by(listener_id=id).first()
+
+def get_researcher_demography(id):
+    return mod.ResearcherDemographic.query.filter_by(researcher_id=id).first()
