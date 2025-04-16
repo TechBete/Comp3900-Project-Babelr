@@ -3,10 +3,12 @@ version: '3.8'
 services:
   Babelr_db:
     image: postgres:14
-    container_name: Babelr
+    container_name: Babelr_db
+    env_file:
+      - .env
     environment:
-      POSTGRES_USER: Babelr
-      POSTGRES_PASSWORD: W16B3900 # Change this to your own password in PROD, additionally do not hardcode passwords in PROD
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} # Change this to your own password in PROD, additionally do not hardcode passwords in PROD
       POSTGRES_DB: Babelr_db
     ports:
       - "5432:5432"
@@ -22,9 +24,10 @@ services:
     build: 
       context: ./backend
       dockerfile: Dockerfile
+    container_name: Babelr_server
     environment:                  # dont hardcode environment variables in PROD
-      POSTGRES_USER: Babelr
-      POSTGRES_PASSWORD: W16B3900 # Change this to your own password in PROD
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} # Change this to your own password in PROD
       POSTGRES_DB: Babelr_db
       POSTGRES_HOST: Babelr_db
     ports:
@@ -43,6 +46,7 @@ services:
 
   frontend:
     build: ./frontend/babelr
+    container_name: Babelr_client
     ports:
       - "3000:3000"
     depends_on:
