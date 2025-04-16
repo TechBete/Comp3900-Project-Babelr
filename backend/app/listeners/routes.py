@@ -2,8 +2,9 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, jwt_required, get
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.exc import IntegrityError
 from flask import jsonify, request
+from app.auth.routes import assignQualifiedAudio
 from app.listeners import userBp
-from app.models import Listener, ListenerDemographic
+from app.models import Gender, Listener, ListenerDemographic
 import app.helpers as helpers
 import uuid, logging
 from app import db
@@ -49,7 +50,7 @@ def getListener():
     user_id = uuid.UUID(id)
     
     # check if listener is valid user
-    user = helper.is_listener_id(user_id)
+    user = helpers.is_listener_id(user_id)
     
     if user is None:
         return jsonify({"error": "Listener not found"}), 404
@@ -81,7 +82,7 @@ def testGetListener():
     listener_id = uuid.UUID(test_listener_id)
 
     # Check if the listener exists
-    listener = helper.is_listener_id(listener_id)
+    listener = helpers.is_listener_id(listener_id)
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
@@ -135,6 +136,8 @@ def addLanguage():
         if new_language not in listener.languages:
             listener.languages.append(new_language)
             flag_modified(listener, "languages")
+            assignQualifiedAudio(listener)
+            logging.debug(f"user {listener} is assigned {listener.assigned_audio}")
             db.session.commit()
     except IntegrityError as e:
         db.session.rollback()
@@ -348,7 +351,7 @@ def registerDemographics():
     listener_id = uuid.UUID(listener_id)
 
     # check if listener is valid user
-    listener = helper.is_listener_id(listener_id)
+    listener = helpers.is_listener_id(listener_id)
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
     logging.debug("Listener before register %s", repr(listener))
@@ -357,7 +360,7 @@ def registerDemographics():
         # a new demographic record for the listener
         # but does not check if the demographic record already exists
         logging.debug("in here!")
-        demographic = helper.get_user_demography(listener_id)
+        demographic = helpers.get_user_demography(listener_id)
         if demographic:
             #if demographic record already exists, update
             demographic.date_of_birth = data['date_of_birth']
@@ -416,7 +419,7 @@ def changeDemographics():
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
-    demographic: ListenerDemographic | None = helper.get_user_demography(user_id)
+    demographic: ListenerDemographic | None = helpers.get_user_demography(user_id)
     if not demographic:
         return jsonify({"error": f"Demographic data for the user {listener.id} was not found"}), 400
 
@@ -456,11 +459,11 @@ def testChangeDemographics():
 
     user_id = "736259a4-aea2-4de7-aa87-5764e1db624b"
 
-    listener = helper.is_listener_id(user_id)
+    listener = helpers.is_listener_id(user_id)
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
-    demographic: ListenerDemographic | None = helper.get_user_demography(user_id)
+    demographic: ListenerDemographic | None = helpers.get_user_demography(user_id)
     if not demographic:
         return jsonify({"error": f"Demographic data for the user {listener.id} was not found"}), 400
 
@@ -712,3 +715,20 @@ def updateListenerProfile():
         return jsonify({"error": "Error: 500, An error occurred while updating the researcher's organisation"}), 500
 
     return jsonify({"message": "Listener profile updated successfully"}), 200
+
+@userBp.route('/getAudioFile')
+@jwt_required()
+def getAudioFile():
+    id = get_jwt_identity()
+    id = uuid.UUID(id)
+    listener = helpers.is_listener_id(id)
+    if not listener:
+        return jsonify({"error": "Listener not found"}), 404
+
+    logging.debug(f"assigned audio {listener.assigned_audio}")
+
+    if len(listener.assigned_audio) == 0:
+        return jsonify({"error": "There is no assigned audio file"}), 404
+
+    audio_file = listener.assigned_audio.pop(0)
+    return jsonify({"audio_file": audio_file})

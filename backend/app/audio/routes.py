@@ -1,24 +1,57 @@
 from app.audio import audioBp
+from app.models import Listener, ProficiencyLevel
 from flask import jsonify, request
 from app import db, jwt
 import app.helpers as helper
 import os, uuid, shutil, filetype, logging
+import app.helpers as helpers
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt, jwt_required, get_jwt_identity
 from sqlalchemy.orm.attributes import flag_modified
 
 
 # dont forget to add docstrings to the routes
+def formatTags(tags: str) -> list[str]:
+    return tags.split(",")
+
+def getRequirements(tags: list[str]) -> tuple[str, ProficiencyLevel]:
+    logging.debug(f'tags[1]: {tags[1]}')
+    logging.debug(f'tags[2]: {tags[2]}')
+    language = tags[1];
+    proficiency_level = ProficiencyLevel[f'{tags[2]}']
+    return (language, proficiency_level)
+def isQualified(listener: Listener, lang, min_proficiency) -> bool:
+    for language in listener.languages:
+        if language['language'] == lang and ProficiencyLevel[language['proficiency'].lower()] >= min_proficiency:
+            return True
+    return False
+
 @audioBp.route('/uploadAudioFile', methods=['POST'])
 @jwt_required()
 def uploadAudioFile():
+    def getQualifiedListeners(requirements: tuple[str, ProficiencyLevel]) -> list[Listener]:
+        (lang, min_proficiency) = requirements
+
+        all_listeners = Listener.query.all()
+
+        qualified_listeners = []
+
+        for listener in all_listeners:
+            if isQualified(listener, lang, min_proficiency):
+                logging.debug(f'{listener} is qualified')
+                qualified_listeners.append(listener)
+
+        logging.debug(f'qualified listeners: {qualified_listeners}')
+        return qualified_listeners
+
     data = request.form
     required_fields = ['project_name', 'tags']
 
-    validation_error = helper.validate_required_fields(data, required_fields)
+    validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
 
     # file availibility validation
+    # TODO: @halliya i think this is what you need to fix?
     if "file" not in request.files:
         return jsonify({"error": "File doesn't exists."}), 400
     file = request.files["file"]
@@ -30,7 +63,7 @@ def uploadAudioFile():
     researcher_id = uuid.UUID(researcher_id)
     # search researcher name from researcher uuid
 
-    researcher = helper.is_researcher_id(researcher_id)
+    researcher = helpers.is_researcher_id(researcher_id)
 
     if researcher:
         researcher_name = researcher.first_name + researcher.last_name
@@ -44,12 +77,19 @@ def uploadAudioFile():
     researcher_dir = os.path.join(file_path, str(researcher_id))
     # if directory with researcher id doesn't exist, make directory
     project_path_dir = os.path.join(researcher_dir, data['project_name'])
+
     researcher_name_dir = os.path.join(project_path_dir, researcher_name)
     os.makedirs(researcher_name_dir, exist_ok=True)
     file_path = os.path.join(researcher_name_dir, file.filename)
-    
     file.save(file_path) # save the file in the directory
-    
+
+    tags = formatTags(data['tags'])
+
+    requirements = getRequirements(tags)
+    qualified_listener = getQualifiedListeners(requirements)
+
+    get_id = lambda listener: listener.id.hex
+    qualified_listener_ids = list(map(get_id, qualified_listener))
     try:
         project_dict = {project["name"]: project for project in researcher.project_list}
 
@@ -65,9 +105,9 @@ def uploadAudioFile():
             "name": file.filename,
             "file_extension": filetype.guess(file_path).extension,
             "file_path": file_path,
-            "allocated_listeners": [],
+            "allocated_listeners": qualified_listener_ids,
             "metrics": project["metrics"], # metrics for the audio file set here
-            "tags": [data['tags']],
+            "tags": tags,
             "Researcher": str(researcher.id),
             "project_name": data['project_name'],
             "project_path": project_path_dir,
@@ -76,6 +116,10 @@ def uploadAudioFile():
         if audio_data not in researcher.uploaded_audio:
             researcher.uploaded_audio.append(audio_data)
             flag_modified(researcher, "uploaded_audio")
+            for listener in qualified_listener:
+                listener.assigned_audio.append(audio_data)
+                flag_modified(listener, "assigned_audio")
+                logging.debug(f'listener {listener} has assigned audio files {listener.assigned_audio}')
             db.session.commit()
         else:
             return jsonify({"message": "Audio file already exist"}), 400
@@ -100,6 +144,81 @@ def uploadAudioFile():
         return jsonify({"error": "Error Code: 500"}), 500
 
     return jsonify({"message": f"{file.filename} is successfully uploaded and stored!"}), 200
+# def uploadAudioFile():
+#     data = request.form
+#     required_fields = ['project_name', 'tags']
+#
+#     validation_error = helper.validate_required_fields(data, required_fields)
+#     if validation_error:
+#         return validation_error
+#
+#     # file availibility validation
+#     if "file" not in request.files:
+#         return jsonify({"error": "File doesn't exists."}), 400
+#     file = request.files["file"]
+#     if file.filename == "":
+#         return jsonify({"error": "There is no selected file."}), 400
+#
+#     # Get researcher information using uuid
+#     researcher_id = get_jwt_identity()
+#     researcher_id = uuid.UUID(researcher_id)
+#     # search researcher name from researcher uuid
+#
+#     researcher = helper.is_researcher_id(researcher_id)
+#
+#     if researcher:
+#         researcher_name = researcher.first_name + researcher.last_name
+#     else:
+#         return jsonify({"error": "Researcher does not exist on database!"}), 400
+#
+#     # NOTE: file path syntax = /root/audioData/researcherId/projectName/researcherName/fileName
+#     # look into this, there should be a simpler way to do it
+#
+#     file_path = "/app/audioData" # root directory path for all audio files
+#     researcher_dir = os.path.join(file_path, str(researcher_id))
+#     # if directory with researcher id doesn't exist, make directory
+#     project_path_dir = os.path.join(researcher_dir, data['project_name'])
+#     researcher_name_dir = os.path.join(project_path_dir, researcher_name)
+#     os.makedirs(researcher_name_dir, exist_ok=True)
+#     file_path = os.path.join(researcher_name_dir, file.filename)
+#
+#     file.save(file_path) # save the file in the directory
+#
+#     try:
+#         project_dict = {project["name"]: project for project in researcher.project_list}
+#
+#         project = project_dict.get(data['project_name'])
+#
+#         if project is None:
+#             return jsonify({"error": "Project not found"}), 404
+#
+#         if project['status'] != 'Draft':
+#             return jsonify({"error": "The Project status must be set to 'Draft' to delete metrics"}), 400
+#
+#         audio_data = {
+#             "name": file.filename,
+#             "file_extension": filetype.guess(file_path).extension,
+#             "file_path": file_path,
+#             "allocated_listeners": [],
+#             "metrics": project["metrics"], # metrics for the audio file set here
+#             "tags": [data['tags']],
+#             "Researcher": str(researcher.id),
+#             "project_name": data['project_name'],
+#             "project_path": project_path_dir,
+#             # subset of the project tags, these tags are specific tags for each audio file
+#         }
+#         if audio_data not in researcher.uploaded_audio:
+#             researcher.uploaded_audio.append(audio_data)
+#             flag_modified(researcher, "uploaded_audio")
+#             db.session.commit()
+#         else:
+#             return jsonify({"message": "Audio file already exist"}), 400
+#     except Exception as e:
+#         db.session.rollback()
+#         logging.debug(e)
+#         return jsonify({"error": "Error Code: 500"}), 500
+#
+#     return jsonify({"message": f"{file.filename} is successfully uploaded and stored!"}), 200
 
 def testUploadAudioFile():
     project_name = "Test Project 1"
@@ -293,6 +412,7 @@ def testgetProjectAudioFiles():
             # Check if project exists
             project_dict = {project["name"]: project for project in researcher.project_list}
             logging.debug(project_dict)
+            
             project = project_dict.get(projectName)
             if project is None:
                 logging.debug(project)
@@ -551,3 +671,4 @@ def updateAllAudioMetrics():
         logging.debug(e)
         return jsonify({"error": "Error: 500, An error has occured while updating the audio file metrics"}), 500
     return jsonify({"message": "Audio metrics updated successfully"}), 200
+

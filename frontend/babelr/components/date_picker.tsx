@@ -17,7 +17,7 @@ export default function DatePickerWrapper() {
         <input
           type="hidden"
           name="date_of_birth"
-          value={value ? value.format('YYYY-MM-DD') : ''}
+          value={value ? value.format('DD-MM-YYYY') : ''}
         />
       </>
     );
