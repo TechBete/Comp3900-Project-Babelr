@@ -14,7 +14,7 @@ def formatTags(tags: str) -> list[str]:
 def getRequirements(tags: list[str]) -> tuple[str, ProficiencyLevel]:
     logging.debug(f'tags[1]: {tags[1]}')
     logging.debug(f'tags[2]: {tags[2]}')
-    language = tags[1];
+    language = tags[1]
     proficiency_level = ProficiencyLevel[f'{tags[2]}']
     return (language, proficiency_level)
 def isQualified(listener: Listener, lang, min_proficiency) -> bool:
@@ -326,24 +326,16 @@ def getProjectAudioFiles():
         with db.session.begin_nested(): 
              # Check if project exists
             project_dict = {project["name"]: project for project in researcher.project_list}
-            logging.debug(project_dict)
-            
             # Get project details if name exists
             project = project_dict.get(projectName)
             if project is None:
-                logging.debug(project)
                 return jsonify({"error": "Project not found"}), 404
 
-            # Check if audio files exist for project
-            audio_file_names = project.get('Audio File Name', [])
-            
-            # search for audio files in the uploaded_audio list in the researcher object
-            # Check if audio files exist
-            if not audio_file_names:
-                return jsonify({"error": "No audio files found for this project"}), 404
-            
-            # Get the audio files for the specified project
-            audio_files = [audio for audio in researcher.uploaded_audio if audio['name'] in audio_file_names]
+            # Check if audio file exists
+            audio_files = [audio for audio in researcher.uploaded_audio if audio['project_name'] == projectName]
+            if not audio_files:
+                return jsonify({"error": "Audio files not found"}), 404
+
             logging.debug(audio_files)
             if not audio_files:
                 return jsonify({"error": "Audio file not found"}), 404
