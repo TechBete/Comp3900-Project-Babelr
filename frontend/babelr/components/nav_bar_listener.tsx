@@ -43,7 +43,6 @@ export default function Navbar_Listener() {
         }
     }
 
-
     return ( 
         <div className={styles["nav-bar"]}>
             <Link href='/Listener/clip_list'><HomeIcon/></Link>

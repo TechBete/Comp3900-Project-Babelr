@@ -88,20 +88,47 @@
     border: none;
 } */
 
-/* Add Audio Button */
-.addAudioBtn {
-    display: flex;
-    background: #28a745;
+.startButton {
+    background-color: #e01111;
     color: white;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 2px 10px;
     border: none;
-    padding: 15px;
+    border-radius: 999px;           /* Fully rounded like a pill */
+    line-height: 1;
+    cursor: pointer;
+    text-transform: none;           /* Prevent all caps */
+    letter-spacing: 0.5px;
+    min-width: unset;               /* Avoid forced width */
+    height: 26px;                   /* Match the short height */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1); 
+    transition: background-color 0.2s ease;
+    margin-top: 15px;
+    margin-bottom: 15px;
+}
+
+.inProgress {
+    background-color: orange;  
+}
+
+.addAudioBtn {
+    background-color: #28a745;
+    color: white;
     font-size: 18px;
     font-weight: bold;
-    border-radius: 8px;
-    cursor: pointer;
-    margin-bottom: 15px;
-    /* align-content: end; */
-
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    padding: 0;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
 }
 
 .addAudioBtn:hover {

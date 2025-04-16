@@ -12,28 +12,26 @@ export default function First_time() {
         const formData = new FormData(event.currentTarget);
         console.log(Object.fromEntries(formData.entries()));
 
-        for (const [key, value] of formData.entries()) {
-            PostDemographics(`${key}`, `${value}`,`edit${key}`)
-        }  
+        PostDemographics(formData)
         console.log(Error)
     }
 
     // dont actually have demographics for researcher but can consider
-    async function PostDemographics(key: string, value: string ,API: string) {
+    async function PostDemographics(formData: FormData) {
         console.log("DEMOGRAPHICS POST BELOW");
-        console.log(JSON.stringify({[key]: value}));
+        console.log("after", JSON.stringify(Object.fromEntries(formData)));
         router.push('project_list')// FOR NOW BEFORE OTHER ADD API CALLS ARE DEVELOPED
         try {
-            const response = await fetch(`http://localhost:8016/researcher/${API}}`, {
+            const response = await fetch(`http://localhost:8016/researcher/registerResearcherProfile`, {
                 method:"POST",
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({[key]: value}),
+                body: JSON.stringify(Object.fromEntries(formData)),
                 credentials: 'include'
             })
     
             if (response.ok) {
                 // const response = await response.json()
-                return // change later maybe
+                router.push('project_list')
             } else {
                 const error = await response.json();
                 setError(error.error);
@@ -54,29 +52,29 @@ export default function First_time() {
                             <h1>Welcome to Babelr</h1>
                             <p>Please fill in the information below</p>
                             <form className={styles["demographics-forms"]} method="post" onSubmit={handleSubmit}>
-                                <label htmlFor="first-name">First Name</label>
+                                <label htmlFor="first_name">First Name</label>
                                 <input 
                                     className={styles.input}
                                     type="text" 
-                                    id="first-name" 
-                                    name="first-name" 
+                                    id="first_name" 
+                                    name="first_name" 
                                 required
                                 />
 
-                                <label htmlFor="last-name">Last Name</label>
+                                <label htmlFor="last_name">Last Name</label>
                                 <input 
                                     className={styles.input}
                                     type="text" 
-                                    id="last-name" 
-                                    name="last-name" 
+                                    id="last_name" 
+                                    name="last_name" 
                                     required
                                 />
                                 
-                                <label htmlFor="country">Organisation</label> 
+                                <label htmlFor="organisation">Organisation</label> 
                                 <select 
                                     className={styles.select} 
-                                    id="country" 
-                                    name="country" 
+                                    id="organisation" 
+                                    name="organisation" 
                                     required
                                 >       
                                     <option value="" disabled >Select Your Organisation</option>

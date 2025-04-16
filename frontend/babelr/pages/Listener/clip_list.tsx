@@ -6,7 +6,20 @@ export default function ClipList() {
         <RoleCheck requiredRole="listener">
             <Navbar_Listener/>
             <div style={{display: 'flex', justifyContent: 'center' , alignItems: 'center', height: '100vh', fontWeight: 'bold'}}>
-                THIS IS A TEMP CLIP LIST PAGE TO TEST ROUTING.
+                <button 
+                    style={{
+                        padding: '12px 24px',
+                        fontSize: '1.1rem',
+                        fontWeight: 'bold',
+                        backgroundColor: '#1976d2',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                    }}
+                >
+                    Start Audio Review
+                </button>
             </div>
         </RoleCheck>
     );
