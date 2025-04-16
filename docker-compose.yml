@@ -8,8 +8,8 @@ services:
       - .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} # Change this to your own password in PROD, additionally do not hardcode passwords in PROD
-      POSTGRES_DB: Babelr_db
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} # Change this to your own password in PROD in the .env file
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
@@ -25,11 +25,11 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: Babelr_server
-    environment:                  # dont hardcode environment variables in PROD
+    environment:                  
       POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} # Change this to your own password in PROD
-      POSTGRES_DB: Babelr_db
-      POSTGRES_HOST: Babelr_db
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} # Change this to your own password in PROD in the .env file
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_HOST: ${POSTGRES_HOST}
     ports:
       - "8016:8016"
     depends_on:
