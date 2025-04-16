@@ -23,7 +23,7 @@ function Project({ name, path, status, creator } : { name: string; path: string;
 
     return (
         <tr className={styles["tr"]}>
-            <td className={styles["td"]}><Link className={styles["projects-link"]} href={path}>{name}</Link></td>
+            <td className={styles["td"]}><Link className={styles["projects-link"]} href={`${path}/audioclips`}>{name}</Link></td>
             {StatusStyle()}
             <td className={styles["td"]}>{creator}</td>
         </tr>
@@ -72,7 +72,7 @@ export default function MainScreen() {
 
     async function handleCreate(event: FormEvent<HTMLFormElement>) {
         event.preventDefault()
-		// const formData = new FormData(event.currentTarget);
+
         try {
             const response = await fetch('http://localhost:8016/projects/createProject', {
                 method:"POST",

@@ -15,6 +15,12 @@ export const config = {
     ],
   };
 
+const isDev = process.env.NODE_ENV === 'development';
+
+const baseURL = isDev
+  ? 'http://localhost:8016' // your local machine
+  : 'http://web:8016';      // Docker-internal service
+
 export async function middleware(req: NextRequest) {
     const token = req.cookies.get('access_token_cookie')?.value;
     const {pathname} = req.nextUrl;
@@ -29,7 +35,7 @@ export async function middleware(req: NextRequest) {
     try {
 
         if (pathname.startsWith('/Listener') || pathname.startsWith('/Researcher')) {
-            const res = await fetch('http://web:8016/auth/getRoleFromID', {
+            const res = await fetch(`${baseURL}/auth/getRoleFromID`, {
                 method: 'GET',
                 headers: {
                   Cookie: req.headers.get('cookie') || '',

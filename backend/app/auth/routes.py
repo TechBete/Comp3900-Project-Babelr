@@ -1,5 +1,8 @@
+from sqlalchemy.orm.attributes import flag_modified
+from app.audio.routes import getRequirements, isQualified, uploadAudioFile
 from flask import request, jsonify, url_for, redirect
 from app.models import Researcher, Listener, PermissionLevel, ListenerDemographic, ResearcherDemographic
+
 from app import db, jwt
 from app.auth import authBp
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, decode_token, set_access_cookies, get_jwt
@@ -126,7 +129,25 @@ def logout():
     db.session.query(Researcher).filter_by(jti=jti).update({'jti': None})
     db.session.commit()
     return jsonify({"message": "Logout successful"}), 200
-
+def assignQualifiedAudio(listener: Listener):
+        def getAllAudioData():
+            allResearchers = Researcher.query.all()
+            allAudio = list()
+            for researcher in allResearchers:
+                uploadedAudio = researcher.uploaded_audio
+                allAudio.extend(uploadedAudio)
+            return allAudio
+        logging.debug('assiging qualified audio to the new listener')
+        allAudio = getAllAudioData()
+        logging.debug(f"{allAudio}")
+        for audio in allAudio:
+            (lang, min_proficiency) = getRequirements(audio['tags'])
+            logging.debug(f'audio {audio} requires {min_proficiency} in {lang}')
+            if isQualified(listener, lang, min_proficiency):
+                audio['allocated_listeners'].append(listener.id.hex)
+                listener.assigned_audio.append(audio)
+                flag_modified(listener, "assigned_audio")
+        logging.debug(f'listener {listener} is assigned {listener.assigned_audio}')
 @authBp.route('/registerListener', methods=['POST'])
 def createListener():
     data = request.json
@@ -176,6 +197,7 @@ def createListener():
     try:
         db.session.add(user)
         db.session.add(demo)
+        assignQualifiedAudio(user)
         db.session.commit()
 
         token = helper.generate_verification_token(data['email'])
@@ -258,8 +280,14 @@ def createTestUser():
 
     test_lang = [
     {
-        "language": "English",
-        "proficiency": "Native"
+        "language": "English", 
+        "proficiency": "Native", 
+    }, {
+        "language": "Japanese",
+        "proficiency": "Elementary",
+    }, {
+        "language": "German",
+        "proficiency": "Bilingual",
     }]
 
     data2 = {
@@ -334,9 +362,9 @@ def createTestUser():
         pw_hash=hashed_password3.value,
         permission=PermissionLevel.listener,
         background_info="ayo",
-        reward_points=0,
+        reward_points=15,
         is_verified=True,
-        languages=[],
+        languages=test_lang,
         demographic=demo2,
         assigned_audio=([] if not data.get('assigned_audio') else data['assigned_audio']),
         first_time=False,
@@ -394,7 +422,7 @@ def createTestUser():
                 "Intelligibility": 0,
                 "Clarity": 0
             },
-            "tags": ["model3A", "Japanese"],
+            "tags": ["model3A", "Japanese", "elementary"],
             "project_name": "Test Project 1",
             "project_path": "projects/Test Project 1/",
             "Researcher": "20658111-860a-4a87-a520-11800b9f36e9",

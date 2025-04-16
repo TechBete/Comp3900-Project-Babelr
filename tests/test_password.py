@@ -1,4 +1,4 @@
-from backend.password import PasswordHash
+from password import PasswordHash
 from pytest import raises
 from hypothesis import given, assume, strategies as st
 
