@@ -118,7 +118,7 @@ export default function TableTest({ audioData }: { audioData: AudioData[] }) {
         Cell: ({ renderedCellValue }) => <strong>{renderedCellValue}</strong>
       },
     ],
-    [audioData, tagOptions] // Add tagOptions to dependencies
+    [tagOptions] // Add tagOptions to dependencies
   );
 
   const table = useMaterialReactTable({
