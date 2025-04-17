@@ -4,7 +4,7 @@ from itsdangerous import URLSafeTimedSerializer
 from password import PasswordHash
 import app.models as mod # models
 import os, smtplib
-import secrets
+import secrets # secrets not used ?
 
 # ========== 0. Helper Functions ==========
 
@@ -96,8 +96,8 @@ def blind_login(id):
     else:
         return None
 
-def get_user_demography(id):
-    return mod.ListenerDemographic.query.filter_by(listener_id=id).first()
+#def get_user_demography(id):
+#    return mod.ListenerDemographic.query.filter_by(listener_id=id).first()
 
-def get_researcher_demography(id):
-    return mod.ResearcherDemographic.query.filter_by(researcher_id=id).first()
+#def get_researcher_demography(id):
+#    return mod.ResearcherDemographic.query.filter_by(researcher_id=id).first()

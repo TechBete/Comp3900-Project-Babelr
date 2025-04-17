@@ -1,43 +1,74 @@
-from flask import jsonify
-from app.models import Researcher
-import app.helpers as helpers
-from app.researchers import researchersBp
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
+from flask import jsonify, request
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.exc import IntegrityError
+from app.models import Researcher
+from app.researchers import researchersBp
 import app.helpers as helper
 import uuid, logging
 from app import db
 
-# this route may only be used by the admin to get all researchers
-# update to only allow admin to access this route once single researcher recall route has been implemented
-# move this route to admin route in future
-@researchersBp.route('/getResearchers', methods=['GET'])
+'''
+# This route is used to get a specific researcher profile
+# this is done by sending a GET request to the /getResearcher endpoint
+# The request must include a JWT token in the Authorization header
+# The token is used to identify the researcher
+# The researcher is then retrieved from the database using the token
+# The researcher information is then returned in the response
+
+ARGS:
+    - None
+
+RESPONSE:
+    - 200 OK: Researcher information is returned in the response
+    - 400 Bad Request: If the researcher does not exist in the database
+    - 400 Bad Request: If the user is not a researcher
+
+RETURNS:
+    Researcher information in JSON format
+    Uuid, First Name, Last Name, Email, Password,
+    Date of Birth, Gender, Country, Education, Organisation,
+    Project List. 
+    
+UPDATES:
+    - None
+'''
+
+# update route to get specific researcher
+@researchersBp.route('/getResearcher', methods=['GET'])
+@jwt_required()
 def getResearchers():
-    users = Researcher.query.all()
-    return jsonify([{
-        "Is verified": user.is_verified,
+    # get user information from the given uuid
+    id = get_jwt_identity()
+    user_id = uuid.UUID(id)
+    
+    # check if listener is valid user
+    user = helper.is_researcher_id(user_id)
+    
+    if not user:
+        return jsonify({"error": "User does not exist on database!"}), 400
+    
+    # check if user is a researcher
+    if not user.permission.value == "researcher":
+        return jsonify({"error": "User is not a researcher!"}), 400
+    
+    return jsonify({
         "Uuid": str(user.id),
         "First Name": user.first_name,
         "Last Name": user.last_name,
         "Email": user.email,
         "Password": user.pw_hash,
-        "Role": user.permission.value,
+        
+        "Date of Birth": user.date_of_birth,
+        "Gender": user.gender,
+        "Country": user.country_of_residence,
+        "Education": user.education,
         "Organisation": user.organisation,
-        "Projects": [
-                    {"name": project.get("name"),
-                     "path": project.get("path"),
-                     "status": project.get("status"),
-                     "tags": project.get("tags", [])}
-                    for project in (user.project_list if user.project_list is not None else [])
-                    if isinstance(project, dict) and "name" in project and "path" in project
-                ],  # list of projects user is working on
-        "Uploaded Audio Clips": [uac.value for uac in user.uploaded_audio] if user.uploaded_audio else [], # list of audio clips user has uploaded
-        "Gender": user.gender.value if user.gender is not None else None
-    } for user in users])
+        
+        "Project List": user.project_list,
+        }, 200)
 
-# this route is used to get the researcher's profile
-# TODO: add a route to get the researcher's profile
+
 
 
 # this route is used to update the researcher's profile, changed from updateOrganisation
@@ -83,3 +114,6 @@ def updateResearcherProfile():
         return jsonify({"error": "Error: 500, An error occurred while updating the researcher's organisation"}), 500
 
     return jsonify({"message": "Researcher organisation updated successfully"}), 200
+
+
+# set researcher demographic route
