@@ -235,12 +235,31 @@ const MetricsPage = () => {
                       {metric.description}
                     </Typography>
                     <Box width="100%">
-                      <Slider
+                      {/* <Slider
                         min={metric.minValue}
                         max={metric.maxValue}
                         value={metric.value}
                         disabled
                         valueLabelDisplay="auto"
+                        sx={{
+                          color: '#282d3f',
+                          '& .MuiSlider-thumb': {
+                            backgroundColor: '#282d3f',
+                          },
+                          '& .MuiSlider-track': {
+                            backgroundColor: '#282d3f',
+                          },
+                          '& .MuiSlider-rail': {
+                            backgroundColor: '#b0b0b0',
+                          },
+                        }}
+                      /> */}
+                      <Slider
+                        min={metric.minValue}
+                        max={metric.maxValue}
+                        defaultValue={metric.value}
+                        valueLabelDisplay="auto"
+                        onChange={() => {}}
                         sx={{
                           color: '#282d3f',
                           '& .MuiSlider-thumb': {
