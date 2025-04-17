@@ -75,7 +75,8 @@ def createProject():
         researcher.project_list = []
 
     # ensure project name is not an empty string
-    if not projectName or len(projectName.strip()) == 0:
+    strippedProjectName = projectName.strip()
+    if not projectName or len(strippedProjectName) == 0:
         return jsonify({"error": "Project name cannot be empty"}), 400
     
     # ensure project does not have invalid characters
@@ -179,13 +180,13 @@ ARGS:
     
 RESPONSE:
     - 200: Project updated successfully
-    - 400: Project name already exists
-    - 400: Project Name data Field is empty
-    - 400: Researcher ID data Field is empty
     - 400: Project name must be a non-empty string
-    - 400: Cannot Create Project
     - 400: Project name contains invalid characters
+    - 400: Researcher ID data Field is empty
+    - 400: Project Name data Field is empty
+    - 400: Project name already exists
     - 400: Project name is too long
+    - 400: Cannot Create Project
     - 404: Researcher not found
     - 500: Project was unable to be updated
     
@@ -220,9 +221,11 @@ def updateProject():
     
     # Project name checks:
     # ensure project name is not an empty string
-    if not projectName or len(projectName.strip()) == 0:
+    strippedOldName = projectName.strip()
+    strippedNewName = newProjectName.strip()
+    if not projectName or len(strippedOldName) == 0:
         return jsonify({"error": "Project name cannot be empty"}), 400
-    if not newProjectName or len(newProjectName.strip()) == 0:
+    if not newProjectName or len(strippedNewName) == 0:
         return jsonify({"error": "Project name cannot be empty"}), 400
     
     # ensure project does not have invalid characters
@@ -291,6 +294,34 @@ def updateProject():
     return jsonify({"message": "Project updated successfully"}), 200
 
 '''
+# this route is used to add tags to a project
+# this is done by sending a post request to the /addProjectTags endpoint
+# the project name and tags are passed in the request body
+# same project name rules apply as in the create project route
+# the tags are passed in as a list of strings
+# the tags are added to the project in the database
+
+ARGS:
+    - project_name: the name of the project
+    - tags: the tags to be added to the project
+    
+RESPONSE:
+    - 200: Tags added successfully
+    - 400: Project name must be a non-empty string
+    - 400: Project name contains invalid characters
+    - 400: Researcher ID data Field is empty
+    - 400: Project Name data Field is empty
+    - 400: Project name already exists
+    - 400: Project name is too long
+    - 404: Researcher not found
+    - 404: Project not found
+    - 500: Project was unable to be updated
+
+RETURNS:
+    - List of updated Tags
+    
+UPDATES:
+    - Database: Project table
 
 '''
 
@@ -311,12 +342,31 @@ def addProjectTags():
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
 
+    # Project name checks:
     projectName = data['project_name']
+    # ensure project name is not an empty string
+    stripped_project_name = projectName.strip()
+    if not projectName or len(stripped_project_name) == 0:
+        return jsonify({"error": "Project name cannot be empty"}), 400
+    
+    # ensure project does not have invalid characters
+    if helper.check_invalid_project_name(projectName):
+        return jsonify({"error": "Project name contains invalid characters"}), 400
+    
+    # ensure project name is not too long
+    if len(projectName) > 128:
+        return jsonify({"error": "Project name is too long"}), 400
+    
+    # sanitize project name to remove special characters
+    safeProjectName = helper.sanitize_project_name(projectName)
+    if safeProjectName != projectName:
+        return jsonify({"error": "Project name contains invalid characters"}), 400
+    
     try:
         with db.session.begin_nested():
             # Check if project exists
-            project_dict = {project["name"]: project for project in researcher.project_list}
-            project = project_dict.get(projectName)
+            project = helper.find_project(safeProjectName, researcher_id)
+        
             if project is None:
                 return jsonify({"error": "Project not found"}), 404 # disallow project update if project does not exist
 
@@ -330,18 +380,17 @@ def addProjectTags():
                 added_tags = [str(tag).strip() for tag in add_tags]
 
             for tag in added_tags:
-                if tag not in project['tags']:
-                    project['tags'].append(tag) # append tags to the project
-
-            flag_modified(researcher, "project_list")
-
+                if tag not in project.tags:  # Check if the tag is already in the list
+                    project.tags.append(tag)  # Add the tag to the project
+            
+            flag_modified(project, "tags")
             db.session.commit()
     except Exception as e:
         db.session.rollback()
         logging.debug(e)
         return jsonify({"error": "Project was unable to be updated"}), 500
 
-    return jsonify({"message": "Tags added successfully.", "projects_list": researcher.project_list})
+    return jsonify({"message": "Tags added successfully.", "Project Tags": project.tags}), 200
 
 # The route is to remove tags from a project
 @projectsBp.route('/removeProjectTags', methods=['POST'])

@@ -137,7 +137,7 @@ class Project(db.Model):
     project_name         = db.Column(db.String(128), nullable=False)
     path                 = db.Column(db.String(128), nullable=False) # project directory
     status               = db.Column(project_state_enum, nullable=False)
-    tags                 = db.Column(db.String(128), default=list)
+    tags                 = db.Column(db.JSON, default=list)
     metrics              = db.Column(db.JSON, nullable=False)
     '''
     {
@@ -244,7 +244,7 @@ class AudioFile(db.Model):
         }
     }
     '''
-    tags                = db.Column(db.String(128), default=list) # optional tags for audio file
+    tags                = db.Column(db.JSON, default=list) # optional tags for audio file
     researcher_id       = db.Column(UUID(as_uuid=True),nullable=False)
     project_name        = db.Column(db.String(128), nullable=False)
     allocated_listeners = db.Column(db.JSON, default=list)
