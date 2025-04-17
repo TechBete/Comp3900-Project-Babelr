@@ -90,6 +90,7 @@ RESPONSE:
     - 200: Researcher profile updated successfully, updated fields
     - 400: No data was provided
     - 400: Researcher does not exist on database
+    - 400: Email already exists
     - 500: Internal Server Error
     
 RETURNS:
@@ -136,9 +137,21 @@ def updateResearcherProfile():
         fields_to_update = []
         for request_field, model_field in field_map.items():
             if request_field in data:
+                # Check if the field is present in the request data
                 current_value = getattr(researcher, model_field)
                 new_value = data[request_field]
+                
+                # Check if the current value is different from the new value
                 if current_value != new_value:
+                    if request_field == "email":
+                        # Check if the email already exists in the database
+                        existing_researcher = helper.is_researcher_email(new_value)
+                        if existing_researcher:
+                            return jsonify({"error": "Email already exists!"}), 400
+                    # If the field is password, hash the new password
+                    if request_field == "password":
+                        new_value = helper.hash_password(new_value)
+                    # Update the field in the model
                     setattr(researcher, model_field, new_value)
                     fields_to_update.append(model_field)
                 

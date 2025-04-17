@@ -1,11 +1,48 @@
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt, jwt_required, get_jwt_identity
-from app.models import Listener, ProficiencyLevel, Researcher
+from app.models import Researcher, Project, AudioFile
 from flask import jsonify, request
 from app import db
 import app.helpers as helper
 import os, uuid, shutil, logging
 from sqlalchemy.orm.attributes import flag_modified
 from app.projects import projectsBp
+
+'''
+# this route is used to create a new project for a researcher
+# this is done by sending a post request to the /createProject endpoint
+# the project name is passed in the request body
+# the project name must be unique for each researcher
+# the project name must not be empty
+# the project name must not contain any special characters
+# underscore or hyphen is allowed
+# the project name must not be longer than 128 characters
+# the project is created in the database and a directory is created for the project
+# the project is updated in the researcher object and the project table
+
+ARGS:
+    - project_name: the name of the project
+    - researcher_id: the id of the researcher
+    
+RESPONSE:
+    - 200: Project created successfully
+    - 400: Project name already exists
+    - 400: Project Name data Field is empty
+    - 400: Researcher ID data Field is empty
+    - 400: Project name must be a non-empty string
+    - 400: Cannot Create Project
+    - 400: Project name contains invalid characters
+    - 400: Project name is too long
+    
+    - 404: Researcher not found
+    - 500: Project was unable to be created
+    
+RETURNS:
+    - None
+    
+UPDATES:
+    - Database: Researcher, Project tables
+    
+'''
 
 @projectsBp.route('/createProject', methods=['POST'])
 @jwt_required()
@@ -16,17 +53,17 @@ def createProject():
     if validation_error:
         return validation_error
     
-    # # FOR FRONTEND TESTING PART
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id) # ensure type consistency
+    
+    # Validate researcher
     required_fields = ['researcher_id']
     validation_error = helper.validate_required_fields({'researcher_id': researcher_id}, required_fields) # validate researcher_id
     if validation_error:
         return validation_error
-    # END OF FRONTEND TESTING PART
 
     projectName = data['project_name']
-    researcherId = researcher_id   #FRONTEND TESTING
+    researcherId = researcher_id
 
     # Check if researcher exists
     researcher = helper.is_researcher_id(researcherId)
@@ -37,64 +74,91 @@ def createProject():
     if researcher.project_list is None:
         researcher.project_list = []
 
-    # ensure project name is not empty
-    if projectName == '':
+    # ensure project name is not an empty string
+    if not projectName or len(projectName.strip()) == 0:
         return jsonify({"error": "Project name cannot be empty"}), 400
-
+    
+    # ensure project does not have invalid characters
+    if helper.check_invalid_project_name(projectName):
+        return jsonify({"error": "Project name contains invalid characters"}), 400
+    
+    # ensure project name is not too long
+    if len(projectName) > 128:
+        return jsonify({"error": "Project name is too long"}), 400
+    
+    # sanitize project name to remove special characters
+    safeProjectName = helper.sanitize_project_name(projectName)
+    if safeProjectName != projectName:
+        return jsonify({"error": "Project name contains invalid characters"}), 400
+    
     # use a transaction to ensure that the project is only created if the project list is updated successfully
     try:
         with db.session.begin_nested():
-            # Check if project already exists
-            # Check if project already exists
-            if any(project.get("name") == projectName for project in researcher.project_list):
+            # Check if project name already exists
+            if any(project.get("project_name") == projectName for project in researcher.project_list):
                 return jsonify({"error": "Project already exists"}), 400
 
-            # create directory for project files in backend and docker.
-            projectOwner = str(researcherId)
-            projectPath = os.path.join("/app", "audioData")
-            researcherPath = os.path.join(projectPath, projectOwner)
-            projectDir = os.path.join(researcherPath, projectName)
-            if not os.path.exists(projectDir):
-                os.makedirs(projectDir)
-            else:
-                return jsonify({"error": "Project already exists"}), 400
+            try:
+                # create directory for project files in backend and docker.
+                projectOwner = str(researcherId)
+                projectPath = os.path.join("/app", "audioData")
+                researcherPath = os.path.join(projectPath, projectOwner)
+                projectDir = os.path.join(researcherPath, safeProjectName)
+                
+                if not os.path.exists(projectDir):
+                    os.makedirs(projectDir)
+
+            except Exception as e:
+                return jsonify({"error": "Cannot Create Project, Project Path Already Exists"}), 400
+            
+            # create project in the database
+            project = Project(
+                id=uuid.uuid4(),
+                project_name=projectName,
+                path=projectDir,
+                status="Draft",
+                tags=[],  # big set of tags used for each audio files in the project
+                metrics={
+                    # default values
+                    # these are hard coded as per instructions but can be changed by the researcher
+                    "Naturalness": {
+                        "min": 1, 
+                        "max": 5, 
+                        "minimum label": "Robotic",
+                        "maximum label": "Natural",
+                        "description": "How natural the audio sounds"
+                    },
+                    "Intelligibility": {
+                        "min": 1,
+                        "max": 5,
+                        "minimum label": "Unintelligible",
+                        "maximum label": "Intelligible",
+                        "description": "How easy it is to understand the audio"
+                    },
+                    "Clarity": {
+                        "min": 1,
+                        "max": 5,
+                        "minimum label": "Unclear",
+                        "maximum label": "Clear",
+                        "description": "How clear the audio sounds"
+                    },
+                },
+                creator_id=researcher.id,  # updated to include creator id (researcher id)
+                creator_name=researcher.first_name,
+                audio_list=[]
+            )
+            
             # update Researcher project list with project name
-            researcher.project_list.append({"name": projectName,
-                                            "path": projectDir,
-                                            "status": "Draft",
-                                            "tags": [], # big set of tags used for each audio files in the project
-                                            "metrics": {
-                                                "Naturalness": {
-                                                    "min": 1,
-                                                    "max": 5,
-                                                    "minimum label": "Robotic",
-                                                    "maximum label": "Natural",
-                                                    "description": "How natural the audio sounds"
-                                                    },
-                                                "Intelligibility": {
-                                                    "min": 1,
-                                                    "max": 5,
-                                                    "minimum label": "Unintelligible",
-                                                    "maximum label": "Intelligible",
-                                                    "description": "How easy it is to understand the audio"
-                                                    },
-                                                "Clarity": {
-                                                    "min": 1,
-                                                    "max": 5,
-                                                    "minimum label": "Unclear",
-                                                    "maximum label": "Clear",
-                                                    "description": "How clear the audio sounds"
-                                                    },
-                                            },
-                                            "creator_id": str(researcher.id),# updated to include creator id (researcher id)
-                                            "creator": researcher.first_name,
-                                            "assigned_audio": {
-                                                "audio": []
-                                            }
-                                            }) # updated to include creator name
+            researcher.project_list.append({
+                                    "project_uuid": str(project.id),
+                                    "project_name": projectName,
+                                })
 
+            flag_modified(project, "metrics")
+            db.session.add(project)
             flag_modified(researcher, "project_list")
-
+            db.session.add(researcher)
+            # commit the changes to the database
             db.session.commit()
     except Exception as e:
         db.session.rollback()
@@ -103,12 +167,43 @@ def createProject():
 
     return jsonify({"message": "Project created successfully"}) ## probably should not send back project list but for simplicities sake
 
+'''
+# this route is used to update the project name incase the researcher wants to change it
+# this is done by sending a post request to the /updateProjectName endpoint
+# the project name is passed in the request body
+# the same project name rules apply as in the create project route
+
+ARGS:
+    - project_name: the name of the project
+    - researcher_id: the id of the researcher
+    
+RESPONSE:
+    - 200: Project updated successfully
+    - 400: Project name already exists
+    - 400: Project Name data Field is empty
+    - 400: Researcher ID data Field is empty
+    - 400: Project name must be a non-empty string
+    - 400: Cannot Create Project
+    - 400: Project name contains invalid characters
+    - 400: Project name is too long
+    - 404: Researcher not found
+    - 500: Project was unable to be updated
+    
+RETURNS:
+    - None
+
+UPDATES:
+    - Database: Researcher, Project tables
+    - File System: Project directory
+
+'''
+
 # this route is to update the project name
-@projectsBp.route('/updateProjectName', methods=['POST'])
+@projectsBp.route('/renameProject', methods=['POST'])
 @jwt_required()
 def updateProject():
     data = request.json
-    required_fields = ['project_name']
+    required_fields = ['project_name', 'new_project_name']
     validation_error = helper.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
@@ -121,44 +216,83 @@ def updateProject():
         return jsonify({"error": "Researcher not found"}), 404
 
     projectName = data['project_name']
+    newProjectName = data['new_project_name']
+    
+    # Project name checks:
+    # ensure project name is not an empty string
+    if not projectName or len(projectName.strip()) == 0:
+        return jsonify({"error": "Project name cannot be empty"}), 400
+    if not newProjectName or len(newProjectName.strip()) == 0:
+        return jsonify({"error": "Project name cannot be empty"}), 400
+    
+    # ensure project does not have invalid characters
+    if helper.check_invalid_project_name(projectName):
+        return jsonify({"error": "Project name contains invalid characters"}), 400
+    if helper.check_invalid_project_name(newProjectName):
+        return jsonify({"error": "Project name contains invalid characters"}), 400
+    
+    # ensure project name is not too long
+    if len(projectName) > 128 or len(newProjectName) > 128:
+        return jsonify({"error": "Project name is too long"}), 400
+    
+    # sanitize project name to remove special characters
+    safeProjectNameOld = helper.sanitize_project_name(projectName)
+    if safeProjectNameOld != projectName:
+        return jsonify({"error": "Project name contains invalid characters"}), 400 
+    
+    # sanitize new project name to remove special characters
+    safeProjectNameNew = helper.sanitize_project_name(newProjectName)
+    if safeProjectNameNew != newProjectName:
+        return jsonify({"error": "Project name contains invalid characters"}), 400 
+    
+    # check if new project name already exists
+    checkA = helper.find_project(safeProjectNameNew, researcher_id)
+    # check researcher project list
+    checkB = helper.find_researcher_project(safeProjectNameNew, researcher_id)
+    if checkA or checkB:
+        return jsonify({"error": "Project name already exists"}), 400
+    
     try:
         with db.session.begin_nested():
-            # Check if project exists
-            project_dict = {project["name"]: project for project in researcher.project_list}
-            project = project_dict.get(projectName)
-            if project is None:
-                return jsonify({"error": "Project not found"}), 404 # disallow project update if project does not exist
-
-            # update project name
-            if 'new_project_name' in data:
-                new_project_name = data['new_project_name']
-                if new_project_name == '':
-                    return jsonify({"error": "Project name cannot be empty"}), 400
-
-                # Check if project already exists
-                if any(project.get("name") == new_project_name for project in researcher.project_list):
-                    return jsonify({"error": "Project name already exists"}), 400
-
-                # create directory for project files in backend and docker.
+            # Check if project exists and is owned by the researcher
+            project = helper.find_project(safeProjectNameOld, researcher_id)
+            # find project in the researcher project list
+            researcherProject=helper.find_researcher_project(safeProjectNameOld, researcher_id)
+            
+            if not project or not researcherProject:
+                return jsonify({"error": "Project not found"}), 404
+            
+            # create directory for project files in backend and docker.
+            try:
                 projectOwner = str(researcher_id)
                 projectPath = os.path.join("/app", "audioData")
                 researcherPath = os.path.join(projectPath, projectOwner)
-                projectDir = os.path.join(researcherPath, projectName)
+                projectDir = os.path.join(researcherPath, safeProjectNameOld)
+                
                 if os.path.exists(projectDir):
-                    os.rename(projectDir, os.path.join(researcherPath, new_project_name))
-                    project['name'] = new_project_name
-                else:
-                    return jsonify({"error": "Project already exists"}), 400
-
-            flag_modified(researcher, "project_list")
-
-            db.session.commit()
+                    os.rename(projectDir, os.path.join(researcherPath, safeProjectNameNew))
+                    project.path = os.path.join(researcherPath, safeProjectNameNew) 
+                    project.project_name = safeProjectNameNew
+                    db.session.add(project)
+                    
+                    researcherProject.project_name = safeProjectNameNew
+                    flag_modified(researcher, "project_list")
+                    db.session.add(researcher)
+                    
+            except Exception as e:
+                return jsonify({"error": "Project was unable to be updated"}), 500
+        
+            db.session.commit()    
     except Exception as e:
         db.session.rollback()
         logging.debug(e)
         return jsonify({"error": "Project was unable to be updated"}), 500
 
-    return jsonify({"message": "Project updated successfully", "projects_list": researcher.project_list})
+    return jsonify({"message": "Project updated successfully"}), 200
+
+'''
+
+'''
 
 # The route is to add tags to a project
 @projectsBp.route('/addProjectTags', methods=['POST'])

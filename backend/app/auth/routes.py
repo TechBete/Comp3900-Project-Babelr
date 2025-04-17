@@ -190,6 +190,7 @@ UPDATES:
     - jti: None
 
 '''
+
 #logout route needs work to get it implemented correctly
 # unset cookie on logout - look into this when possible
 @authBp.route('/logout', methods=['POST'])
