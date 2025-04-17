@@ -1,8 +1,5 @@
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from flask import jsonify, request
-from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy.exc import IntegrityError
-from app.models import Researcher
 from app.researchers import researchersBp
 import app.helpers as helper
 import uuid, logging
@@ -34,7 +31,7 @@ UPDATES:
     - None
 '''
 
-# update route to get specific researcher
+# updated route to get specific researcher
 @researchersBp.route('/getResearcher', methods=['GET'])
 @jwt_required()
 def getResearchers():
@@ -69,12 +66,40 @@ def getResearchers():
         }, 200)
 
 
+'''
+# This route is used to update a specific researcher profile
+# this is done by sending a POST request to the /updateResearcherProfile endpoint
+# The request must include a JWT token in the Authorization header
+# The token is used to identify the researcher
+# The researcher is then retrieved from the database using the token
+# The researcher information is then updated in the database
+# The updated researcher information is then returned in the response
 
-
-# this route is used to update the researcher's profile, changed from updateOrganisation
-# I dont see a justification for researcher to update the researchers organisation by itself,
-# its better to allow the researcher to call route to update entire profile and let researcher
-# choose what fields to update
+ARGS:
+    - first_name: str
+    - last_name: str
+    - email: str
+    - password: str
+    - date_of_birth: str
+    - gender: str
+    - country: str
+    - education: str
+    - organisation: str
+    
+RESPONSE:
+    - 200: Researcher profile updated successfully, updated fields
+    - 400: No data was provided
+    - 400: Researcher does not exist on database
+    - 500: Internal Server Error
+    
+RETURNS:
+    - Researcher information in JSON format
+    - updated values
+    
+UPDATES:
+    - Database: Researcher
+        
+'''
 
 @researchersBp.route('/updateResearcherProfile', methods=['POST'])
 @jwt_required()
@@ -94,26 +119,40 @@ def updateResearcherProfile():
         return jsonify({"error": "Researcher does not exist on database!"}), 400
 
     try:
-        researcher.first_name = data['first_name']
-        researcher.last_name = data['last_name']
-        researcher.email = data['email']
-        researcher.organisation = data['new_organisation']
-        researcher.demographic.date_of_birth = data['date_of_birth']
-        researcher.demographic.gender = data['gender']
-        researcher.demographic.country = data['country']
-        researcher.demographic.education = data['education']
         
-        for key, value in data.items():
-            if getattr(researcher, key, None) != value:
-                setattr(researcher, key, value)
-                flag_modified(researcher, key)
-        db.session.commit()
+        # Map of request field names to model field names
+        field_map = {
+            "first_name": "first_name",
+            "last_name": "last_name",
+            "email": "email",
+            "password": "pw_hash",
+            "date_of_birth": "date_of_birth",
+            "gender": 'gender',
+            "country": "country_of_residence",
+            "education": "education",
+            "organisation": "organisation"
+        }
+        
+        fields_to_update = []
+        for request_field, model_field in field_map.items():
+            if request_field in data:
+                current_value = getattr(researcher, model_field)
+                new_value = data[request_field]
+                if current_value != new_value:
+                    setattr(researcher, model_field, new_value)
+                    fields_to_update.append(model_field)
+                
+                
+        if fields_to_update:
+            # Update the modified fields in the database
+            db.session.commit()
+        return jsonify({
+                    "message": "Researcher profile updated successfully",
+                    "updated fields": fields_to_update
+                    }), 200
+        
     except Exception as e:
         db.session.rollback()
-        logging.error(f"An error occurred while updating researcher's organisation: {e}")
-        return jsonify({"error": "Error: 500, An error occurred while updating the researcher's organisation"}), 500
+        logging.error(e)
+        return jsonify({"Error": "500, Internal Server Error"}), 500
 
-    return jsonify({"message": "Researcher organisation updated successfully"}), 200
-
-
-# set researcher demographic route
