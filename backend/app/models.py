@@ -158,6 +158,7 @@ class Project(db.Model):
     creator_name         = db.Column(db.String(128), nullable=False)
     # list of audio file uuid to track all uploaded audio file under the project
     audio_list           = db.Column(UUID(as_uuid=True), default=list)
+    
 
 class Listener(db.Model):
     __tablename__ = "listeners"
@@ -167,7 +168,7 @@ class Listener(db.Model):
     email                = db.Column(db.String(128), nullable=False, unique=True)
     pw_hash              = db.Column(db.String(128), nullable=False) # Argon2 hash string is 97 char long
     permission           = db.Column(permission_level_enum, nullable=False)
-    reward_points        = db.Column(db.Integer)
+    reward_points        = db.Column(db.Integer, nullable=False)
 
     # demographic details
     background_info      = db.Column(db.String(1024), default="") # 1024 char length string
@@ -193,7 +194,6 @@ class Listener(db.Model):
     # All allocated audio file for a user is stored here as a list of audio uuid
     # once finishing evaluation of currently_assigned_audio, first element of this list will be moved to currently_assigned_audio for evaluation
     allocated_audio_queue     = db.Column(UUID(as_uuid=True), default=list) # list of video IDs completed by the listener
-
 
 class AudioFile(db.Model):
     __tablename__       = "audiofiles"

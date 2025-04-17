@@ -17,6 +17,7 @@ def getRequirements(tags: list[str]) -> tuple[str, ProficiencyLevel]:
     language = tags[1];
     proficiency_level = ProficiencyLevel[f'{tags[2]}']
     return (language, proficiency_level)
+
 def isQualified(listener: Listener, lang, min_proficiency) -> bool:
     for language in listener.languages:
         if language['language'] == lang and ProficiencyLevel[language['proficiency'].lower()] >= min_proficiency:
@@ -60,7 +61,6 @@ def uploadAudioFile():
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
     # search researcher name from researcher uuid
-
     researcher = helpers.is_researcher_id(researcher_id)
 
     if researcher:
@@ -216,14 +216,14 @@ def testUploadAudioFile():
 
     # NOTE: file path syntax = /root/audioData/researcherId/projectName/researcherName/fileName
     # follow up on this as well
-    
+
     file_path = "../../../audioData" # root directory path for all audio files
     researcher_dir = os.path.join(file_path, researcher_id)
     # if directory with researcher id doesn't exist, make directory
     os.makedirs(researcher_dir, exist_ok=True)
     researcher_name_dir = os.path.join(researcher_dir, researcher_name)
     os.makedirs(researcher_name_dir, exist_ok=True)
-    
+
     file_path = os.path.join(researcher_name_dir, "testfile")
     # file.save(file_path) # save the file in the directory
 
