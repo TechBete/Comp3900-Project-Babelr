@@ -1,8 +1,7 @@
 from sqlalchemy.orm.attributes import flag_modified
 from app.audio.routes import getRequirements, isQualified, uploadAudioFile
 from flask import request, jsonify, url_for, redirect
-from app.models import Researcher, Listener, PermissionLevel, ListenerDemographic, ResearcherDemographic
-
+from app.models import Listener, Researcher, Project, AudioFile, PermissionLevel
 from app import db, jwt
 from app.auth import authBp
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, decode_token, set_access_cookies, get_jwt
@@ -22,8 +21,8 @@ def verify_email(token):
         return redirect(url_for('auth.login')), 404
 
     # Find user and mark as verified
-    listener = Listener.query.filter_by(email=email).first()
-    user = listener if listener else Researcher.query.filter_by(email=email).first()
+    listener = helper.is_listener_email(email)
+    user = listener if listener else helper.is_researcher_email(email)
 
     if user and not user.is_verified:
         user.is_verified = True
@@ -33,6 +32,27 @@ def verify_email(token):
 
     return redirect(url_for('auth.login'))
 
+'''
+# this route is for a user to login to the platform
+# this is done by sending a post request to the /login endpoint
+# the user must provide their email and password in the request body
+# the email and password are then validated and checked against the database
+# if the email and password are valid, a JWT token is created and returned to the user
+# the token is then used to authenticate the user for future requests
+# the token is set as a cookie in the response
+# the token is then used to authenticate the user for future requests
+
+ARGS:
+    email: str
+    pw: str
+
+RESPONSE:
+    200: Successful login
+    400: Validation error
+    401: Invalid email-password combination
+    404: Email not verified
+    500: Internal server error
+'''
 @authBp.route('/login', methods=['POST'])
 def login():
     data = request.json
@@ -49,7 +69,7 @@ def login():
     if password == '' or Email == '':
         return jsonify({"error": "Email or Password cannot be empty"}), 400
 
-    # add password length and format check in later iteration
+    # add password length and format check if necessary later
 
     # check if email is structured correctly
     try:
@@ -115,11 +135,25 @@ def login():
             # set the access token as a cookie in the response
             response = jsonify({"Login": "Successful"})
             set_access_cookies(response,token)
-            # response.set_cookie("accesstoken", token, samesite="None")
 
             return response
     return jsonify({"error": "Failed Login. Either Email or password was incorrect"}), 401   # update frontend for error message popup
 
+'''
+# this route is for a user to logout of the platform
+# this is done by sending a post request to the /logout endpoint
+# the user will be logged out of the platform via the jwt token
+# the token is then invalidated in the database
+
+# upon relogin, the jwt token will be updated and the user will be able to login again
+
+ARGS:
+    None
+RESPONSE:
+    200: Successful logout
+
+'''
+#logout route needs work to get it implemented correctly
 # unset cookie on logout - look into this when possible
 @authBp.route('/logout', methods=['POST'])
 @jwt_required()
@@ -129,6 +163,10 @@ def logout():
     db.session.query(Researcher).filter_by(jti=jti).update({'jti': None})
     db.session.commit()
     return jsonify({"message": "Logout successful"}), 200
+
+### check on whether this is needed in this file or if it should 
+### be moved to the helpers file
+### this will need to be updated to check in the audio table
 def assignQualifiedAudio(listener: Listener):
         def getAllAudioData():
             allResearchers = Researcher.query.all()
@@ -148,6 +186,30 @@ def assignQualifiedAudio(listener: Listener):
                 listener.assigned_audio.append(audio)
                 flag_modified(listener, "assigned_audio")
         logging.debug(f'listener {listener} is assigned {listener.assigned_audio}')
+
+'''
+# this route is for a Listener user to register to the platform
+# this is done by sending a post request to the /registerListener endpoint
+# the user must provide their first name, last name, email and password in the request body
+# the email and password are then validated and checked against the database
+# if the email and password are valid, the password is hashed using argon2
+# the user's information is then added to the database
+
+ARGS:
+    first_name: str
+    last_name: str
+    email: str
+    pw: str
+    
+RESPONSE:
+    200: Successful registration
+    400: Validation error
+    404: Email not verified
+    403: User already registered
+    401: Invalid email-password combination
+    409: Email already registered
+    500: Internal server error
+'''
 @authBp.route('/registerListener', methods=['POST'])
 def createListener():
     data = request.json
@@ -178,25 +240,24 @@ def createListener():
         email=data['email'],
         pw_hash=hashed_password.value,
         permission=PermissionLevel.listener,
-        background_info=data.get('background_info', ''),
         reward_points=0,
-        is_verified=False,
-        languages=([] if not data.get('languages') else data['languages']),
-        assigned_audio=([] if not data.get('assigned_audio') else data['assigned_audio']),
-        first_time =True,
-    )
-
-    demo = ListenerDemographic(
-        listener_id=user.id,
+        background_info=data.get('background_info', ""),
         date_of_birth="",
         gender='other',
         country_of_residence="",
-        education=""
+        education="",
+        languages=[],
+        is_verified=False,
+        jti = None,
+        blindlogin = None,
+        first_time =True,
+        currently_assigned_audio=[],
+        evaluation_history=[],
+        allocated_audio_queue=[],
     )
-
+    
     try:
         db.session.add(user)
-        db.session.add(demo)
         assignQualifiedAudio(user)
         db.session.commit()
 
@@ -215,6 +276,29 @@ def createListener():
     # Ensure languages_proficiency is serialized as a list
     return jsonify({"message": "Registration Successful"}), 200
 
+'''
+# this route is for a Researcher user to register to the platform
+# this is done by sending a post request to the /registerResearcher endpoint
+# the user must provide their first name, last name, email and password in the request body
+# the email and password are then validated and checked against the database
+# if the email and password are valid, the password is hashed using argon2
+# the user's information is then added to the database
+
+ARGS:
+    first_name: str
+    last_name: str
+    email: str
+    pw: str
+
+RESPONSE:
+    200: Successful registration
+    400: Validation error
+    400: Email already registered
+    400: Database integrity error
+    401: Invalid email-password combination
+    403: User already registered
+    500: Internal server error
+'''
 @authBp.route('/registerResearcher', methods=['POST'])
 def createResearcher():
     data = request.json
@@ -226,7 +310,7 @@ def createResearcher():
     Email = data['email']
     # Check if email already exists
     if helper.is_existing_user_email(Email):
-        return jsonify({"error": "Email already registered"}), 400
+        return jsonify({"error": "Email already registered"}), 403
 
     # check if email is structured correctly
     try:
@@ -244,11 +328,16 @@ def createResearcher():
         email=data['email'],
         pw_hash=hashed_password.value,
         permission=PermissionLevel.researcher,
-        organisation=data.get('organisation', ''),
-        is_verified=False,
         project_list=[],
-        uploaded_audio=[],
-        first_time =True,
+        date_of_birth="",
+        gender='other',
+        country_of_residence="",
+        education="",
+        organisation="",
+        is_verified=False,
+        jti= None,
+        blindlogin = None,
+        first_time =True
     )
     
     try:
@@ -269,6 +358,10 @@ def createResearcher():
         return jsonify({"error": "Error Code: 500"}), 500
     return jsonify({"message": "Registration Successful"})
 
+'''
+# this route is for a user to create a test user
+# 
+'''
 # remove this function before Prod
 def createTestUser():
     data = {

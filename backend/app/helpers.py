@@ -10,8 +10,8 @@ import secrets
 
 
 def check_verified(email):
-    existing_listener = mod.Listener.query.filter_by(email=email).first()
-    existing_researcher = mod.Researcher.query.filter_by(email=email).first()
+    existing_listener = is_listener_email
+    existing_researcher = is_researcher_email(email)
     if existing_listener and existing_listener.is_verified:
         return True
     if existing_researcher and existing_researcher.is_verified:

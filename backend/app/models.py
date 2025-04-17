@@ -88,6 +88,18 @@ event.listen(
     """)
 )
 
+event.listen(
+    db.metadata, 'before_create',
+    DDL("""
+    DO $$
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'projectstate') THEN
+            CREATE TYPE projectstate AS ENUM ('draft', 'in_progress');
+        END IF;
+    END $$;
+    """)
+)
+
 # ========== 3. SQL DB Models ==========
 class Researcher(db.Model):
     __tablename__        = "researchers"
@@ -167,7 +179,7 @@ class Listener(db.Model):
     email                = db.Column(db.String(128), nullable=False, unique=True)
     pw_hash              = db.Column(db.String(128), nullable=False) # Argon2 hash string is 97 char long
     permission           = db.Column(permission_level_enum, nullable=False)
-    reward_points        = db.Column(db.Integer)
+    reward_points        = db.Column(db.Integer, nullable=False) # reward points for listeners
 
     # demographic details
     background_info      = db.Column(db.String(1024), default="") # 1024 char length string
@@ -244,3 +256,4 @@ class AudioFile(db.Model):
         "Clarity": 3
     }
     '''
+    
