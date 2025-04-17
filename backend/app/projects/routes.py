@@ -635,23 +635,26 @@ def deleteProjectMetrics():
         with db.session.begin_nested():
             # Check if project exists
             project_dict = {project["name"]: project for project in researcher.project_list}
+            print("Project dict keys:", list(project_dict.keys()))
             project = project_dict.get(projectName)
             if project is None:
                 return jsonify({"error": "Project not found"}), 404
 
-            if project.status != 'Draft':
+            if project.get("status") != 'Draft':
                 return jsonify({"error": "The Project status must be set to 'Draft' to delete metrics"}), 400
 
+            metrics = project.get('metrics')
+
             # check if mertics is a valid dictionary
-            if not isinstance(project['metrics'], dict):
+            if not isinstance(metrics, dict):
                 return jsonify({"error": "Metrics are not in a valid format"}), 500
 
             # delete the metric from the project
             metric = data['metric']
-            if metric not in project['metrics']:
+            if metric not in metrics:
                 return jsonify({"error": "Metric not found"}), 404
             # Delete the metric from the project
-            del project['metrics'][metric]
+            del metrics[metric]
 
             # Mark the project_list as modified and commit changes
             flag_modified(researcher, "project_list")
@@ -661,4 +664,4 @@ def deleteProjectMetrics():
         logging.debug(e)
         return jsonify({"error": "Error: 500, An error occurred while deleting the project metric"}), 500
 
-    return jsonify({"message": "Project metric deleted successfully", "metrics": project['metrics']})
+    return jsonify({"message": "Project metric deleted successfully", "metrics": metrics})
