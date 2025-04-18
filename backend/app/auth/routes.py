@@ -282,8 +282,8 @@ def createTestUser():
 
     test_lang = [
     {
-        "language": "English", 
-        "proficiency": "Native", 
+        "language": "English",
+        "proficiency": "Native",
     }, {
         "language": "Japanese",
         "proficiency": "Elementary",
@@ -311,65 +311,46 @@ def createTestUser():
     hashed_password2 = helper.hash_password(data2)
     hashed_password3 = helper.hash_password(data3)
 
-    demo_data = {
-        "date_of_birth": "1959-06-11",
-        "country_of_residence": "Australia",
-        "education": "Bachelor of Arts",
-        "gender": "female"
-    }
-
-    demo_data2 = {
-        "date_of_birth": "2000-09-08",
-        "country_of_residence": "Australia",
-        "education": "HSC",
-        "gender": "female"
-    }
-
-    demo = ListenerDemographic(
-        date_of_birth=demo_data['date_of_birth'],
-        country_of_residence=demo_data['country_of_residence'],
-        education=demo_data['education'],
-        gender=demo_data['gender']
-    )
-
-    demo2 = ListenerDemographic(
-        date_of_birth=demo_data2['date_of_birth'],
-        country_of_residence=demo_data2['country_of_residence'],
-        education=demo_data2['education'],
-        gender=demo_data2['gender']
-    )
-
-
     user = Listener(
-        id="736259a4-aea2-4de7-aa87-5764e1db624b",    # generate a random uuid if not provided
+        id="736259a4-aea2-4de7-aa87-5764e1db624b",
         first_name=data['first_name'],
         last_name=data['last_name'],
         email=data['email'],
         pw_hash=hashed_password.value,
         permission=PermissionLevel.listener,
-        background_info="ahhhhhhhhhhhh",
         reward_points=5,
-        is_verified=True,
+        background_info="testbackground",
+        date_of_birth="1959-06-11",
+        country_of_residence="Australia",
+        education="Bachelor of Arts",
+        gender="female",
         languages=test_lang,
-        demographic=demo,
-        assigned_audio=([] if not data.get('assigned_audio') else data['assigned_audio']),
-        first_time=False 
+        is_verified=True,
+        first_time=False,
+        currently_assigned_audio=None,
+        evaluation_history=None,
+        allocated_audio_queue=None,
     )
 
     allocated_listener = Listener(
-        id="20658871-860a-4a87-a520-11800b9f3632",    # generate a random uuid if not provided
+        id="20658871-860a-4a87-a520-11800b9f3632",
         first_name=data3['first_name'],
         last_name=data3['last_name'],
         email=data3['email'],
         pw_hash=hashed_password3.value,
         permission=PermissionLevel.listener,
-        background_info="ayo",
         reward_points=15,
-        is_verified=True,
+        background_info="ayo",
+        date_of_birth="2000-09-08",
+        country_of_residence="Australia",
+        education="HSC",
+        gender="male",
         languages=test_lang,
-        demographic=demo2,
-        assigned_audio=([] if not data.get('assigned_audio') else data['assigned_audio']),
+        is_verified=True,
         first_time=False,
+        currently_assigned_audio=None,
+        evaluation_history=None,
+        allocated_audio_queue=None,
     )
 
     user2 = Researcher(
@@ -379,57 +360,13 @@ def createTestUser():
         email=data2['email'],
         pw_hash=hashed_password2.value,
         permission=PermissionLevel.researcher,
+        project_list=[],
+        date_of_birth="1953-04-12",
+        gender="other",
+        country_of_residence="France",
+        education="UCLA",
+        organisation="University of Paris",
         is_verified=True,
-        project_list=[
-        {
-            "name": "Test Project 1",
-            "path": "",
-            "status": "Draft",
-            "tags": [],
-            "metrics": {
-                        "Naturalness": {
-                        "min": 1,
-                        "max": 5,
-                        "minimum label": "Robotic",
-                        "maximum label": "Natural",
-                        "description": "How natural the audio sounds"
-                        },
-                        "Intelligibility": {
-                        "min": 1,
-                        "max": 5,
-                        "minimum label": "Unintelligible",
-                        "maximum label": "Intelligible",
-                        "description": "How easy it is to understand the audio"
-                        },
-                        "Clarity": {
-                        "min": 1,
-                        "max": 5,
-                        "minimum label": "Unclear",
-                        "maximum label": "Clear",
-                        "description": "How clear the audio sounds"
-                        },
-            },
-            "creator id": "20658111-860a-4a87-a520-11800b9f36e9",
-            "creator": data2['first_name'],
-            "Audio File Name": "testFile1",
-            "Audio File Path": "./audioData/Bill/TestProject1/",
-        }],
-        uploaded_audio=[{
-            "name": "testFile1",
-            "file_extension": ".wav",
-            "file_path": "./audioData/Bill/TestProject1/",
-            "allocated_listeners": [user.id, allocated_listener.id],
-            "metrics": {
-                "Naturalness": 0,
-                "Intelligibility": 0,
-                "Clarity": 0
-            },
-            "tags": ["model3A", "Japanese", "elementary"],
-            "project_name": "Test Project 1",
-            "project_path": "projects/Test Project 1/",
-            "Researcher": "20658111-860a-4a87-a520-11800b9f36e9",
-            
-        }],
         first_time=False,
     )
 
@@ -604,7 +541,7 @@ def getRoleFromID():
         role = listener.permission.value
         return jsonify({"role": str(role), "first_time": first_time})
     elif not listener and researcher:
-        role = researcher.permission.value       
+        role = researcher.permission.value
         return jsonify({"role": str(role), "first_time": first_time})
     else:
         return jsonify({"error": "User ID not found"}), 404
