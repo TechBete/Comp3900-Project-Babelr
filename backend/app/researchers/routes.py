@@ -151,6 +151,11 @@ def updateResearcherProfile():
                     # If the field is password, hash the new password
                     if request_field == "password":
                         new_value = helper.hash_password(new_value)
+                    
+                    if request_field == "first_name":
+                        helper.update_project_creator(current_value, new_value, researcher_id)
+                    
+                    
                     # Update the field in the model
                     setattr(researcher, model_field, new_value)
                     fields_to_update.append(model_field)

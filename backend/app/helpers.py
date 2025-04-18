@@ -3,6 +3,7 @@ from email.mime.text import MIMEText
 from itsdangerous import URLSafeTimedSerializer
 from password import PasswordHash
 from app.models import Researcher, Listener, Project # ls
+from app import db
 import os, smtplib, re
 import secrets # secrets not used ?
 
@@ -104,3 +105,17 @@ def find_project(projectName, id):
 def find_researcher_project(projectName, id):
     return Researcher.project_list.filter_by(project_uuid=id, project_name=projectName).first()
 
+def update_project_creator(current_value, new_value, id):
+    # Update the project creator in the Project model
+    try:
+        projects = Project.query.filter_by(creator_name=current_value, creator_id=id).all()
+        if not projects:
+            return 
+        
+        for project in projects:
+            project.creator_name = new_value
+        db.session.commit()
+        return True
+    except Exception as e:
+        db.session.rollback()
+        return False

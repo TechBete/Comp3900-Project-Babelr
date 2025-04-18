@@ -1,5 +1,5 @@
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt, jwt_required, get_jwt_identity
-from app.models import Researcher, Project, AudioFile
+from app.models import Researcher, Project, AudioFile, ProjectStatus
 from flask import jsonify, request
 from app import db
 import app.helpers as helper
@@ -117,7 +117,7 @@ def createProject():
                 id=uuid.uuid4(),
                 project_name=projectName,
                 path=projectDir,
-                status="Draft",
+                status=ProjectStatus.draft,  # default status
                 tags=[],  # big set of tags used for each audio files in the project
                 metrics={
                     # default values
@@ -202,7 +202,7 @@ UPDATES:
 # this route is to update the project name
 @projectsBp.route('/renameProject', methods=['POST'])
 @jwt_required()
-def updateProject():
+def renameProject():
     data = request.json
     required_fields = ['project_name', 'new_project_name']
     validation_error = helper.validate_required_fields(data, required_fields)
@@ -311,6 +311,7 @@ RESPONSE:
     - 400: Project name contains invalid characters
     - 400: Researcher ID data Field is empty
     - 400: Project Name data Field is empty
+    - 400: Project is not in draft status
     - 400: Project name already exists
     - 400: Project name is too long
     - 404: Researcher not found
@@ -370,6 +371,10 @@ def addProjectTags():
             if project is None:
                 return jsonify({"error": "Project not found"}), 404 # disallow project update if project does not exist
 
+            # check if project is set to draft
+            if project.status != ProjectStatus.draft:
+                return jsonify({"error": "Project is not in draft status"}), 400
+
             add_tags = data['tags']
 
             # add tags to the project
@@ -392,6 +397,38 @@ def addProjectTags():
 
     return jsonify({"message": "Tags added successfully.", "Project Tags": project.tags}), 200
 
+'''
+# this route is used to remove tags from a project
+# this is done by sending a post request to the /removeProjectTags endpoint
+# the project name and tags are passed in the request body
+# same project name rules apply as in the create project route
+# the tags are passed in as a list of strings
+# the tags are removed from the project in the database
+
+ARGS:
+    - project_name: the name of the project
+    - tags: the tags to be removed from the project
+    
+RESPONSE:
+    - 200: Tags removed successfully
+    - 400: Project name must be a non-empty string
+    - 400: Project name contains invalid characters
+    - 400: Researcher ID data Field is empty
+    - 400: Project Name data Field is empty
+    - 400: Project is not in draft status
+    - 400: Project name already exists
+    - 400: Project name is too long
+    - 404: Researcher not found
+    - 404: Project not found
+    - 500: Project was unable to be updated
+
+RETURNS:
+    - List of updated Tags
+    
+UPDATES:
+    - Database: Project table
+'''
+
 # The route is to remove tags from a project
 @projectsBp.route('/removeProjectTags', methods=['POST'])
 @jwt_required()
@@ -409,14 +446,36 @@ def removeProjectTags():
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
 
+    # Project name checks:
     projectName = data['project_name']
+    stripped_project_name = projectName.strip()
+    if not projectName or len(stripped_project_name) == 0:
+        return jsonify({"error": "Project name cannot be empty"}), 400
+    
+    # ensure project does not have invalid characters
+    if helper.check_invalid_project_name(projectName):
+        return jsonify({"error": "Project name contains invalid characters"}), 400
+    
+    # ensure project name is not too long
+    if len(projectName) > 128:
+        return jsonify({"error": "Project name is too long"}), 400
+    
+    # sanitize project name to remove special characters
+    safeProjectName = helper.sanitize_project_name(projectName)
+    if safeProjectName != projectName:
+        return jsonify({"error": "Project name contains invalid characters"}), 400
+    
     try:
         with db.session.begin_nested():
             # Check if project exists
-            project_dict = {project["name"]: project for project in researcher.project_list}
-            project = project_dict.get(projectName)
+            project = helper.find_project(safeProjectName, researcher_id)
+            
             if project is None:
                 return jsonify({"error": "Project not found"}), 404 # disallow project update if project does not exist
+
+            # check if project is set to draft
+            if project.status != ProjectStatus.draft:
+                return jsonify({"error": "Project is not in draft status"}), 400
 
             remove_tags = data['tags']
 
@@ -428,10 +487,10 @@ def removeProjectTags():
                 removed_tags = [str(tag).strip() for tag in removed_tags]
 
             for tag in removed_tags:
-                if tag in project['tags']:
-                    project['tags'].remove(tag) # remove tags from the project
+                if tag in project.tags:
+                    project.tags.remove(tag)
 
-            flag_modified(researcher, "project_list")
+            flag_modified(project, "tags")
 
             db.session.commit()
     except Exception as e:
@@ -441,6 +500,32 @@ def removeProjectTags():
 
     return jsonify({"message": "Tags removed successfully.", "projects_list": researcher.project_list})
 
+'''
+# this route is used to search for a project by tag
+# this is done by sending a post request to the /searchProjectByTag endpoint
+# the tag is passed in the request body
+# the tag is used to search for all projects that contain the tag
+# the projects are returned in a list
+
+ARGS:
+    - tag: the tag to be searched for
+    
+RESPONSE:
+    - 200: Projects found successfully
+    - 200: No projects found
+    - 400: Tag data Field is empty
+    - 404: Researcher not found
+    - 500: An error has occured while searching for projects
+    
+RETURNS:
+    - List of projects that contain the tag
+    
+UPDATES:
+    - None
+
+'''
+
+# this route is to search for a project by tag
 @projectsBp.route('/searchProjectByTag', methods=['POST'])
 @jwt_required()
 def searchProjectByTag():
@@ -457,17 +542,70 @@ def searchProjectByTag():
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
 
-    tag = data['tag']
+    tags = data['tag']
+    #If tags is a string, split it into a list
+    if isinstance(tags, str):
+        search_tags = [tag.strip() for tag in tags.split(',')]  # Split by ',' and remove extra spaces
+    elif isinstance(tags, list):
+        search_tags = [str(tag).strip() for tag in tags]
+    
     try:
-        with db.session.begin_nested():
-            # Check if project exists
-            project_list = researcher.project_list
-            projects = [project for project in project_list if tag in project.get("tags", [])]
+        # Check if project exists
+        # nesting is a bit excessive 
+        # a way to use less nesting can be done using the query filter:
+        # projects_list = Project.query.filter(
+        # Project.creator_id == researcher_id,or_(*[Project.tags.contains(cast([tag], JSONB)) for tag in search_tags])).all()
+        # but this is more readable and easier to understand
+        # without having to be at the mercy of sqlalchemy voodoo
+        projects_list = []
+        for projectEntry in researcher.project_list:
+            projectName = projectEntry.get("project_name")
+            if projectName:
+                project = helper.find_project(projectName, researcher_id)
+                if project is not None:
+                    if any(tag in project.tags for tag in search_tags):
+                        projects_list.append(project)
+ 
+        # Check if any projects were found
+        if not projects_list:   
+            return jsonify({"message": "No projects found"}), 200
+                                
     except Exception as e:
         logging.debug(e)
         return jsonify({"error": "Error: 500, An error has occured while searching for projects"}), 500
 
-    return jsonify({"projects_list": projects})
+    return jsonify({"projects_list": projects_list}), 200
+
+'''
+# this route is to change the project status
+# this is done by sending a post request to the /updateProjectStatus endpoint
+# the project name and status are passed in the request body
+# the status is used to update the project status in the database
+# the status can only be one of the following: draft or in_progress
+# project name rules apply
+
+ARGS:
+    - project_name: the name of the project
+    - status: the status to be set for the project
+    
+RESPONSE:
+    - 200: Project status updated successfully
+    - 400: Project name must be a non-empty string
+    - 400: Project name contains invalid characters
+    - 400: Researcher ID data Field is empty
+    - 400: Project Name data Field is empty
+    - 400: Project name already exists
+    - 400: Project name is too long
+    - 404: Researcher not found
+    - 500: Project was unable to be updated
+
+RETURNS:
+    - None
+    
+UPDATES:
+    - Database: Project table
+    
+'''
 
 # this route is to update the project status
 @projectsBp.route('/updateProjectStatus', methods=['POST'])
@@ -486,23 +624,46 @@ def updateProjectStatus():
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
 
+    # Project name checks:
     projectName = data['project_name']
+    # ensure project name is not an empty string
+    strippedProjectName = projectName.strip()
+    if not projectName or len(strippedProjectName) == 0:
+        return jsonify({"error": "Project name cannot be empty"}), 400
+    
+    # ensure project does not have invalid characters
+    if helper.check_invalid_project_name(projectName):
+        return jsonify({"error": "Project name contains invalid characters"}), 400
+    
+    # ensure project name is not too long
+    if len(projectName) > 128:
+        return jsonify({"error": "Project name is too long"}), 400
+    
+    # sanitize project name to remove special characters
+    safeProjectName = helper.sanitize_project_name(projectName)
+    if safeProjectName != projectName:
+        return jsonify({"error": "Project name contains invalid characters"}), 400
+    
     try:
         with db.session.begin_nested():
             # Check if project exists
-            project_dict = {project["name"]: project for project in researcher.project_list}
-            project = project_dict.get(projectName)
+            project = helper.find_project(projectName, researcher_id)
+            
             if project is None:
                 return jsonify({"error": "Project not found"}), 404 # disallow project update if project does not exist
 
             new_status = data['status']
+            
             if new_status == '':
                 return jsonify({"error": "Status cannot be empty"}), 400
 
-            project['status'] = new_status
-
-            flag_modified(researcher, "project_list")
-
+            # Check if the new status is valid
+            if new_status == "draft":
+                project.status = ProjectStatus.draft
+            
+            elif new_status == "in_progress":
+                project.status = ProjectStatus.in_progress
+                
             db.session.commit()
     except Exception as e:
         db.session.rollback()
@@ -511,6 +672,28 @@ def updateProjectStatus():
 
     return jsonify({"message": "Project status updated successfully.", "projects_list": researcher.project_list})
 
+'''
+# this route returns all the projects of a researcher
+# this is done by sending a get request to the /getProjects endpoint
+# the researcher id is passed in the request header
+# the researcher id is used to get all the projects of the researcher
+# the projects are returned in a list
+
+ARGS:
+    - researcher_id: the id of the researcher
+    
+RESPONSE:
+    - 200: Projects found successfully
+    - 404: Researcher not found
+    - 500: An error has occured while searching for projects
+
+RETURNS:
+    - List of projects that belong to the researcher
+
+UPDATES:
+    - None
+    
+'''
 # this route is to get all the projects of a researcher
 @projectsBp.route('/getProjects', methods=['GET'])
 @jwt_required()
@@ -523,6 +706,37 @@ def getProjects():
         return jsonify({"error": "Researcher not found"}), 404
 
     return jsonify({"projects_list": researcher.project_list})
+
+'''
+# this route is to get a specific project of a researcher
+# this is done by sending a post request to the /getProject endpoint
+# the project name is passed in the request body
+# the project name is used to get the project of the researcher
+# the project object is returned in the response
+# project name rules apply
+
+ARGS:
+    - project_name: the name of the project
+    - researcher_id: the id of the researcher
+
+RESPONSE:
+    - 200: Project returned successfully
+    - 400: Project name must be a non-empty string
+    - 400: Project name contains invalid characters
+    - 400: Researcher ID data Field is empty
+    - 400: Project Name data Field is empty
+    - 400: Project name already exists
+    - 400: Project name is too long
+    - 404: Researcher not found
+    - 500: An error has occured while retrieving the project
+    
+RETURNS:
+    - Project object in JSON format
+
+UPDATES:
+    - None
+
+'''
 
 # this route is to get a specific project of a researcher
 @projectsBp.route('/getProject' , methods=['POST'])
@@ -541,12 +755,31 @@ def getProject():
     if not researcher_exists:
         return jsonify({"error": "Researcher not found"}), 404
 
+    # Project name checks:
     projectName = data['project_name']
+    # ensure project name is not an empty string
+    strippedProjectName = projectName.strip()
+    if not projectName or len(strippedProjectName) == 0:
+        return jsonify({"error": "Project name cannot be empty"}), 400
+    
+    # ensure project does not have invalid characters
+    if helper.check_invalid_project_name(projectName):
+        return jsonify({"error": "Project name contains invalid characters"}), 400
+    
+    # ensure project name is not too long
+    if len(projectName) > 128:
+        return jsonify({"error": "Project name is too long"}), 400
+    
+    # sanitize project name to remove special characters
+    safeProjectName = helper.sanitize_project_name(projectName)
+    if safeProjectName != projectName:
+        return jsonify({"error": "Project name contains invalid characters"}), 400
+    
     try:
         with db.session.begin_nested():
             # Check if project exists
-            project_dict = {project["name"]: project for project in researcher_exists.project_list}
-            project = project_dict.get(projectName)
+            project = helper.find_project(safeProjectName, researcher_id)
+                        
             if project is None:
                 return jsonify({"error": "Project not found"}), 404 # disallow returning project if project does not exist
     except Exception as e:
@@ -555,9 +788,40 @@ def getProject():
 
     return jsonify({"project": project})
 
+'''
 # this route is to delete a project
-# frontend should ensure that the user is aboslutely sure they want to delete the project as it will
-# delete all the files associated with the project
+# this is done by sending a post request to the /deleteProject endpoint
+# the project name is passed in the request body
+# the project name is used to delete the project of the researcher
+# the project is deleted from the database and the project directory is deleted from the file system
+# the project name rules apply
+# Prompt the user to confirm deletion before proceeding
+# if the project is deleted all the audio files in the project are deleted
+
+ARGS:
+    - project_name: the name of the project
+    - researcher_id: the id of the researcher
+
+RESPONSE:
+    - 200: Project deleted successfully
+- 400: Project name must be a non-empty string
+    - 400: Project name contains invalid characters
+    - 400: Researcher ID data Field is empty
+    - 400: Project Name data Field is empty
+    - 400: Project name already exists
+    - 400: Project name is too long
+    - 404: Researcher not found
+    - 500: An error has occured while attempting to delete the project
+
+RETURNS:
+    - None
+
+UPDATES:
+    - Database: Researcher, Project table
+
+'''
+
+# this route is to delete a project
 @projectsBp.route('/deleteProject', methods=['POST'])
 @jwt_required()
 def deleteProject():
@@ -570,34 +834,78 @@ def deleteProject():
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
 
-    researcher = Researcher.query.filter_by(id=researcher_id).first()
+    researcher = helper.is_researcher_id(researcher_id)
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
 
+    # Project name checks:
     projectName = data['project_name']
+    # ensure project name is not an empty string
+    strippedProjectName = projectName.strip()
+    if not projectName or len(strippedProjectName) == 0:
+        return jsonify({"error": "Project name cannot be empty"}), 400
+    
+    # ensure project does not have invalid characters
+    if helper.check_invalid_project_name(projectName):
+        return jsonify({"error": "Project name contains invalid characters"}), 400
+    
+    # ensure project name is not too long
+    if len(projectName) > 128:
+        return jsonify({"error": "Project name is too long"}), 400
+    
+    # sanitize project name to remove special characters
+    safeProjectName = helper.sanitize_project_name(projectName)
+    if safeProjectName != projectName:
+        return jsonify({"error": "Project name contains invalid characters"}), 400
+    
     try:
         with db.session.begin_nested():
             # Check if project exists
-            project_dict = {project["name"]: project for project in researcher.project_list}
-            project = project_dict.get(projectName)
+            project = helper.find_project(safeProjectName, researcher_id)
             if project is None:
                 return jsonify({"error": "Project not found"}), 404
+            
             # Check if researcher owns project
-            if project.get("creator") != researcher.first_name:
-                    if project.get("creator id") != str(researcher.id):
+            # double check researcher first name and id
+            # project creator name and id should match researcher name and id
+            if project.creator_name != researcher.first_name or project.creator_id != researcher.id:
                         return jsonify({"error": "You do not have permission to delete this project"}), 403
-                # delete project directory
-            if os.path.exists(project.get("path")):
-                shutil.rmtree(project.get("path"))
-                researcher.project_list.remove(project)
+            
+            # delete project directory
+            if os.path.exists(project.path):
+                try:
+                    # delete the project directory from storage
+                    # this will delete the directory and all its contents
+                    shutil.rmtree(project.path)
+                except OSError as e:
+                    return jsonify({"error": "Failed to delete project files"}), 500 
+                   
+                #remove the project from the researcher project list
+                researcherProject = helper.find_researcher_project(safeProjectName, researcher_id)
+                
+                # remove the project from the researcher project list
+                if researcherProject:
+                    # remove the project from the researcher project list
+                    researcher.project_list.remove(researcherProject)
+                
+                # update audio tables to remove all files associated with the project
+                # this will delete all the audio files associated with the project
+                audio_files = helper.get_all_audio_files(safeProjectName, researcher_id)
+                for audio_file in audio_files:
+                    db.session.delete(audio_file)
+
+                # delete the project from the database
+                db.session.delete(project)
+                
             flag_modified(researcher, "project_list")
             db.session.commit()
+            
     except Exception as e:
         db.session.rollback()
         logging.debug(e)
         return jsonify({"error": "Project was unable to be deleted"}), 500
 
-    return jsonify({"message": "Project deleted successfully", "projects_list": researcher.project_list})
+    return jsonify({"message": "Project deleted successfully"}), 200
 
 # this route is to get the metrics for a specific project
 @projectsBp.route('/getProjectMetrics', methods=['POST'])
@@ -791,7 +1099,7 @@ def updateProjectMetrics():
 
 # this route is to delete a specified metric in a project.
 # this will remove the key value pair from the metrics dictionary
-# this can only be called when a project status is set to 'Draft'
+# this can only be called when a project status is set to 'draft'
 @projectsBp.route('/deleteProjectMetrics', methods=['POST'])
 @jwt_required()
 def deleteProjectMetrics():

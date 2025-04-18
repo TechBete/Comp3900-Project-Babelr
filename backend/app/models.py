@@ -244,7 +244,7 @@ class AudioFile(db.Model):
         }
     }
     '''
-    tags                = db.Column(db.JSON, default=list) # optional tags for audio file
+    tags                = db.Column(db.JSON, default=list) 
     researcher_id       = db.Column(UUID(as_uuid=True),nullable=False)
     project_name        = db.Column(db.String(128), nullable=False)
     allocated_listeners = db.Column(db.JSON, default=list)
