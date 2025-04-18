@@ -185,15 +185,15 @@ class Listener(db.Model):
 
     ### Listener audio file details
     # uuid of currently allocated audio file (still evaluating)
-    currently_assigned_audio  = db.Column(UUID(as_uuid=True))
+    currently_assigned_audio  = db.Column(db.String(36))
 
     # list of audio uuid
     # after evaluation is done from listener side it moves from currently_assigned_audio to evaluation_history
-    evaluation_history        = db.Column(UUID(as_uuid=True), default=list)
+    evaluation_history        = db.Column(db.String(36), default=list)
 
     # All allocated audio file for a user is stored here as a list of audio uuid
     # once finishing evaluation of currently_assigned_audio, first element of this list will be moved to currently_assigned_audio for evaluation
-    allocated_audio_queue     = db.Column(UUID(as_uuid=True), default=list) # list of video IDs completed by the listener
+    allocated_audio_queue     = db.Column(db.String(36), default=list) # list of video IDs completed by the listener
 
 class AudioFile(db.Model):
     __tablename__       = "audiofiles"

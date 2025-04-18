@@ -98,7 +98,7 @@ def blind_login(id):
         return None
 
 def get_user_demography(id):
-    return mod.ListenerDemographic.query.filter_by(listener_id=id).first()
+    return mod.Listener.query.filter_by(listener_id=id).first()
 
 def get_researcher_demography(id):
-    return mod.ResearcherDemographic.query.filter_by(researcher_id=id).first()
+    return mod.Researcher.query.filter_by(researcher_id=id).first()

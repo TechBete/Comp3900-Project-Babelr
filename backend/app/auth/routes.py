@@ -1,7 +1,7 @@
 from sqlalchemy.orm.attributes import flag_modified
 from app.audio.routes import getRequirements, isQualified, uploadAudioFile
 from flask import request, jsonify, url_for, redirect
-from app.models import Researcher, Listener, PermissionLevel, ListenerDemographic, ResearcherDemographic
+from app.models import Researcher, Listener, PermissionLevel
 
 from app import db, jwt
 from app.auth import authBp
@@ -188,14 +188,6 @@ def createListener():
         first_time =True,
     )
 
-    demo = ListenerDemographic(
-        listener_id=user.id,
-        date_of_birth="",
-        gender='other',
-        country_of_residence="",
-        education=""
-    )
-
     try:
         db.session.add(user)
         db.session.add(demo)
@@ -327,9 +319,8 @@ def createTestUser():
         languages=test_lang,
         is_verified=True,
         first_time=False,
-        currently_assigned_audio=None,
-        evaluation_history=None,
-        allocated_audio_queue=None,
+        evaluation_history=[],
+        allocated_audio_queue=[],
     )
 
     allocated_listener = Listener(
@@ -348,9 +339,8 @@ def createTestUser():
         languages=test_lang,
         is_verified=True,
         first_time=False,
-        currently_assigned_audio=None,
-        evaluation_history=None,
-        allocated_audio_queue=None,
+        evaluation_history=[],
+        allocated_audio_queue=[],
     )
 
     user2 = Researcher(

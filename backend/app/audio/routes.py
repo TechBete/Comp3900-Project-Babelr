@@ -219,7 +219,7 @@ def getAudioFileMetrics():
                 return jsonify({"error": "Project not found"}), 404
 
             # Check if audio file exists
-            audio_file = AudioFile.query.filter_by(file+name=audio_file_name)
+            audio_file = AudioFile.query.filter_by(file_name=audio_file_name)
             if not audio_file:
                 return jsonify({"error": "Audio file not found"}), 404
 
@@ -266,7 +266,7 @@ def getProjectAudioFiles():
             audio_files = []
             audio_files = AudioFile.query.filter_by(project_name=projectName).all()
             logging.debug(audio_files)
-            if not audio_files || audio_files == []:
+            if not audio_files or audio_files == []:
                 return jsonify({"error": "Audio files not found"}), 404
     except Exception as e:
         logging.debug(e)

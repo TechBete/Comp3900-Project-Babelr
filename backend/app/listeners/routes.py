@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from flask import jsonify, request
 from app.auth.routes import assignQualifiedAudio
 from app.listeners import userBp
-from app.models import Gender, Listener, ListenerDemographic
+from app.models import Gender, Listener
 import app.helpers as helpers
 import uuid, logging
 from app import db
@@ -437,10 +437,6 @@ def testChangeDemographics():
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
-    demographic: ListenerDemographic | None = helpers.get_user_demography(user_id)
-    if not demographic:
-        return jsonify({"error": f"Demographic data for the user {listener.id} was not found"}), 400
-
     # Convince the type system that these exists
     assert demographic is not None
     assert data is not None
@@ -480,8 +476,8 @@ def submitRating():
     # check if audio file to submit ratings exists
     audio_id = data['audio_id']
     audio_file = AudioFile.query.filter_by(id=audio_id).first()
-        if not audio_file:
-            return jsonify({"error": "Audio file not found"}), 404
+    if not audio_file:
+        return jsonify({"error": "Audio file not found"}), 404
 
     listener.evaluation_history.append(audio_id)
     if not audio_id in listener.evaluation_history:
