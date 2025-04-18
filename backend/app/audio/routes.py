@@ -1,5 +1,5 @@
 from app.audio import audioBp
-from app.models import Listener, ProficiencyLevel
+from app.models import Listener, ProficiencyLevel, ProjectStatus, AudioFile
 from flask import jsonify, request
 from app import db, jwt
 import app.helpers as helper
@@ -44,14 +44,13 @@ def uploadAudioFile():
         return qualified_listeners
 
     data = request.form
-    required_fields = ['project_name', 'tags']
+    required_fields = ['project_name', 'model', 'language', 'min_proficiency', 'tags'] # new
 
     validation_error = helper.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
 
     # file availibility validation
-    # TODO: @halliya i think this is what you need to fix?
     if "file" not in request.files:
         return jsonify({"error": "File doesn't exists."}), 400
     file = request.files["file"]
@@ -62,7 +61,6 @@ def uploadAudioFile():
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
     # search researcher name from researcher uuid
-
     researcher = helper.is_researcher_id(researcher_id)
 
     if researcher:
@@ -91,53 +89,43 @@ def uploadAudioFile():
     get_id = lambda listener: listener.id.hex
     qualified_listener_ids = list(map(get_id, qualified_listener))
     try:
-        project_dict = {project["name"]: project for project in researcher.project_list}
-
-        project = project_dict.get(data['project_name'])
+        project = Project.query.filter_by(project_name=data['project_name'])
 
         if project is None:
             return jsonify({"error": "Project not found"}), 404
 
-        if project['status'] != 'Draft':
+        if project.status != 'draft': # TODO: draft check? enum
             return jsonify({"error": "The Project status must be set to 'Draft' to delete metrics"}), 400
 
-        audio_data = {
-            "name": file.filename,
-            "file_extension": filetype.guess(file_path).extension,
-            "file_path": file_path,
-            "allocated_listeners": qualified_listener_ids,
-            "metrics": project["metrics"], # metrics for the audio file set here
-            "tags": tags,
-            "Researcher": str(researcher.id),
-            "project_name": data['project_name'],
-            "project_path": project_path_dir,
-            # subset of the project tags, these tags are specific tags for each audio file
-        }
-        if audio_data not in researcher.uploaded_audio:
-            researcher.uploaded_audio.append(audio_data)
-            flag_modified(researcher, "uploaded_audio")
-            for listener in qualified_listener:
-                listener.assigned_audio.append(audio_data)
-                flag_modified(listener, "assigned_audio")
-                logging.debug(f'listener {listener} has assigned audio files {listener.assigned_audio}')
-            db.session.commit()
-        else:
+        audio_data = AudioFile(
+            id=data.get(id, uiud.uuid4()),
+            file_name=file.filename,
+            file_extension=filetype.guess(file_path).extension,
+            file_path=file_path,
+            model=data['model'],
+            language=data['language'],
+            min_proficiency=data['min_proficiency'],
+            metrics=project.metrics,
+            tags=data['tags'],
+            researcher_id=str(researcher.id),
+            project_name=project.project_name,
+            allocated_listeners=[]
+        )
+
+        if db.session.query(AudioFile).filter_by(file_path=file_path).first():
             return jsonify({"message": "Audio file already exist"}), 400
-        
-        # add audio file to project assigned_audio
-        if "assigned_audio" not in project:
-            project["assigned_audio"] = {
-                "audio": [],
-            }
-        # check if audio file already exists in the project
-        if file.filename not in project["assigned_audio"]["audio"]:
-            project["assigned_audio"]["audio"].append(file.filename)
-            db.session.commit()
-        else:
-            return jsonify({"message": "Audio file already exist in project"}), 400
-        
-        #flag_modified(researcher, "project_list")
-        
+        db.session.add(audio_data)
+        project.audio_list.append(audio_data.id)
+        flag_modified(project, "audio_list")
+        for listener in qualified_listener:
+            if listener.currently_assigned_audio is None:
+                listener.currently_assigned_audio = audio_data.id
+                flag_modified(listener, "currently_assigned_audio")
+            else:
+                listener.allocated_audio_queue.append(audio_data.id)
+                flag_modified(listener, "allocated_audio_queue")
+            logging.debug(f'listener {listener} has assigned audio files {listener.assigned_audio}')
+        db.session.commit()
     except Exception as e:
         db.session.rollback()
         logging.debug(e)
@@ -160,14 +148,14 @@ def testUploadAudioFile():
 
     # NOTE: file path syntax = /root/audioData/researcherId/projectName/researcherName/fileName
     # follow up on this as well
-    
+
     file_path = "../../../audioData" # root directory path for all audio files
     researcher_dir = os.path.join(file_path, researcher_id)
     # if directory with researcher id doesn't exist, make directory
     os.makedirs(researcher_dir, exist_ok=True)
     researcher_name_dir = os.path.join(researcher_dir, researcher_name)
     os.makedirs(researcher_name_dir, exist_ok=True)
-    
+
     file_path = os.path.join(researcher_name_dir, "testfile")
     # file.save(file_path) # save the file in the directory
 
@@ -245,19 +233,18 @@ def getAudioFileMetrics():
     try:
         with db.session.begin_nested():
             # Check if project exists
-            project_dict = {project["name"]: project for project in researcher.project_list}
-            project = project_dict.get(projectName)
+            project = helper.find_project(projectName, researcher_id)
             if project is None:
             # disallow returning project if project does not exist
                 return jsonify({"error": "Project not found"}), 404
 
             # Check if audio file exists
-            audio_files = [audio for audio in researcher.uploaded_audio if audio['name'] == audio_file_name]
-            if not audio_files:
+            audio_file = AudioFile.query.filter_by(file_name=audio_file_name)
+            if not audio_file:
                 return jsonify({"error": "Audio file not found"}), 404
 
             # Get the metrics for the specified audio file
-            audio_file_metrics = audio_files[0].get('metrics', {})
+            audio_file_metrics = audio_file.metrics
     except Exception as e:
         logging.debug(e)
         return jsonify({"error": "Error: 500, An error has occured while retrieving the audio file metrics"}), 500
@@ -283,44 +270,30 @@ def getProjectAudioFiles():
         return jsonify({"error": "Researcher not found"}), 404
 
     projectName = data['project_name']
-    
+
     try:
-        with db.session.begin_nested(): 
-             # Check if project exists
-            project_dict = {project["name"]: project for project in researcher.project_list}
-            logging.debug(project_dict)
-            
-            # Get project details if name exists
-            project = project_dict.get(projectName)
+        with db.session.begin_nested():
+            # Check if project exists
+            project = helper.find_project(projectName, researcher_id)
             if project is None:
                 logging.debug(project)
                 return jsonify({"error": "Project not found"}), 404
 
-            # Check if audio files exist for project
-            # this needs to be changed to checking the dict
-            assigned_audio_files = project.get('assigned_audio', {}).get('audio', [])
-            logging.debug(assigned_audio_files)
-            
-            
-            audio_file_names = [audio['name'] for audio in assigned_audio_files if audio['name'] in assigned_audio_files]
-            logging.debug(audio_file_names)
-            
-            # search for audio files in the uploaded_audio list in the researcher object
             # Check if audio files exist
-            if not audio_file_names:
+            if project.audio_list == []:
                 return jsonify({"error": "No audio files found for this project"}), 404
-            
+
             # Get the audio files for the specified project
-            #audio_files = [audio for audio in researcher.uploaded_audio if audio['name'] in audio_file_names]
-            #logging.debug(audio_files)
-            #if not audio_files:
-            #    return jsonify({"error": "Audio file not found"}), 404
-            
+            audio_files = []
+            audio_files = AudioFile.query.filter_by(project_name=projectName).all()
+            logging.debug(audio_files)
+            if not audio_files or audio_files == []:
+                return jsonify({"error": "Audio files not found"}), 404
     except Exception as e:
         logging.debug(e)
         return jsonify({"error": "Error: 500, An error has occured while retrieving the audio files"}), 500
-    
-    return jsonify({"audio_files": audio_file_names})
+
+    return jsonify({"audio_files": audio_files})
 
 # test route to get the audio files for a specific project
 # this is broken, need to fix
@@ -343,19 +316,19 @@ def testgetProjectAudioFiles():
                 logging.debug(project)
                 return jsonify({"error": "Project not found"}), 404
 
-            # Check if audio files exist for project
-            # this needs to be changed to checking the dict
-            assigned_audio_files = project.get('assigned_audio', {}).get('audio', [])
-            logging.debug(assigned_audio_files)
-            
-            
-            audio_file_names = [audio['name'] for audio in assigned_audio_files if audio['name'] in assigned_audio_files]
-            logging.debug(audio_file_names)
-            
+            # Check if audio files exist
+            audio_file_names = project.get('Audio File Name', [])
+
             # search for audio files in the uploaded_audio list in the researcher object
             # Check if audio files exist
             if not audio_file_names:
                 return jsonify({"error": "No audio files found for this project"}), 404
+
+            # Get the audio files for the specified project
+            audio_files = [audio for audio in researcher.uploaded_audio if audio['name'] in audio_file_names]
+            logging.debug(audio_files)
+            if not audio_files:
+                return jsonify({"error": "Audio file not found"}), 404
 
     except Exception as e:
         logging.debug(e)
@@ -363,16 +336,15 @@ def testgetProjectAudioFiles():
 
     return jsonify({"audio_file_metrics": audio_file_names})
 
-# this route is to get specific audio file from a project 
+# this route is to get specific audio file from a project
 # and return the audio data so that it can be allocated to the users
 # database
- 
 @audioBp.route('/getAudioFileData', methods=['POST'])
 @jwt_required()
 def getAudioFileData():
     data = request.json
     required_fields = ['project_name', 'audio_file_name']
-    
+
     validation_error = helper.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
@@ -385,38 +357,30 @@ def getAudioFileData():
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
 
-
     projectName = data['project_name']
     audio_file_name = data['audio_file_name']
 
     try:
         with db.session.begin_nested():
             # Check if project exists
-            project_dict = {project["name"]: project for project in researcher.project_list}
-            project = project_dict.get(projectName)
-            
-            # Check if project exists
+            project = helper.find_project(projectName, researcher_id)
             if project is None:
                 return jsonify({"error": "Project not found"}), 404 # disallow returning project if project does not exist
 
-            # Check if audio file exists
-            audio_files = [audio for audio in researcher.uploaded_audio if audio['name'] == audio_file_name]
-            if not audio_files:
+            # Check if audio file exists and get specific audio file
+            audio_file = AudioFile.query.filter(file_name=audio_file_name, project_name=projectName).first()
+            if not audio_file:
                 return jsonify({"error": "Audio file not found"}), 404
 
-            # Get the specified audio file
-            audio_file = audio_files[0]
-            
             # update audio file metrics from project metrics
             # this is to ensure metrics are consistent across all audio files in the project
             # and up to date with the project metrics
-            # ensure that the metrics are in a valid format 
-            if not isinstance(project['metrics'], dict):
+            # ensure that the metrics are in a valid format
+            if not isinstance(project.metrics, dict):
                 return jsonify({"error": "Project metrics are not in a valid format"}), 500
             # check if audio file metrics are in a valid format
-            if not isinstance(audio_file['metrics'], dict):
+            if not isinstance(audio_file.metrics, dict):
                 return jsonify({"error": "Audio file metrics are not in a valid format"}), 500
-            
     except Exception as e:
         logging.debug(e)
         return jsonify({"error": "Error: 500, An error has occured while retrieving the audio file"}), 500
@@ -477,61 +441,56 @@ def updateAudioMetrics():
     validation_error = helper.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
-    
+
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
     researcher = helper.is_researcher_id(researcher_id)
-    
     # Validate researcher
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
-    
+
     # set local variables to the data fields
-    project_name = data['project_name']
+    projectName = data['project_name']
     audio_file_name = data['audio_file_name']
-    
+
     try:
         with db.session.begin_nested():
             # Check if project exists
-            project_dict = {project["name"]: project for project in researcher.project_list}
-            project = project_dict.get(project_name)
-            
-            # Check if project exists
+            project = helper.find_project(projectName, researcher_id)
             if project is None:
                 return jsonify({"error": "Project not found"}), 404
+
             # Check if audio file exists
-            audio_files = [audio for audio in researcher.uploaded_audio if audio['name'] == audio_file_name]
-            if not audio_files:
+            audio_file = AudioFile.query.filter(file_name=audio_file_name, project_name=projectName).first()
+            if not audio_file:
                 return jsonify({"error": "Audio file not found"}), 404
-            
-            # Get the specified audio file
-            audio_file = audio_files[0]
-            
+
             # check if audio file metrics are in a valid format
-            if not isinstance(audio_file['metrics'], dict):
+            if not isinstance(audio_file.metrics, dict):
                 return jsonify({"error": "Audio file metrics are not in a valid format"}), 500
-            
+
             # check if project metrics are in a valid format
-            if not isinstance(project['metrics'], dict):
+            if not isinstance(project.metrics, dict):
                 return jsonify({"error": "Project metrics are not in a valid format"}), 500
- 
+
             # Validate the structure of project metrics
             required_fields = ['min', 'max', 'minimum label', 'maximum label', 'description']
-            for metric_name, metric_data in project['metrics'].items():
+            validation_error = helper.validate_required_fields(data, required_fields)
+            if validation_error:
+                return validation_error
+            for metric_name, metric_data in project.metrics.items():
                 if not isinstance(metric_data, dict):
                     return jsonify({"error": "Metric {} is not in a valid format".format(metric_data)}), 500
                 for field in required_fields:
                     if field not in metric_data:
                         return jsonify({"error": "Metric {} is missing required field {}".format(metric_name, field)}), 500
-            
+
             # update audio file metrics from project metrics
             # this is to ensure metrics are consistent
-            audio_file['metrics'] = project['metrics']
-            
-            # Mark the project_list as modified and commit changes
-            flag_modified(researcher, "uploaded_audio")
+            audio_file.metrics = project.metrics
+            flag_modified(audio_file, "metrics")
             db.session.commit()
-    # handle any errors that occur during the process    
+    # handle any errors that occur during the process
     except Exception as e:
             logging.debug(e)
             return jsonify({"error": "Error: 500, An error has occured while updating the audio file metrics"}), 500
@@ -548,48 +507,53 @@ def updateAllAudioMetrics():
     validation_error = helper.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
-    
+
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
     researcher = helper.is_researcher_id(researcher_id)
-    
+
     # Validate researcher
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
     # set local variables to the data fields
-    project_name = data['project_name']
-    
+    projectName = data['project_name']
+
     try:
         with db.session.begin_nested():
             # Check if project exists
-            project_dict = {project["name"]: project for project in researcher.project_list}
-            project = project_dict.get(project_name)
-            
-            # Check if project exists
+            project = helper.find_project(projectName, researcher_id)
             if project is None:
                 return jsonify({"error": "Project not found"}), 404
-            
+
             # check if audio file metrics are in a valid format
-            if not isinstance(project['metrics'], dict):
+            if not isinstance(project.metrics, dict):
                 return jsonify({"error": "Project metrics are not in a valid format"}), 500
+
+            # get all audio files in the project
+            all_audio_files = helper.get_all_audio_files(projectName, researcher_id)
+            if not all_audio_files:
+                return jsonify({"error": "No audio files found for this project"}), 404
             
-            # Validate the structure of project metrics
-            required_fields = ['min', 'max', 'minimum label', 'maximum label', 'description']
-            for metric_name, metric_data in project['metrics'].items():
-                if not isinstance(metric_data, dict):
-                    return jsonify({"error": "Metric {} is not in a valid format".format(metric_data)}), 500
-                for field in required_fields:
-                    if field not in metric_data:
-                        return jsonify({"error": "Metric {} is missing required field {}".format(metric_name, field)}), 500
-            
-            # update audio file metrics from project metrics
-            # this is to ensure metrics are consistent across all audio files in the project
-            for audio_file in researcher.uploaded_audio:
-                if audio_file['project_name'] == project_name:
-                    audio_file['metrics'] = project['metrics']
-                    
+            for audio_file_name in all_audio_files:
+                # Check if audio file exists
+                audio_file = AudioFile.query.filter(file_name=audio_file_name, project_name=projectName).first()
+                if not audio_file:
+                    return jsonify({"error": "Audio file not found"}), 404
+
+                # Validate the structure of project metrics
+                required_fields = ['min', 'max', 'minimum label', 'maximum label', 'description']
+                for metric_name, metric_data in project.metrics.items():
+                    if not isinstance(metric_data, dict):
+                        return jsonify({"error": "Metric {} is not in a valid format".format(metric_data)}), 500
+                    for field in required_fields:
+                        if field not in metric_data:
+                            return jsonify({"error": "Metric {} is missing required field {}".format(metric_name, field)}), 500
+
+                # update audio file metrics from project metrics
+                audio_file.metrics = project.metrics
+
             # Mark the project_list as modified and commit changes
-            flag_modified(researcher, "uploaded_audio")
+            flag_modified(audio_file, "metrics")
             db.session.commit()
     except Exception as e:
         db.session.rollback()

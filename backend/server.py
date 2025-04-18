@@ -24,7 +24,6 @@ if __name__ == '__main__':
                 # creates test user for frontend testing, verification for this account is waived
                 # testAddLanguage() # for testing add language functionality; To be removed
                 testUploadAudioFile()
-                testChangeDemographics()
             break
         except OperationalError as e:
             print("Database not ready yet, retrying...")

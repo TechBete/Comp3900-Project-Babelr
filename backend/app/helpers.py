@@ -4,8 +4,7 @@ from itsdangerous import URLSafeTimedSerializer
 from password import PasswordHash
 from app.models import Researcher, Listener, Project # ls
 from app import db
-import os, smtplib, re
-import secrets # secrets not used ?
+import os, smtplib, re, uuid #(?) uuid not in use?
 
 # ========== 0. Helper Functions ==========
 
@@ -17,7 +16,7 @@ def check_verified(email):
         return True
     if existing_researcher and existing_researcher.is_verified:
         return True
-    
+
     return jsonify({"error": "Email not verified"}), 401
 
 def validate_required_fields(data, required_fields):
@@ -63,7 +62,7 @@ def send_verification_email(receiver_email, verification_url):
         server.quit()
     except Exception as e:
         return f"Error: {e}"
-    
+
 def is_existing_user_email(email):
     existing_listener = Listener.query.filter_by(email=email).first()
     existing_researcher = Researcher.query.filter_by(email=email).first()

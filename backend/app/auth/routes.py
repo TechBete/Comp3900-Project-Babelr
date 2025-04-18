@@ -470,8 +470,8 @@ def createTestUser():
 
     test_lang = [
     {
-        "language": "English", 
-        "proficiency": "Native", 
+        "language": "English",
+        "proficiency": "Native",
     }, {
         "language": "Japanese",
         "proficiency": "Elementary",
@@ -487,15 +487,18 @@ def createTestUser():
     hashed_password3 = helper.hash_password(data3)
 
     user = Listener(
-        id="736259a4-aea2-4de7-aa87-5764e1db624b",    # generate a random uuid if not provided
+        id="736259a4-aea2-4de7-aa87-5764e1db624b",
         first_name=data['first_name'],
         last_name=data['last_name'],
         email=data['email'],
         pw_hash=hashed_password.value,
         permission=PermissionLevel.listener,
-        background_info="ahhhhhhhhhhhh",
         reward_points=5,
-        is_verified=True,
+        background_info="testbackground",
+        date_of_birth="1959-06-11",
+        country_of_residence="Australia",
+        education="Bachelor of Arts",
+        gender="female",
         languages=test_lang,
         date_of_birth=data["date_of_birth"],
         country_of_residence=data["country_of_residence"],
@@ -510,15 +513,18 @@ def createTestUser():
     )
 
     allocated_listener = Listener(
-        id="20658871-860a-4a87-a520-11800b9f3632",    # generate a random uuid if not provided
+        id="20658871-860a-4a87-a520-11800b9f3632",
         first_name=data3['first_name'],
         last_name=data3['last_name'],
         email=data3['email'],
         pw_hash=hashed_password3.value,
         permission=PermissionLevel.listener,
-        background_info="ayo",
         reward_points=15,
-        is_verified=True,
+        background_info="ayo",
+        date_of_birth="2000-09-08",
+        country_of_residence="Australia",
+        education="HSC",
+        gender="male",
         languages=test_lang,
         date_of_birth=data3["date_of_birth"],
         country_of_residence=data3["country_of_residence"],
@@ -539,6 +545,12 @@ def createTestUser():
         email=data2['email'],
         pw_hash=hashed_password2.value,
         permission=PermissionLevel.researcher,
+        project_list=[],
+        date_of_birth="1953-04-12",
+        gender="other",
+        country_of_residence="France",
+        education="UCLA",
+        organisation="University of Paris",
         is_verified=True,
         date_of_birth= data2["date_of_birth"],
         country_of_residence= data2["country_of_residence"],
@@ -862,7 +874,7 @@ def getRoleFromID():
         role = listener.permission.value
         return jsonify({"role": str(role), "first_time": first_time})
     elif not listener and researcher:
-        role = researcher.permission.value       
+        role = researcher.permission.value
         return jsonify({"role": str(role), "first_time": first_time})
     else:
         return jsonify({"error": "User ID not found"}), 404
