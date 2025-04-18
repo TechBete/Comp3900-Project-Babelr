@@ -166,10 +166,12 @@ class Project(db.Model):
         }
     }
     '''
+    models               = db.Column(db.JSON, default=list) # list of models used in the project
     creator_id           = db.Column(UUID(as_uuid=True), nullable=False)
     creator_name         = db.Column(db.String(128), nullable=False)
     # list of audio file uuid to track all uploaded audio file under the project
     audio_list           = db.Column(UUID(as_uuid=True), default=list)
+    total_listeners      = db.Column(db.Integer, default=0) # total number of listeners in the project
 
 class Listener(db.Model):
     __tablename__ = "listeners"

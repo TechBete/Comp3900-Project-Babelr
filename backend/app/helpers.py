@@ -103,7 +103,12 @@ def find_project(projectName, id):
     return Project.query.filter_by(project_name=projectName, creator_id=id).first()
 
 def find_researcher_project(projectName, id):
-    return Researcher.project_list.filter_by(project_uuid=id, project_name=projectName).first()
+    researcher = Researcher.query.filter_by(id=id).first()
+    if researcher and researcher.project_list:
+        for project in researcher.project_list:
+            if project.get("project_name") == projectName:
+                return project
+    return None
 
 def update_project_creator(current_value, new_value, id):
     # Update the project creator in the Project model
@@ -119,3 +124,8 @@ def update_project_creator(current_value, new_value, id):
     except Exception as e:
         db.session.rollback()
         return False
+
+def get_all_audio_files(projectName, id):
+    # Get the audio file path from the database
+    return Project.query.filter_by(project_name=projectName, creator_id=id).all()
+

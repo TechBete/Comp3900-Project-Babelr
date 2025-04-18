@@ -1151,11 +1151,39 @@ def setProjectMetricsField():
 
     return jsonify({"message": "Project metrics set successfully", "metrics": project.metrics})
 
+'''
+# this route is used to update the project metrics
+# this is done by sending a post request to the /updateProjectMetrics endpoint
+# the project name and metrics are passed in the request body
+# the project name is used to update the metrics for the project
+# the metrics are passed in as a dictionary and updated in the projects table
+# the project name rules apply
+
+ARGS:
+    - project_name: the name of the project
+    - metrics: the metrics to be updated for the project
+    
+RESPONSE:
+    - 200: Project metrics updated successfully
+    - 400: Project name must be a non-empty string
+    - 400: Project name contains invalid characters
+    - 400: Researcher ID data Field is empty
+    - 400: Project Name data Field is empty
+    - 400: Project name already exists
+    - 400: Project name is too long
+    - 404: Researcher not found
+    - 404: Project not found
+    - 500: An error has occured while updating the project metrics
+    
+RETURNS:
+    - Project metrics in JSON format
+    
+UPDATES:
+    - Database: Project table
+
+'''
 
 
-# this route is to update the project metrics
-# this will add values to each of the fields in the metrics dictionary
-# project metric values should be pulled directly from project data
 @projectsBp.route('/updateProjectMetrics', methods=['POST'])
 @jwt_required()
 def updateProjectMetrics():
@@ -1169,11 +1197,11 @@ def updateProjectMetrics():
     researcher_id = uuid.UUID(researcher_id)
 
     # Validate researcher
-    researcher = Researcher.query.filter_by(id=researcher_id).first()
+    researcher = helper.is_researcher_id(researcher_id)
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
 
-     # Project name checks:
+    # Project name checks:
     projectName = data['project_name']
     # ensure project name is not an empty string
     strippedProjectName = projectName.strip()
@@ -1193,32 +1221,69 @@ def updateProjectMetrics():
     if safeProjectName != projectName:
         return jsonify({"error": "Project name contains invalid characters"}), 400
     
-    if not isinstance(projectName, str):
-        logging.error("Project name must be a non-empty string")
-        return jsonify({"error": "Project name must be a non-empty string"}), 400
-
     try:
         with db.session.begin_nested():
             # Check if project exists
             project = helper.find_project(safeProjectName, researcher_id)
                         
-            logging.debug(f"Project: {project}")
             if project is None:
                 return jsonify({"error": "Project not found"}), 404
 
+            # Check if project is set to draft
+            if project.status != ProjectStatus.draft:
+                return jsonify({"error": "Project is not in draft status"}), 400
+        
+            # Check if owner of project
+            if project.creator_name != researcher.first_name or project.creator_id != researcher.id:
+                return jsonify({"error": "You do not have permission to update this project"}), 403
+        
             # Validate metrics from the frontend
             frontend_metrics = data['metrics']
-            logging.debug(f"Frontend metrics: {frontend_metrics}")
+            
             if not isinstance(frontend_metrics, dict):
                 return jsonify({"error": "Metrics must be a dictionary of numeric values"}), 400
 
+            # Check if metrics are empty
+            if not frontend_metrics:
+                return jsonify({"error": "Metrics cannot be empty"}), 400
 
             # Validate and update metrics
-            existing_metrics = project.get('metrics', {})
+            existing_metrics = project.metrics or {}
+            
             if not isinstance(existing_metrics, dict):
                 logging.error("Existing metrics must be a dictionary")
                 return jsonify({"error": "Existing metrics must be a dictionary"}), 500
+            
             for metric_name, metric_value in frontend_metrics.items():
+                if not isinstance(metric_value, dict):
+                    return jsonify({"error": "Metrics data for {} must be a dictionary".format(metric_name)}), 400
+                
+                # validate required fields
+                required_fields = ['min', 'max', 'minimum label', 'maximum label', 'description']
+                for field in required_fields:
+                    if field not in metric_value:
+                        return jsonify({"error": "Missing required field: {} for metric {}".format(field, metric_name)}), 400
+                
+                #validate text fields are not empty
+                for text_field in ['minimum label', 'maximum label', 'description']:
+                    if not isinstance(metric_value[text_field], str) or len(metric_value[text_field].strip()) == 0:
+                        return jsonify({"error": "{} must be a non-empty string for metric information".format(text_field)}), 400
+                
+                # Ensure min and max are numeric (in this case floats so as to handle future cases)
+                try:
+                    metric_value['min'] = float(metric_value['min'])
+                    metric_value['max'] = float(metric_value['max'])
+                except ValueError:
+                    return jsonify({"error": "Min and max values must be numeric"}), 400
+                
+                # Ensure absolute bounds for min and max
+                if abs(metric_value['min']) < 0 or abs(metric_value['max']) > 100:
+                    return jsonify({"error": "Min and max values must be between 0 and 100"}), 400
+                
+                # Ensure min is less than max
+                if metric_value['min'] >= metric_value['max']:
+                    return jsonify({"error": "Min value must be less than max value"}), 400
+                
                 if metric_name in existing_metrics:
                    existing_metrics[metric_name].update({
                        "min": metric_value.get('min', existing_metrics[metric_name]['min']),
@@ -1227,21 +1292,52 @@ def updateProjectMetrics():
                         "maximum label": metric_value.get('maximum label', existing_metrics[metric_name]['maximum label']),
                         "description": metric_value.get('description', existing_metrics[metric_name]['description'])
                    })
-            existing_metrics.update(frontend_metrics)
-
-            # Mark the project_list as modified and commit changes
-            flag_modified(researcher, "project_list")
+                   
+            project.metrics = existing_metrics
+            
+            # Mark the project metrics as modified and commit changes
+            flag_modified(project, "metrics")
             db.session.commit()
     except Exception as e:
         db.session.rollback()
-        logging.error(f"An error occurred while updating project metrics: {e}")
+        logging.error("An error occurred while updating project metrics: {}".format(e))
         return jsonify({"error": "Error: 500, An error occurred while updating the project metrics"}), 500
 
-    return jsonify({"message": "Project metrics updated successfully", "metrics": project['metrics']})
+    return jsonify({"message": "Project metrics updated successfully", "metrics": project.metrics})
 
+'''
 # this route is to delete a specified metric in a project.
+# this is done by sending a post request to the /deleteProjectMetrics endpoint
+# the project name and metric name are passed in the request body
+# the project name is used to delete the metric for the project
 # this will remove the key value pair from the metrics dictionary
 # this can only be called when a project status is set to 'draft'
+# the project name rules apply
+
+ARGS:
+    - project_name: the name of the project
+    - metric: the metric to be deleted for the project
+    
+RESPONSE:
+    - 200: Project metric deleted successfully
+    - 400: Project name must be a non-empty string
+    - 400: Project name contains invalid characters
+    - 400: Researcher ID data Field is empty
+    - 400: Project Name data Field is empty
+    - 400: Project name already exists
+    - 400: Project name is too long
+    - 404: Researcher not found
+    - 404: Project not found
+    - 500: An error has occured while deleting the project metric
+    
+RETURNS:
+    - Project metrics in JSON format
+    
+UPDATES:
+    - Database: Project table    
+
+'''
+
 @projectsBp.route('/deleteProjectMetrics', methods=['POST'])
 @jwt_required()
 def deleteProjectMetrics():
@@ -1254,40 +1350,67 @@ def deleteProjectMetrics():
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
 
-    researcher = Researcher.query.filter_by(id=researcher_id).first()
+    researcher = helper.is_researcher_id(researcher_id)
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
 
+    # Project name checks:
     projectName = data['project_name']
-
+    # ensure project name is not an empty string
+    strippedProjectName = projectName.strip()
+    if not projectName or len(strippedProjectName) == 0:
+        return jsonify({"error": "Project name cannot be empty"}), 400
+    
+    # ensure project does not have invalid characters
+    if helper.check_invalid_project_name(projectName):
+        return jsonify({"error": "Project name contains invalid characters"}), 400
+    
+    # ensure project name is not too long
+    if len(projectName) > 128:
+        return jsonify({"error": "Project name is too long"}), 400
+    
+    # sanitize project name to remove special characters
+    safeProjectName = helper.sanitize_project_name(projectName)
+    if safeProjectName != projectName:
+        return jsonify({"error": "Project name contains invalid characters"}), 400
+    
     try:
         with db.session.begin_nested():
             # Check if project exists
-            project_dict = {project["name"]: project for project in researcher.project_list}
-            project = project_dict.get(projectName)
+            project = helper.find_project(safeProjectName, researcher_id)
             if project is None:
                 return jsonify({"error": "Project not found"}), 404
 
-            if project.status != 'Draft':
+            if project.status != ProjectStatus.draft:
                 return jsonify({"error": "The Project status must be set to 'Draft' to delete metrics"}), 400
 
+            # Check project ownership
+            if project.creator_name != researcher.first_name or project.creator_id != researcher.id:
+                return jsonify({"error": "You do not have permission to delete this project metric"}), 403
+            
             # check if mertics is a valid dictionary
-            if not isinstance(project['metrics'], dict):
+            if not isinstance(project.metrics, dict):
                 return jsonify({"error": "Metrics are not in a valid format"}), 500
 
             # delete the metric from the project
             metric = data['metric']
-            if metric not in project['metrics']:
-                return jsonify({"error": "Metric not found"}), 404
+            if not metric or not isinstance(metric, str) or len(metric.strip()) == 0:
+                return jsonify({"error": "Metric name must be a non-empty string"}), 400
+            
+            # Check if this is the only metric
+            # metrics are not nullable and therefore cannot be empty
+            if len(project.metrics) <= 1:
+                return jsonify({"error": "Cannot delete the last metric. Projects must have at least one metric."}), 400
+            
             # Delete the metric from the project
-            del project['metrics'][metric]
+            project.metrics.pop(metric, None)
 
-            # Mark the project_list as modified and commit changes
-            flag_modified(researcher, "project_list")
+            # Mark the project metrics as modified and commit changes
+            flag_modified(project, "metrics")
             db.session.commit()
     except Exception as e:
         db.session.rollback()
         logging.debug(e)
         return jsonify({"error": "Error: 500, An error occurred while deleting the project metric"}), 500
 
-    return jsonify({"message": "Project metric deleted successfully", "metrics": project['metrics']})
+    return jsonify({"message": "Project metric deleted successfully", "metrics": project.metrics})
