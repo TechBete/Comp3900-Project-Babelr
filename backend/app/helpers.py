@@ -10,7 +10,7 @@ import os, smtplib, re, uuid #(?) uuid not in use?
 
 
 def check_verified(email):
-    existing_listener = is_listener_email
+    existing_listener = is_listener_email(email)
     existing_researcher = is_researcher_email(email)
     if existing_listener and existing_listener.is_verified:
         return True

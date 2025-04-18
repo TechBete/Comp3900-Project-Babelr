@@ -318,7 +318,7 @@ def createListener():
     
     try:
         db.session.add(user)
-        assignQualifiedAudio(user)
+        #assignQualifiedAudio(user)
         db.session.commit()
         # this redirects to a 404 page, need to check that routing is done correctly
         # to redirect to the login page
@@ -495,21 +495,18 @@ def createTestUser():
         permission=PermissionLevel.listener,
         reward_points=5,
         background_info="testbackground",
-        date_of_birth="1959-06-11",
-        country_of_residence="Australia",
-        education="Bachelor of Arts",
-        gender="female",
-        languages=test_lang,
         date_of_birth=data["date_of_birth"],
+        gender=data["gender"],
         country_of_residence=data["country_of_residence"],
         education=data["education"],
-        gender=data["gender"],
+        languages=test_lang,
+        is_verified=True,
+        jti = None,
+        blindlogin = None, 
         first_time=False,
         currently_assigned_audio=[],
         evaluation_history=[],
-        allocated_audio_queue=["20658111-860a-4a87-g420-11800b9f36e9"],
-        jti = None,
-        blindlogin = None, 
+        allocated_audio_queue=["3975b85e-05a5-4671-944b-d53b5a167420"],
     )
 
     allocated_listener = Listener(
@@ -521,21 +518,18 @@ def createTestUser():
         permission=PermissionLevel.listener,
         reward_points=15,
         background_info="ayo",
-        date_of_birth="2000-09-08",
-        country_of_residence="Australia",
-        education="HSC",
-        gender="male",
-        languages=test_lang,
         date_of_birth=data3["date_of_birth"],
+        gender=data3["gender"],
         country_of_residence=data3["country_of_residence"],
         education=data3["education"],
-        gender=data3["gender"],
+        languages=test_lang,
+        is_verified=True,
+        jti = None,
+        blindlogin = None,
         first_time=False,
         currently_assigned_audio=[],
         evaluation_history=[],
-        allocated_audio_queue=["20658111-860a-4a87-g420-11800b9f36e9"],
-        jti = None,
-        blindlogin = None,
+        allocated_audio_queue=["3975b85e-05a5-4671-944b-d53b5a167420"],
     )
 
     user2 = Researcher(
@@ -545,26 +539,19 @@ def createTestUser():
         email=data2['email'],
         pw_hash=hashed_password2.value,
         permission=PermissionLevel.researcher,
-        project_list=[],
-        date_of_birth="1953-04-12",
-        gender="other",
-        country_of_residence="France",
-        education="UCLA",
-        organisation="University of Paris",
-        is_verified=True,
-        date_of_birth= data2["date_of_birth"],
-        country_of_residence= data2["country_of_residence"],
-        education= data2["education"],
-        gender= data2["gender"],
         project_list=[
         {
-            "project_id": "20658111-860a-4a87-g420-11800b9f36e9",
+            "project_id": "3975b85e-05a5-4671-944b-d53b5a167420",
             "project_name": "Test Project 1",
             
         }
         ],
-        organisation="Test Organisation",
-        background_info="Test Background Info",
+        date_of_birth= data2["date_of_birth"],
+        gender= data2["gender"],
+        country_of_residence= data2["country_of_residence"],
+        education= data2["education"],
+        organisation="University of Paris",
+        is_verified=True,
         jti = None,
         blindlogin = None,
         first_time=False,

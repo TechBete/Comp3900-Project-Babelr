@@ -29,7 +29,7 @@ def create_app(config_class=Config):
     from app.researchers.routes import researchersBp
     from app.listeners.routes import userBp
     from app.audio.routes import audioBp
-    from app.statistics.routes import statisticsBp
+    #from app.statistics.routes import statisticsBp
 #   from app.admin.routes import adminBp     commenting out for now
     
     # Register the blueprints with their respective URL prefixes
@@ -38,7 +38,7 @@ def create_app(config_class=Config):
     app.register_blueprint(userBp, url_prefix='/listener')
     app.register_blueprint(projectsBp, url_prefix='/projects')
     app.register_blueprint(audioBp, url_prefix='/audio')
-    app.register_blueprint(statisticsBp, url_prefix='/statistics')
+    #app.register_blueprint(statisticsBp, url_prefix='/statistics')
 #   app.register_blueprint(adminBp, url_prefix='/admin') commenting out for now
 
     return app

@@ -82,8 +82,8 @@ def testGetListener():
     listener_id = uuid.UUID(test_listener_id)
 
     # Check if the listener exists
-    listener = helpers.is_listener_id(listener_id)
-    if not listener:
+    user = helpers.is_listener_id(listener_id)
+    if not user:
         return jsonify({"error": "Listener not found"}), 404
 
     # Construct the response
@@ -137,8 +137,8 @@ def addLanguage():
         if new_language not in listener.languages:
             listener.languages.append(new_language)
             flag_modified(listener, "languages")
-            assignQualifiedAudio(listener)
-            logging.debug(f"user {listener} is assigned {listener.assigned_audio}")
+            #assignQualifiedAudio(listener)
+            #logging.debug(f"user {listener} is assigned {listener.allocated_audio_queue}")
             db.session.commit()
     except IntegrityError as e:
         db.session.rollback()

@@ -144,9 +144,11 @@ def createProject():
                         "description": "How clear the audio sounds"
                     },
                 },
+                models=[],
                 creator_id=researcher.id,  # updated to include creator id (researcher id)
                 creator_name=researcher.first_name,
-                audio_list=[]
+                audio_list=[],
+                total_listeners=0
             )
             
             # update Researcher project list with project name
@@ -161,6 +163,7 @@ def createProject():
             db.session.add(researcher)
             # commit the changes to the database
             db.session.commit()
+            
     except Exception as e:
         db.session.rollback()
         logging.debug(e)
