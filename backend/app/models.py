@@ -125,7 +125,7 @@ class Project(db.Model):
     project_name         = db.Column(db.String(128), nullable=False)
     path                 = db.Column(db.String(128), nullable=False) # project directory
     status               = db.Column(project_state_enum, nullable=False)
-    tags                 = db.Column(db.String(128), default=list)
+    tags                 = db.Column(db.JSON)
     metrics              = db.Column(db.JSON, nullable=False)
     '''
     {
@@ -154,10 +154,12 @@ class Project(db.Model):
         }
     }
     '''
+    models               = db.Column(db.JSON) # all models used for audio clips
     creator_id           = db.Column(UUID(as_uuid=True), nullable=False)
     creator_name         = db.Column(db.String(128), nullable=False)
     # list of audio file uuid to track all uploaded audio file under the project
     audio_list           = db.Column(UUID(as_uuid=True), default=list)
+    total_listeners      = db.Column(db.Integer, default=0)
 
 
 class Listener(db.Model):
@@ -232,7 +234,7 @@ class AudioFile(db.Model):
         }
     }
     '''
-    tags                = db.Column(db.String(128), default=list) # optional tags for audio file
+    tags                = db.Column(db.JSON) # optional tags for audio file
     researcher_id       = db.Column(UUID(as_uuid=True),nullable=False)
     project_name        = db.Column(db.String(128), nullable=False)
     allocated_listeners = db.Column(db.JSON, default=list)
