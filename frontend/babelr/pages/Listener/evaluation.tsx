@@ -3,28 +3,59 @@ import Navbar_Listener from "components/nav_bar_listener";
 import { useState, useEffect } from "react";
 import { Button } from "@mui/material";
 import Slider from '@mui/material/Slider';
-// import ch_0 from 'ch_0.wav';
 
 export default function Evaluation() {
     const [Error, setError] = useState("");
-    // const [audioUrl, setAudioUrl] = useState("");
+    const [audioPath, setAudioPath] = useState("");
+    const [audioFile, setAudioFile] = useState('null');
 
-    /*
-    const fetchAudio = async () => {
-        const response = await fetch('http://127.0.0.1:8016/listener/getAudio', {
+    const fetchAudioPath = async () => {
+        const response = await fetch('http://127.0.0.1:8016/listener/getAssignedAudioFile', {
             method:"GET",
             credentials: 'include'
         });
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        setAudioUrl(url);
-        console.log("url is: ", url);
+
+        const res = await response.json();
+
+        console.log('res: ', res.audio_file);
+        // setAudioPath(res);
+        setAudioPath(res.audio_file);
+        console.log("audio path is: ", audioPath);
     };
-    */
+
+    const fetchAudioFileData = async () => {
+        const obj = filter_audio_path();
+        console.log('obj: ', obj);
+        const project_name = obj['project_name']; // 'project name 2'; // 
+        const audio_file_name = obj['audio_file_name']; // 'audio file name 3'; // 
+
+        const response = await fetch('http://127.0.0.1:8016/audio/getAudioFileData', {
+            method:"POST",
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({project_name, audio_file_name}),
+            credentials: 'include'
+        });
+
+        const res = await response.json();
+
+        setAudioFile('hello world');
+
+        console.log(audioFile);
+        console.log('res: ', res);
+    }
+
+    const filter_audio_path = function() {
+        // example = '/app/audioData/c1056c9e-962c-499d-83a8-599e784a4109/water bottle 1/temp_fntemp_ln/ch_2.wav'
+        const parts = audioPath.split('/');
+        const project_name = parts[4];
+        const audio_file_name = parts[parts.length - 1];
+
+        return { project_name, audio_file_name };
+    }
 
     useEffect(() => {
-        // fetchAudio();
-        // Audio_Receiver();
+        fetchAudioPath();
+        fetchAudioFileData();
     }, []);
 
     async function submitRating() {
@@ -38,11 +69,9 @@ export default function Evaluation() {
             })
 
             if (response.ok) {
-                console.log("HAHAHAHAHA!!!");
                 // const response = await response.json()
                 return // change later maybe
             } else {
-                console.log("Banana!!");
                 const error = await response.json();
                 setError(error.error);
             }
@@ -54,38 +83,6 @@ export default function Evaluation() {
         }
     }
 
-    /*
-    async function Audio_Receiver() {
-        try {
-            const response = await fetch(`http://localhost:8016/listener/getAudio`, {
-                method:"GET",
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({}),
-                credentials: 'include'
-            })
-    
-            if (response.ok) {
-                const response = await response.json()
-
-                console.log('what is response?');
-                console.log(response);
-
-                // setAudio(response);
-
-                return // change later maybe
-            } else {
-                const error = await response.json();
-                setError(error.error);
-            }
-    
-        } catch {
-            setError("Network Error: Fetch Request Failed");
-            return Error;
-        }
-    }
-    */
-
-    // const test_metric_names = ["Clarity", "Intelligibility"];
     const test_metrics = [
         {'name': 'Clarity', 'description': 'How clear is the speech?'},
         {'name': 'Intelligibility', 'description': 'How easy to understand is the speech?'}
@@ -121,13 +118,9 @@ export default function Evaluation() {
                             <p>Play the audio clip and rate it based on the provided metrics.</p>
                             <form className={styles["login-form"]} method="post" onSubmit={submitRating}>
                                 {/*audioUrl && <audio controls src={audioUrl}></audio>*/}
-                                {<audio controls id="audio" src="./ch_0.wav"></audio>}
+                                {<audio controls id="audio" src="/ch_0.wav"></audio>}
                                 {/*<Button variant="contained" id='playButton'>Play</Button>*/}
                                 {metric_grid}
-
-                                {/*<audio controls src={ch_0}>Play Audio</audio>*/}
-
-                                {/*<button id='playButton'>Play Audio</button>*/}
                                 <Button variant="contained" type='submit'>Submit Rating</Button>
                             </form>
                         </div>

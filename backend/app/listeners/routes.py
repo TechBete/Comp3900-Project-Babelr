@@ -6,7 +6,7 @@ from app.auth.routes import assignQualifiedAudio
 from app.listeners import userBp
 from app.models import Gender, Listener, ListenerDemographic
 import app.helpers as helpers
-import uuid, logging
+import uuid, logging, os
 from app import db
 
 # This route is used to get all listeners in the database
@@ -645,8 +645,15 @@ def getAssignedAudio():
 
         # check if listener is valid user
         listener = helpers.is_listener_id(listener_id)
+
+        logging.debug("**************************************************")
+        logging.debug(f"{listener}")
+
+
         if not listener:
             return jsonify({"error": "Listener not found"}), 404
+
+        # reached
 
         # check if listener has any assigned audio
         if not listener.assigned_audio:
@@ -663,14 +670,7 @@ def getAssignedAudio():
         # get the first audio file assigned to the listener
 
         audio_file_path = audio_file['file_path']
-        audio_file_name = audio_file['name']
-        audio_file_extension = audio_file['file_extension']
-
-        audio_file_src = os.path.join(
-            audio_file_path,
-            audio_file_name + '.' + audio_file_extension
-        )
-        logging.debug(audio_file_src)
+        audio_file_src = audio_file_path
 
         # check if the audio file exists
         if not os.path.exists(audio_file_src):
@@ -682,7 +682,7 @@ def getAssignedAudio():
         return jsonify({"error": "Error: 500, An error occurred while getting the audio file"}), 500
     
     # return the audio file src
-    return jsonify({"audio_file: {}".format(audio_file_src)}), 200
+    return jsonify({"audio_file": audio_file_src}), 200
 
 # update listener profile
 # update listener languages to be done in a different route
