@@ -9,6 +9,7 @@ import logging
 db = SQLAlchemy()
 jwt = JWTManager()
 
+
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
@@ -19,13 +20,15 @@ def create_app(config_class=Config):
     db.init_app(app)
     jwt.init_app(app)
     CORS(app, supports_credentials=True, 
-         origins=["http://localhost:3000", "https://localhost:8016", "*"])
+         resources={r"/*": {"origins": "*"}})  # Allow requests from the frontend to the backend
+                                                                                              # Set CORS policy to allow requests from the frontend to the backend
 
     # Register blueprints
     from app.auth.routes import authBp
     from app.projects.routes import projectsBp
     from app.researchers.routes import researchersBp
     from app.listeners.routes import userBp
+    from app.audio.routes import audioBp
 #   from app.admin.routes import adminBp     commenting out for now
     
     # Register the blueprints with their respective URL prefixes
@@ -33,10 +36,7 @@ def create_app(config_class=Config):
     app.register_blueprint(researchersBp, url_prefix='/researcher')
     app.register_blueprint(userBp, url_prefix='/listener')
     app.register_blueprint(projectsBp, url_prefix='/projects')
+    app.register_blueprint(audioBp, url_prefix='/audio')
 #   app.register_blueprint(adminBp, url_prefix='/admin') commenting out for now
 
     return app
-
-# this should allow for importing the create_app function from the app package
-#from . import create_app, db
-#__all__ = ['create_app', 'db', 'jwt']
