@@ -276,7 +276,6 @@ def getProjectAudioFiles():
             # Check if project exists
             project = helper.find_project(projectName, researcher_id)
             if project is None:
-                logging.debug(project)
                 return jsonify({"error": "Project not found"}), 404
 
             # Check if audio files exist
