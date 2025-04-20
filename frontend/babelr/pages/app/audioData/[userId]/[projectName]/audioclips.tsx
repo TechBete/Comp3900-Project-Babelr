@@ -62,7 +62,7 @@ export default function FileUploadPage() {
         if (typeof projectName === 'string') {
             getAudioClips();
         }
-    }, ); // <- only runs when projectName changes
+    },[projectName] ); // <- only runs when projectName changes
 
     if (typeof projectName !== 'string') {
         return <div>Loading?</div>;

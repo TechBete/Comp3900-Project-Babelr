@@ -14,7 +14,7 @@ import { useRouter } from "next/router";
 
 async function getRatingStats(projectName: string, metric: string): Promise<RatingsRow[] | null>{
   try {
-    const response = await fetch('http://localhost:8016/statistics/getRatingStats' , {
+    const response = await fetch('http://localhost:8016/statistics/getRatingsStats' , {
         method:"POST",
         credentials: 'include',
         headers: {'Content-Type': 'application/json'},
