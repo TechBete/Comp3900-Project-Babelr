@@ -18,7 +18,7 @@ interface AudioData {
 
 
 
-export default function TableTest({ audioData }: { audioData: AudioData[] }) {
+export default function Table({ audioData }: { audioData: AudioData[] }) {
 
     // For filtering
     const tagOptions = useMemo(() => {
@@ -34,6 +34,18 @@ export default function TableTest({ audioData }: { audioData: AudioData[] }) {
       {
         accessorKey: "file_name", // Recommended way
         header: "Audio Clips",
+        muiTableHeadCellProps: { sx: { color: "black" } },
+        Cell: ({ renderedCellValue }) => <strong>{renderedCellValue}</strong>
+      },
+      {
+        accessorKey: "language", // Recommended way
+        header: "Language",
+        muiTableHeadCellProps: { sx: { color: "black" } },
+        Cell: ({ renderedCellValue }) => <strong>{renderedCellValue}</strong>
+      },
+      {
+        accessorKey: "model", // Recommended way
+        header: "Model",
         muiTableHeadCellProps: { sx: { color: "black" } },
         Cell: ({ renderedCellValue }) => <strong>{renderedCellValue}</strong>
       },
