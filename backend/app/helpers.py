@@ -128,7 +128,7 @@ def get_all_audio_files(projectName, id):
     return AudioFile.query.filter_by(project_name=projectName, researcher_id=id).all()
 
 def get_audio_from_audio_id(id):
-    audio_file = AudioFile.query.filter_by(id=audio_id).first()
+    audio_file = AudioFile.query.filter_by(id=id).first()
     if not audio_file:
         return jsonify({"error": "Audio file not found"}), 404
 

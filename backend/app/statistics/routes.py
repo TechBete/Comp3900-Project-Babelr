@@ -168,38 +168,38 @@ def getProjectSummary():
 
 #                     })
 
-# @statisticsBp.route('/getGraphStats' , methods=['POST'])
-# @jwt_required()
-# def getGraphStats():
-#     data = request.json
-#     required_fields = ['project_name']
-#     validation_error = helpers.validate_required_fields(data, required_fields)
-#     if validation_error:
-#         return validation_error
+@statisticsBp.route('/getGraphStats' , methods=['POST'])
+@jwt_required()
+def getGraphStats():
+    data = request.json
+    required_fields = ['project_name']
+    validation_error = helpers.validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
     
-#     researcher_id = get_jwt_identity()
-#     researcher_id = uuid.UUID(researcher_id)
+    researcher_id = get_jwt_identity()
+    researcher_id = uuid.UUID(researcher_id)
 
-#     researcher_exists = helpers.is_researcher_id(researcher_id)
-#     if not researcher_exists:
-#         return jsonify({"error": "Researcher not found"}), 404
+    researcher_exists = helpers.is_researcher_id(researcher_id)
+    if not researcher_exists:
+        return jsonify({"error": "Researcher not found"}), 404
 
-#     projectName = data['project_name']
-#     try:
-#         with db.session.begin_nested():
-#             # Check if project exists
-#             project_dict = {project["project_name"]: project for project in researcher_exists.project_list}
-#             project = project_dict.get(projectName)
-#             if project is None:
-#                 return jsonify({"error": "Project not found"}), 404 # disallow returning project if project does not exist
-#     except Exception as e:
-#         logging.debug(e)
-#         return jsonify({"error": "Error: 500, An error has occured while retrieving the project"}), 500
-#     return jsonify([
-#         {'metric': 'Nat', 'model': 'hel223', 'mean': 2.7, 'std': 1.2, 'ci_low': 0.5, 'ci_high': 1.6},
-#         {'metric': 'Int', 'model': 'he2l223',' mean': 3.7, 'std': 5.2, 'ci_low': 0.25, 'ci_high': 2.6},
-#         {'metric': 'Int', 'model': 'hel223', 'mean': 7.7, 'std': 2.2, 'ci_low': 3.25, 'ci_high': 2.6}
-#       ])
+    projectName = data['project_name']
+    try:
+        with db.session.begin_nested():
+            # Check if project exists
+            project_dict = {project["project_name"]: project for project in researcher_exists.project_list}
+            project = project_dict.get(projectName)
+            if project is None:
+                return jsonify({"error": "Project not found"}), 404 # disallow returning project if project does not exist
+    except Exception as e:
+        logging.debug(e)
+        return jsonify({"error": "Error: 500, An error has occured while retrieving the project"}), 500
+    return jsonify([
+        {'metric': 'Nat', 'model': 'hel223', 'mean': 2.7, 'std': 1.2, 'ci_low': 0.5, 'ci_high': 1.6},
+        {'metric': 'Int', 'model': 'he2l223',' mean': 3.7, 'std': 5.2, 'ci_low': 0.25, 'ci_high': 2.6},
+        {'metric': 'Int', 'model': 'hel223', 'mean': 7.7, 'std': 2.2, 'ci_low': 3.25, 'ci_high': 2.6}
+      ])
 
 # @statisticsBp.route('/getProjectSummary', methods=['POST'])
 # @jwt_required()
@@ -254,7 +254,7 @@ def mean(audio_list, metric):
 @statisticsBp.route('/getDemographicStats', methods=['POST'])
 @jwt_required()
 def getDemographicStats():
-    data = request.form
+    data = request.json
     required_fields = ['project_name']
     # check validity of required fields
     validation_error = helpers.validate_required_fields(data, required_fields)
@@ -263,9 +263,10 @@ def getDemographicStats():
 
     # Get researcher information using uuid
     researcher_id = get_jwt_identity()
-    researcher_id = uuid.UUID(data["project_name"], researcher_id)
+    # researcher_id = uuid.UUID(data["project_name"], researcher_id)
+    researcher_id = uuid.UUID(researcher_id)
 
-    project = helpers.find_project(researcher_id)
+    project = helpers.find_project(data['project_name'], researcher_id)
 
     languages = {}
     countries = {}
@@ -302,19 +303,28 @@ def getDemographicStats():
 @statisticsBp.route('/getRatingsStats', methods=['POST'])
 @jwt_required()
 def getRatingsStats():
-    data = request.form
+    data = request.json
+    logging.debug("fucked here")
     required_fields = ['project_name', "metric"]
+    logging.debug("no here")
+    logging.debug(data)
+    # logging.debug("project_name is %s", data['project_name'])
+    # logging.debug("metric is %s", data['metric'])
     # check validity of required fields
     validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
+    logging.debug("no here1")
 
     # Get researcher information using uuid
     researcher_id = get_jwt_identity()
-    researcher_id = uuid.UUID(data["project_name"], researcher_id)
+    # researcher_id = uuid.UUID(data["project_name"], researcher_id)
+    researcher_id = uuid.UUID(researcher_id)
+    logging.debug("no here2")
 
-    project = helpers.find_project(researcher_id)
+    project = helpers.find_project(data['project_name'],researcher_id)
     metric = data["metric"]
+    logging.debug("no her3")
 
     rating_stats = []
     for audio_id in project.audio_list:
@@ -329,4 +339,6 @@ def getRatingsStats():
             audio_ratings["ratings"].append(evaluation[metric])
         rating_stats.append(audio_ratings)
 
-    return jsonify(rating_stats)
+    logging.debug("no here6")
+    logging.debug(rating_stats)
+    return jsonify({'rating_stats': rating_stats})
