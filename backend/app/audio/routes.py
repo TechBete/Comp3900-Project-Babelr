@@ -13,10 +13,10 @@ def formatTags(tags: str) -> list[str]:
     return tags.split(",")
 
 def getRequirements(tags: list[str]) -> tuple[str, ProficiencyLevel]:
-    logging.debug(f'tags[1]: {tags[1]}')
-    logging.debug(f'tags[2]: {tags[2]}')
-    language = tags[1];
-    proficiency_level = ProficiencyLevel[f'{tags[2]}']
+    logging.debug(f'tags[1]: {tags[2]}')
+    logging.debug(f'tags[2]: {tags[3]}')
+    language = tags[1]
+    proficiency_level = ProficiencyLevel[f'{tags[3]}']
     return (language, proficiency_level)
 
 def isQualified(listener: Listener, lang, min_proficiency) -> bool:
@@ -28,20 +28,20 @@ def isQualified(listener: Listener, lang, min_proficiency) -> bool:
 @audioBp.route('/uploadAudioFile', methods=['POST'])
 @jwt_required()
 def uploadAudioFile():
-    def getQualifiedListeners(requirements: tuple[str, ProficiencyLevel]) -> list[Listener]:
-        (lang, min_proficiency) = requirements
-
-        all_listeners = Listener.query.all()
-
-        qualified_listeners = []
-
-        for listener in all_listeners:
-            if isQualified(listener, lang, min_proficiency):
-                logging.debug(f'{listener} is qualified')
-                qualified_listeners.append(listener)
-
-        logging.debug(f'qualified listeners: {qualified_listeners}')
-        return qualified_listeners
+    #def getQualifiedListeners(requirements: tuple[str, ProficiencyLevel]) -> list[Listener]:
+    #    (lang, min_proficiency) = requirements
+#
+    #    all_listeners = Listener.query.all()
+#
+    #    qualified_listeners = []
+#
+    #    for listener in all_listeners:
+    #        if isQualified(listener, lang, min_proficiency):
+    #            logging.debug(f'{listener} is qualified')
+    #            qualified_listeners.append(listener)
+#
+    #    logging.debug(f'qualified listeners: {qualified_listeners}')
+    #    return qualified_listeners
 
     data = request.form
     required_fields = ['project_name', 'model', 'language', 'min_proficiency', 'tags'] # new
@@ -81,24 +81,24 @@ def uploadAudioFile():
     file_path = os.path.join(researcher_name_dir, file.filename)
     file.save(file_path) # save the file in the directory
 
-    tags = formatTags(data['tags'])
+    #tags = formatTags(data['tags'])
 
-    requirements = getRequirements(tags)
-    qualified_listener = getQualifiedListeners(requirements)
+    #requirements = getRequirements(tags)
+    #qualified_listener = getQualifiedListeners(requirements)
 
-    get_id = lambda listener: listener.id.hex
-    qualified_listener_ids = list(map(get_id, qualified_listener))
+    #get_id = lambda listener: listener.id.hex
+    #qualified_listener_ids = list(map(get_id, qualified_listener))
     try:
-        project = Project.query.filter_by(project_name=data['project_name'])
+        project = helper.find_project(data['project_name'], researcher_id)
 
         if project is None:
             return jsonify({"error": "Project not found"}), 404
 
-        if project.status != 'draft': # TODO: draft check? enum
-            return jsonify({"error": "The Project status must be set to 'Draft' to delete metrics"}), 400
+        if project.status != ProjectStatus.draft: # TODO: draft check? enum
+            return jsonify({"error": "The Project status must be set to 'draft' to upload audio clips"}), 400
 
         audio_data = AudioFile(
-            id=data.get(id, uiud.uuid4()),
+            id=data.get(id, uuid.uuid4()),
             file_name=file.filename,
             file_extension=filetype.guess(file_path).extension,
             file_path=file_path,
@@ -115,16 +115,16 @@ def uploadAudioFile():
         if db.session.query(AudioFile).filter_by(file_path=file_path).first():
             return jsonify({"message": "Audio file already exist"}), 400
         db.session.add(audio_data)
-        project.audio_list.append(audio_data.id)
+        project.audio_list.append(str(audio_data.id))
         flag_modified(project, "audio_list")
-        for listener in qualified_listener:
-            if listener.currently_assigned_audio is None:
-                listener.currently_assigned_audio = audio_data.id
-                flag_modified(listener, "currently_assigned_audio")
-            else:
-                listener.allocated_audio_queue.append(audio_data.id)
-                flag_modified(listener, "allocated_audio_queue")
-            logging.debug(f'listener {listener} has assigned audio files {listener.assigned_audio}')
+        #for listener in qualified_listener:
+        #    if listener.currently_assigned_audio is None:
+        #        listener.currently_assigned_audio = audio_data.id
+        #        flag_modified(listener, "currently_assigned_audio")
+        #    else:
+        #        listener.allocated_audio_queue.append(audio_data.id)
+        #        flag_modified(listener, "allocated_audio_queue")
+        #    logging.debug(f'listener {listener} has assigned audio files {listener.assigned_audio}')
         db.session.commit()
     except Exception as e:
         db.session.rollback()
@@ -285,15 +285,42 @@ def getProjectAudioFiles():
 
             # Get the audio files for the specified project
             audio_files = []
-            audio_files = AudioFile.query.filter_by(project_name=projectName).all()
+            audio_files = helper.get_all_audio_files(projectName, researcher_id)
             logging.debug(audio_files)
             if not audio_files or audio_files == []:
                 return jsonify({"error": "Audio files not found"}), 404
+            
+            # convert audio_files to serializable format
+            serialized_audio_files = []
+            for audio_file in audio_files:
+                if hasattr(audio_file, '__dict__'):
+                    # If field is an ORM object like AudioFile
+                    audio_file_dict = {
+                        "id": str(audio_file.id) if hasattr(audio_file, 'id') else None,
+                        "file_name": audio_file.file_name if hasattr(audio_file, 'file_name') else None,
+                        "file_extension": audio_file.file_extension if hasattr(audio_file, 'file_extension') else None,
+                        "file_path": audio_file.file_path if hasattr(audio_file, 'file_path') else None,
+                        "model": audio_file.model if hasattr(audio_file, 'model') else None,
+                        "language": audio_file.language if hasattr(audio_file, 'language') else None,
+                        "min_proficiency": audio_file.min_proficiency if hasattr(audio_file, 'min_proficiency') else None,
+                        "metrics": audio_file.metrics if hasattr(audio_file, 'metrics') else None,
+                        "tags": audio_file.tags if hasattr(audio_file, 'tags') else None,
+                        "researcher_id": str(audio_file.researcher_id) if hasattr(audio_file, 'researcher_id') else None,
+                        "project_name": audio_file.project_name if hasattr(audio_file, 'project_name') else None,
+                        "allocated_listeners": audio_file.allocated_listeners if hasattr(audio_file, 'allocated_listeners') else None,
+                    }
+                    serialized_audio_files.append(audio_file_dict)
+                else:
+                    # If already a basic type (string, int, etc.)
+                    serialized_audio_files.append(audio_file)
+                    
+            
+            
     except Exception as e:
         logging.debug(e)
         return jsonify({"error": "Error: 500, An error has occured while retrieving the audio files"}), 500
 
-    return jsonify({"audio_files": audio_files})
+    return jsonify({"audio_files": serialized_audio_files})
 
 # test route to get the audio files for a specific project
 # this is broken, need to fix

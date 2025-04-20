@@ -4,46 +4,15 @@ from sqlalchemy.exc import IntegrityError
 from flask import jsonify, request
 from app.auth.routes import assignQualifiedAudio
 from app.listeners import userBp
-from app.models import Gender, Listener
+from app.models import Gender, Listener, AudioFile
 import app.helpers as helpers
-import uuid, logging
+import uuid, logging, os
 from app import db
-
-# This route is used to get all listeners in the database
-# this route may only be used by the admin to get all listeners
-# This should be moved to admin in next sprint
-@userBp.route('/getListeners', methods=['GET'])
-@jwt_required()
-def getListeners():
-    #admin = get_jwt_identity()
-    #admin_id = uuid.UUID(admin)
-    #if not helper.is_admin(admin_id):
-    #    return jsonify({"error": "Unauthorized access"}), 403
-
-    users = Listener.query.all()
-    return jsonify([{
-        "Uuid": str(user.id),
-        "First Name": user.first_name,
-        "Last Name": user.last_name,
-        "Email": user.email,
-        "Password": user.pw_hash,
-        "Role": user.permission.value,
-        "Reward Points": user.reward_points,
-        "Background Info": user.background_info,
-        "Date of Birth": user.date_of_birth,
-        "Gender": str(user.gender.value) if user.gender else None,
-        "Country of Residence": user.country_of_residence,
-        "Education": user.education,
-        "languages": [lang for lang in user.languages] if user.languages else [],
-        "is_verified": user.is_verified,
-        "Current audio": user.currently_assigned_audio if user.currently_assigned_audio else None,
-        "Evaluation history": user.evaluation_history if user.evaluation_history else None,
-        "Allocated audio queue": user.allocated_audio_queue if user.allocated_audio_queue else None,
-    } for user in users])
 
 
 # test route to get a listener by id once listener cookie is implemented
-@userBp.route('/getListener/<uuid:listener_id>', methods=['GET'])
+@userBp.route('/getListener', methods=['GET'])
+@jwt_required()
 def getListener():
     # get user information from the given uuid
     id = get_jwt_identity()
@@ -60,12 +29,12 @@ def getListener():
         "Last Name": user.last_name,
         "Email": user.email,
         "Password": user.pw_hash,
+        "Reward Points": user.reward_points,
+        "Background Info": user.background_info,
         "Date of Birth": user.date_of_birth,
-        "Gender": str(user.gender.value) if user.gender else None,
+        "Gender": user.gender.value,
         "Country of Residence": user.country_of_residence,
         "Education": user.education,
-        "Background Info": user.background_info,
-        "Reward Points": user.reward_points,
         "languages": [user.languages] if user.languages else [],  # list of languages user speaks
         "Current audio": user.currently_assigned_audio if user.currently_assigned_audio else None,
         "Evaluation history": user.evaluation_history if user.evaluation_history else None,
@@ -94,7 +63,7 @@ def testGetListener():
         "Email": user.email,
         "Password": user.pw_hash,
         "Date of Birth": user.date_of_birth,
-        "Gender": str(user.gender.value) if user.gender else None,
+        "Gender": user.gender.value if user.gender else "other",
         "Country of Residence": user.country_of_residence,
         "Education": user.education,
         "Background Info": user.background_info,
@@ -138,7 +107,7 @@ def addLanguage():
             listener.languages.append(new_language)
             flag_modified(listener, "languages")
             #assignQualifiedAudio(listener)
-            #logging.debug(f"user {listener} is assigned {listener.allocated_audio_queue}")
+            logging.debug(f"user {listener} is assigned {listener.allocated_audio_queue}")
             db.session.commit()
     except IntegrityError as e:
         db.session.rollback()
@@ -341,7 +310,6 @@ def registerDemographics():
     data = request.json
     required_fields = ['first_name', 'last_name', 'date_of_birth', 'country_of_residence', 'education']
     # optional demograhics
-    gender = data['gender']
 
     # check validation error
     validation_error = helpers.validate_required_fields(data, required_fields)
@@ -463,7 +431,7 @@ def submitRating():
     data = request.json
     required_fields = ['audio_id']
 
-    validation_error = helper.validate_required_fields(data, required_fields)
+    validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
 
@@ -720,6 +688,7 @@ def getAudioFile():
 
     if len(listener.assigned_audio) == 0:
         return jsonify({"error": "There is no assigned audio file"}), 404
-
+    # forgot to add to current before popping
+    listener.currently_assigned_audio = listener.assigned_audio[0]
     audio_file = listener.assigned_audio.pop(0)
     return jsonify({"audio_file": audio_file})

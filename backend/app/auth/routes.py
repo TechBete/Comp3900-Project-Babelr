@@ -1,4 +1,4 @@
-from app.models import Listener, Researcher, Project, AudioFile, PermissionLevel
+from app.models import Listener, Researcher, Project, AudioFile, PermissionLevel, Gender
 from email_validator import validate_email, EmailNotValidError
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.exc import IntegrityError
@@ -303,7 +303,7 @@ def createListener():
         reward_points=0,
         background_info=data.get('background_info', ""),
         date_of_birth="",
-        gender='other',
+        gender=Gender.other,
         country_of_residence="",
         education="",
         languages=[],
@@ -399,7 +399,7 @@ def createResearcher():
         permission=PermissionLevel.researcher,
         project_list=[],
         date_of_birth="",
-        gender='other',
+        gender=Gender.other,
         country_of_residence="",
         education="",
         organisation="",

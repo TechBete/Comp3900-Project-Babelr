@@ -120,7 +120,7 @@ class Researcher(db.Model):
 
     # demographic details
     date_of_birth        = db.Column(db.String(15), nullable=False)
-    gender               = db.Column(gender_enum)
+    gender               = db.Column(gender_enum, default=Gender.other)
     country_of_residence = db.Column(db.String(30), nullable=False)
     education            = db.Column(db.String(128), nullable=False)
     organisation         = db.Column(db.String(128), nullable=False)
@@ -186,7 +186,7 @@ class Listener(db.Model):
     # demographic details
     background_info      = db.Column(db.String(1024), default="") # 1024 char length string
     date_of_birth        = db.Column(db.String(15), nullable=False)
-    gender               = db.Column(gender_enum)
+    gender               = db.Column(gender_enum, default=Gender.other)
     country_of_residence = db.Column(db.String(30), nullable=False)
     education            = db.Column(db.String(128), nullable=False)
     languages            = db.Column(db.JSON, default=list) # sets of language:proficiency
@@ -198,7 +198,7 @@ class Listener(db.Model):
 
     ### Listener audio file details
     # uuid of currently allocated audio file (still evaluating)
-    currently_assigned_audio  = db.Column(db.String(128))
+    currently_assigned_audio  = db.Column(db.JSON, default=list) # list of audio uuid
 
     # list of audio uuid
     # after evaluation is done from listener side it moves from currently_assigned_audio to evaluation_history

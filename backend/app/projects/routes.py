@@ -666,6 +666,7 @@ def updateProjectStatus():
             
             elif new_status == "in_progress":
                 project.status = ProjectStatus.in_progress
+                # add call to allocate listeners here
                 
             db.session.commit()
     except Exception as e:
@@ -708,7 +709,31 @@ def getProjects():
     if not researcher:
         return jsonify({"error": "Researcher not found"}), 404
 
-    return jsonify({"projects_list": researcher.project_list})
+    # for each project in the researcher project list, get the project object
+    project_list = []
+    for projectEntry in researcher.project_list:
+        projectName = projectEntry.get("project_name")
+        if projectName:
+            project = helper.find_project(projectName, researcher_id)
+            if project is not None:
+                if project is not None:
+                    # convert project object to dict
+                    project_dict = {
+                        "project_name": project.project_name,
+                        "project_uuid": str(project.id),
+                        "path": project.path,
+                        "status": project.status.name,
+                        "tags": project.tags,
+                        "metrics": project.metrics,
+                        "models": project.models,
+                        "creator_id": str(project.creator_id),
+                        "creator_name": project.creator_name,
+                        "audio_list": project.audio_list,
+                        "total_listeners": project.total_listeners
+                    }
+                    project_list.append(project_dict)
+
+    return jsonify({"projects_list": project_list}), 200
 
 '''
 # this route is to get a specific project of a researcher
