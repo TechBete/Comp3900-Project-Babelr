@@ -8,7 +8,7 @@ import { Box, Button, Chip, Stack } from "@mui/material";
 
 
 interface AudioData {
-    name: string;
+    file_name: string;
     tags: string[];
     dateAdded: string;
     evaluated: string;
@@ -32,7 +32,7 @@ export default function TableTest({ audioData }: { audioData: AudioData[] }) {
   const columns = useMemo<MRT_ColumnDef<AudioData>[]>(
     () => [
       {
-        accessorKey: "name", // Recommended way
+        accessorKey: "file_name", // Recommended way
         header: "Audio Clips",
         muiTableHeadCellProps: { sx: { color: "black" } },
         Cell: ({ renderedCellValue }) => <strong>{renderedCellValue}</strong>

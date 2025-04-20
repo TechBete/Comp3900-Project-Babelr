@@ -12,7 +12,7 @@ import TableTest from "components/table";
 import RoleCheck from "components/role_checker";
 
 interface AudioData {
-    name: string;
+    file_name: string;
     tags: string[];
     dateAdded: string;
     evaluated: string;
@@ -21,7 +21,7 @@ interface AudioData {
 
 type RawAudioClip = {
     file_name: string;
-    tags: string[]; // update this based on actual structure if needed
+    tags: string; // update this based on actual structure if needed
     Researcher: string;
     file_extension: string;
     file_path: string;
@@ -62,7 +62,7 @@ export default function FileUploadPage() {
         if (typeof projectName === 'string') {
             getAudioClips();
         }
-    }, [projectName]); // <- only runs when projectName changes
+    }, ); // <- only runs when projectName changes
 
     if (typeof projectName !== 'string') {
         return <div>Loading?</div>;
@@ -79,15 +79,20 @@ export default function FileUploadPage() {
             })
             
             if (response.ok) {
-                const audio_files  = await response.json();
-                console.log('raw audioClips:', audio_files);
+                const res  = await response.json();
+                const audio_files = res.audio_files;
+
                 const formattedClips: AudioData[] = (audio_files as RawAudioClip[]).map(clip => ({
-                    name: clip.file_name,
-                    tags: clip.tags?.map(tag => tag.trim()).filter(Boolean) ?? [],
+                    file_name: clip.file_name,
+                    tags: (clip.tags as string)
+                        .split(',')
+                        .map(tag => tag.trim())
+                        .filter(Boolean),
                     dateAdded: new Date().toLocaleDateString(),
                     evaluated: "0/50",
                     rating: 0,
                 }));
+                console.log('formatted audioClips:', formattedClips);
                 setAudioData(formattedClips);
                 console.log('clips are',formattedClips)
             } else {
