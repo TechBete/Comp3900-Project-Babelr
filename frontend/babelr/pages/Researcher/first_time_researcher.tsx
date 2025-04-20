@@ -22,7 +22,7 @@ export default function First_time() {
         console.log("after", JSON.stringify(Object.fromEntries(formData)));
         router.push('project_list')// FOR NOW BEFORE OTHER ADD API CALLS ARE DEVELOPED
         try {
-            const response = await fetch(`http://localhost:8016/researcher/registerResearcherProfile`, {
+            const response = await fetch(`http://localhost:8016/researcher/updateResearcherProfile`, {
                 method:"POST",
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(Object.fromEntries(formData)),

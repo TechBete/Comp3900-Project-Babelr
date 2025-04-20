@@ -2,21 +2,21 @@ from flask import jsonify
 from email.mime.text import MIMEText
 from itsdangerous import URLSafeTimedSerializer
 from password import PasswordHash
-import app.models as mod # models
-import os, smtplib
-import secrets
+from app.models import Researcher, Listener, Project # ls
+from app import db
+import os, smtplib, re, uuid #(?) uuid not in use?
 
 # ========== 0. Helper Functions ==========
 
 
 def check_verified(email):
-    existing_listener = mod.Listener.query.filter_by(email=email).first()
-    existing_researcher = mod.Researcher.query.filter_by(email=email).first()
+    existing_listener = is_listener_email(email)
+    existing_researcher = is_researcher_email(email)
     if existing_listener and existing_listener.is_verified:
         return True
     if existing_researcher and existing_researcher.is_verified:
         return True
-    
+
     return jsonify({"error": "Email not verified"}), 401
 
 def validate_required_fields(data, required_fields):
@@ -62,33 +62,29 @@ def send_verification_email(receiver_email, verification_url):
         server.quit()
     except Exception as e:
         return f"Error: {e}"
-    
+
 def is_existing_user_email(email):
-    existing_listener = mod.Listener.query.filter_by(email=email).first()
-    existing_researcher = mod.Researcher.query.filter_by(email=email).first()
+    existing_listener = Listener.query.filter_by(email=email).first()
+    existing_researcher = Researcher.query.filter_by(email=email).first()
     if existing_listener or existing_researcher:
         return True
     return False
 
 def is_researcher_email(email):
-    return mod.Researcher.query.filter_by(email=email).first()
+    return Researcher.query.filter_by(email=email).first()
 
 def is_listener_email(email):
-    return mod.Listener.query.filter_by(email=email).first()
+    return Listener.query.filter_by(email=email).first()
 
-#def is_admin(admin_id):
-#    return Admin.query.filter_by(id=admin_id).first()
-# admin yet to be implemented
-    
 def is_researcher_id(id):
-    return mod.Researcher.query.filter_by(id=id).first()
+    return Researcher.query.filter_by(id=id).first()
 
 def is_listener_id(id):
-    return mod.Listener.query.filter_by(id=id).first()
+    return Listener.query.filter_by(id=id).first()
 
 def blind_login(id):
-    existing_listener = mod.Listener.query.filter_by(blind_login=id).first()
-    existing_researcher = mod.Researcher.query.filter_by(blind_login=id).first()
+    existing_listener = Listener.query.filter_by(blind_login=id).first()
+    existing_researcher = Researcher.query.filter_by(blind_login=id).first()
     if existing_listener:
         return existing_listener.blindlogin
     elif existing_researcher:
@@ -96,8 +92,39 @@ def blind_login(id):
     else:
         return None
 
-def get_user_demography(id):
-    return mod.ListenerDemographic.query.filter_by(listener_id=id).first()
+def sanitize_project_name(projectName):
+    return re.sub(r'[^\w\s-]', '', projectName).strip()
 
-def get_researcher_demography(id):
-    return mod.ResearcherDemographic.query.filter_by(researcher_id=id).first()
+def check_invalid_project_name(projectName):
+    return re.search(r'[<>:"/\\|?*]', projectName)
+
+def find_project(projectName, id):
+    return Project.query.filter_by(project_name=projectName, creator_id=id).first()
+
+def find_researcher_project(projectName, id):
+    researcher = Researcher.query.filter_by(id=id).first()
+    if researcher and researcher.project_list:
+        for project in researcher.project_list:
+            if project.get("project_name") == projectName:
+                return project
+    return None
+
+def update_project_creator(current_value, new_value, id):
+    # Update the project creator in the Project model
+    try:
+        projects = Project.query.filter_by(creator_name=current_value, creator_id=id).all()
+        if not projects:
+            return 
+        
+        for project in projects:
+            project.creator_name = new_value
+        db.session.commit()
+        return True
+    except Exception as e:
+        db.session.rollback()
+        return False
+
+def get_all_audio_files(projectName, id):
+    # Get the audio file path from the database
+    return Project.query.filter_by(project_name=projectName, creator_id=id).all()
+

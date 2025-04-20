@@ -44,7 +44,7 @@ function ProjectList({ projects }: { projects: { name: string; path: string; sta
 
 export default function MainScreen() {
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [projectName, setProjectName] = useState("Project_4"); // change this to empty string later for production
+    const [projectName, setProjectName] = useState(""); // change this to empty string later for production
     const [createError, setCreateError] = useState("");
     const [projectsData, setProjectData] = useState([]);
 
