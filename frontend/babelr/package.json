@@ -22,7 +22,8 @@
     "next": "15.2.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-h5-audio-player": "^3.10.0-rc.1"
+    "react-h5-audio-player": "^3.10.0-rc.1",
+    "recharts": "^2.15.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
