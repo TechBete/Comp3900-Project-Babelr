@@ -40,6 +40,7 @@ export default function RatingChart({ data }: Props) {
   const filtered = data.filter(
     (d) => selectedModels.includes(d.model) && selectedMetrics.includes(d.metric)
   );
+  console.log(filtered);
 
   const getMeanDataset = () => {
     return selectedMetrics.map((metric) => {
@@ -150,12 +151,13 @@ export default function RatingChart({ data }: Props) {
       series={getSTDDataset().map((series) => ({
         data: series.data.map((d) => d.y),
         label: series.label,
-        curve: 'monotoneX',
+        showMark: true,
+        lineStyle: { strokeWidth: 0 }
       }))}
       height={300}
     />
   ) : (
-    <ConfidenceIntervalChart data={filtered} />
+    <ConfidenceIntervalChart data={filtered}/>
   )}
 </Box>
     </Box>
