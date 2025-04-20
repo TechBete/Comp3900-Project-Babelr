@@ -14,7 +14,7 @@ import { useRouter } from "next/router";
 
 async function getRatingStats(projectName: string, metric: string): Promise<RatingsRow[] | null>{
   try {
-    const response = await fetch('http://localhost:8016/projects/getRatingStats' , {
+    const response = await fetch('http://localhost:8016/statistics/getRatingStats' , {
         method:"POST",
         credentials: 'include',
         headers: {'Content-Type': 'application/json'},
@@ -52,7 +52,7 @@ async function getRatingStats(projectName: string, metric: string): Promise<Rati
 
 async function getSummaryStats(projectName: string): Promise<SummaryRowRes[] | null> {
   try {
-    const response = await fetch('http://localhost:8016/projects/getProjectSummary' , {
+    const response = await fetch('http://localhost:8016/statistics/getProjectSummary' , {
         method:"POST",
         credentials: 'include',
         headers: {'Content-Type': 'application/json'},
@@ -74,6 +74,30 @@ async function getSummaryStats(projectName: string): Promise<SummaryRowRes[] | n
   }
 }
 
+async function getGraphStats(projectName: string): Promise<GraphStat[] | null> {
+  try {
+    const response = await fetch('http://localhost:8016/statistics/getGraphStats' , {
+        method:"POST",
+        credentials: 'include',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({project_name: projectName}),
+    })
+    
+    if (response.ok) {
+        const res = await response.json();
+        console.log('stats:', res['summary_stats']);
+        return res.summary_stats as GraphStat[];
+    } else {
+        const error = await response.json()
+        console.log(error)
+        return null;
+    }
+  } catch(e) {
+    console.error('Fetch error:', e);
+    return null;
+  }  
+}
+
 
 export default function AnalyticsPage() {
   const [metric, setMetric] = useState<string>('');
@@ -90,8 +114,10 @@ export default function AnalyticsPage() {
     async function fetchStats() {
       const data = await getRatingStats(confirmedName, metric);
       const summary = await getSummaryStats(confirmedName);
+      const graph = await getGraphStats(confirmedName);
       setRawAudioData(data);
       setSummaryData(summary);
+      setGraphData(graph);
       setGraphData([
         {metric: 'Nat', model: 'hel223', mean: 2.7, std: 1.2, ci_low: 0.5, ci_high: 1.6},
         {metric: 'Int', model: 'he2l223', mean: 3.7, std: 5.2, ci_low: 0.25, ci_high: 2.6},

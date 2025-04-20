@@ -15,7 +15,7 @@ export default function DemographicsBox({ projectName }: { projectName: string }
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await fetch("http://localhost:8016/projects/getDemographicStats", {
+        const res = await fetch("http://localhost:8016/statistics/getDemographicStats", {
           method: "POST",
           credentials: "include",
           headers: {
