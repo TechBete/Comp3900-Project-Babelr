@@ -94,9 +94,9 @@ export default function First_time() {
                                     required
                                 >
                                     <option value="" disabled>Select Your Gender</option>
-                                    <option>Male</option>
-                                    <option>Female</option>
-                                    <option>Other</option>
+                                    <option value="male">Male</option>
+                                    <option value="female">Female</option>
+                                    <option value="other">Other</option>
                                 </select>
         
                                 <label className={styles.label} htmlFor="date_of_birth">Date of Birth</label>

@@ -119,12 +119,16 @@ export default function FileUploadPage() {
 
         const fileExtension = file.name.split(".").pop(); // Keep original extension
         const newFileName = `${fileName}.${fileExtension}`;
-        const combinedTags = [model, language, langProf, tags].filter(Boolean).join(",");
+        //const combinedTags = [model, language, langProf, tags].filter(Boolean).join(",");
 
         const formData = new FormData();
         formData.append("file", file);
         formData.append("fileName", newFileName);
-        formData.append("tags", combinedTags);
+        //formData.append("tags", combinedTags);
+        formData.append("model", model);
+        formData.append("language", language);
+        formData.append("min_proficiency", langProf);
+        formData.append("tags", tags);
         if (typeof projectName === 'string') {
             formData.append("project_name", projectName);
         }
