@@ -125,7 +125,7 @@ def update_project_creator(current_value, new_value, id):
 
 def get_all_audio_files(projectName, id):
     # Get the audio file path from the database
-    return Project.query.filter_by(project_name=projectName, creator_id=id).all()
+    return AudioFile.query.filter_by(project_name=projectName, researcher_id=id).all()
 
 def get_audio_from_audio_id(id):
     audio_file = AudioFile.query.filter_by(id=audio_id).first()

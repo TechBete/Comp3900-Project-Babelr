@@ -20,7 +20,7 @@ interface AudioData {
 }
 
 type RawAudioClip = {
-    name: string;
+    file_name: string;
     tags: string[]; // update this based on actual structure if needed
     Researcher: string;
     file_extension: string;
@@ -28,7 +28,6 @@ type RawAudioClip = {
     allocated_listeners: never[];
     project_name: string;
     project_path: string;
-    metrics: never; // or type it properly if you use it
 };
 
 
@@ -80,10 +79,10 @@ export default function FileUploadPage() {
             })
             
             if (response.ok) {
-                const { audio_files }: { audio_files: RawAudioClip[] } = await response.json();
+                const audio_files  = await response.json();
                 console.log('raw audioClips:', audio_files);
-                const formattedClips: AudioData[] = audio_files.map(clip => ({
-                    name: clip.name,
+                const formattedClips: AudioData[] = (audio_files as RawAudioClip[]).map(clip => ({
+                    name: clip.file_name,
                     tags: clip.tags?.map(tag => tag.trim()).filter(Boolean) ?? [],
                     dateAdded: new Date().toLocaleDateString(),
                     evaluated: "0/50",
