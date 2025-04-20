@@ -282,24 +282,17 @@ def getProjectAudioFiles():
             # Check if audio files exist
             if project.audio_list == []:
                 return jsonify({"error": "No audio files found for this project"}), 404
-            logging.debug("project.audio_list")
-            logging.debug(project.audio_list)
+            
             # Get the audio files for the specified project
             audio_files = []
             audio_files = helper.get_all_audio_files(projectName, researcher_id)
-            logging.debug("audio_files")
-            logging.debug(audio_files)
             if not audio_files or audio_files == []:
                 return jsonify({"error": "Audio files not found"}), 404
             
             # convert audio_files to serializable format
             serialized_audio_files = []
             for audio_file in audio_files:
-                logging.debug(audio_file)
                 if hasattr(audio_file, '__dict__'):
-                    logging.debug("audio_file")
-                    logging.debug(audio_file.__dict__)
-                    logging.debug(audio_file)
                     # If field is an ORM object like AudioFile
                     audio_file_dict = {
                         "id": str(getattr(audio_file, 'id', '')) if getattr(audio_file, 'id', '') else None,
