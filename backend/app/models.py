@@ -175,6 +175,7 @@ class Project(db.Model):
     
     '''
     total_listeners      = db.Column(db.Integer, default=0) # total number of listeners in the project
+    listener_list        = db.Column(db.JSON, default=list) # list of all listener id within the project
 
 class Listener(db.Model):
     __tablename__ = "listeners"

@@ -114,8 +114,7 @@ def update_project_creator(current_value, new_value, id):
     try:
         projects = Project.query.filter_by(creator_name=current_value, creator_id=id).all()
         if not projects:
-            return 
-        
+            return
         for project in projects:
             project.creator_name = new_value
         db.session.commit()
@@ -127,3 +126,10 @@ def update_project_creator(current_value, new_value, id):
 def get_all_audio_files(projectName, id):
     # Get the audio file path from the database
     return AudioFile.query.filter_by(project_name=projectName, researcher_id=id).all()
+
+def get_audio_from_audio_id(id):
+    audio_file = AudioFile.query.filter_by(id=audio_id).first()
+    if not audio_file:
+        return jsonify({"error": "Audio file not found"}), 404
+
+    return audio_file
