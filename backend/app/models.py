@@ -171,6 +171,9 @@ class Project(db.Model):
     creator_name         = db.Column(db.String(128), nullable=False)
     # list of audio file uuid to track all uploaded audio file under the project
     audio_list           = db.Column(db.JSON, default=list)
+    '''
+    
+    '''
     total_listeners      = db.Column(db.Integer, default=0) # total number of listeners in the project
 
 class Listener(db.Model):

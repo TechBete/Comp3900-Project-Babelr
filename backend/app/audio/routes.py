@@ -281,11 +281,10 @@ def getProjectAudioFiles():
             # Check if audio files exist
             if project.audio_list == []:
                 return jsonify({"error": "No audio files found for this project"}), 404
-
+            
             # Get the audio files for the specified project
             audio_files = []
             audio_files = helper.get_all_audio_files(projectName, researcher_id)
-            logging.debug(audio_files)
             if not audio_files or audio_files == []:
                 return jsonify({"error": "Audio files not found"}), 404
             
@@ -295,18 +294,18 @@ def getProjectAudioFiles():
                 if hasattr(audio_file, '__dict__'):
                     # If field is an ORM object like AudioFile
                     audio_file_dict = {
-                        "id": str(audio_file.id) if hasattr(audio_file, 'id') else None,
-                        "file_name": audio_file.file_name if hasattr(audio_file, 'file_name') else None,
-                        "file_extension": audio_file.file_extension if hasattr(audio_file, 'file_extension') else None,
-                        "file_path": audio_file.file_path if hasattr(audio_file, 'file_path') else None,
-                        "model": audio_file.model if hasattr(audio_file, 'model') else None,
-                        "language": audio_file.language if hasattr(audio_file, 'language') else None,
-                        "min_proficiency": audio_file.min_proficiency if hasattr(audio_file, 'min_proficiency') else None,
-                        "metrics": audio_file.metrics if hasattr(audio_file, 'metrics') else None,
-                        "tags": audio_file.tags if hasattr(audio_file, 'tags') else None,
-                        "researcher_id": str(audio_file.researcher_id) if hasattr(audio_file, 'researcher_id') else None,
-                        "project_name": audio_file.project_name if hasattr(audio_file, 'project_name') else None,
-                        "allocated_listeners": audio_file.allocated_listeners if hasattr(audio_file, 'allocated_listeners') else None,
+                        "id": str(getattr(audio_file, 'id', '')) if getattr(audio_file, 'id', '') else None,
+                        "file_name": getattr(audio_file, 'file_name', ''),
+                        "file_extension": getattr(audio_file, 'file_extension', ''),
+                        "file_path": getattr(audio_file, 'file_path', ''),
+                        "model": getattr(audio_file, 'model', ''),
+                        "language": getattr(audio_file, 'language', ''),
+                        "min_proficiency": str(getattr(audio_file, 'min_proficiency', '')),
+                        "metrics": getattr(audio_file, 'metrics', {}),
+                        "tags": getattr(audio_file, 'tags', []),
+                        "researcher_id": str(getattr(audio_file, 'researcher_id', '')) if getattr(audio_file, 'researcher_id', '') else None,
+                        "project_name": getattr(audio_file, 'project_name', ''),
+                        "allocated_listeners": getattr(audio_file, 'allocated_listeners', []),
                     }
                     serialized_audio_files.append(audio_file_dict)
                 else:

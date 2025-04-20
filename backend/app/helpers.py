@@ -2,7 +2,7 @@ from flask import jsonify
 from email.mime.text import MIMEText
 from itsdangerous import URLSafeTimedSerializer
 from password import PasswordHash
-from app.models import Researcher, Listener, Project # ls
+from app.models import Researcher, Listener, Project, AudioFile # ls
 from app import db
 import os, smtplib, re, uuid #(?) uuid not in use?
 
@@ -126,5 +126,4 @@ def update_project_creator(current_value, new_value, id):
 
 def get_all_audio_files(projectName, id):
     # Get the audio file path from the database
-    return Project.query.filter_by(project_name=projectName, creator_id=id).all()
-
+    return AudioFile.query.filter_by(project_name=projectName, researcher_id=id).all()
