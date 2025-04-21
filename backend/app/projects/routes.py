@@ -736,7 +736,8 @@ def getProjects():
                         "creator_id": str(project.creator_id),
                         "creator_name": project.creator_name,
                         "audio_list": project.audio_list,
-                        "total_listeners": project.total_listeners
+                        "total_listeners": project.total_listeners,
+                        "listener_list": project.listener_list
                     }
                     project_list.append(project_dict)
 
@@ -817,11 +818,28 @@ def getProject():
                         
             if project is None:
                 return jsonify({"error": "Project not found"}), 404 # disallow returning project if project does not exist
+
+            # convert project object to dict
+            project_dict = {
+                "project_name": project.project_name,
+                "project_uuid": str(project.id),
+                "path": project.path,
+                "status": project.status.name,
+                "tags": project.tags,
+                "metrics": project.metrics,
+                "models": project.models,
+                "creator_id": str(project.creator_id),
+                "creator_name": project.creator_name,
+                "audio_list": project.audio_list,
+                "total_listeners": project.total_listeners,
+                "listener_list": project.listener_list
+            }
+
     except Exception as e:
         logging.debug(e)
         return jsonify({"error": "Error: 500, An error has occured while retrieving the project"}), 500
 
-    return jsonify({"project": project})
+    return jsonify({"project": project_dict}), 200
 
 '''
 # this route is to delete a project
