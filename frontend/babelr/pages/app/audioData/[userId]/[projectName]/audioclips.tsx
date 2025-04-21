@@ -8,27 +8,30 @@ import styles from "stylesheets/file_upload.module.css";
 // import AudioClipsTable from "components/clips_table";
 import {Box, Button} from "@mui/material";
 
-import TableTest from "components/table";
+import Table from "components/table";
 import RoleCheck from "components/role_checker";
 
 interface AudioData {
-    name: string;
+    file_name: string;
     tags: string[];
+    model: string;
+    language: string;
     dateAdded: string;
     evaluated: string;
     rating: number;
 }
 
 type RawAudioClip = {
-    name: string;
-    tags: string[]; // update this based on actual structure if needed
+    file_name: string;
+    tags: string; // update this based on actual structure if needed
     Researcher: string;
     file_extension: string;
     file_path: string;
     allocated_listeners: never[];
     project_name: string;
     project_path: string;
-    metrics: never; // or type it properly if you use it
+    model: string;
+    language: string;
 };
 
 
@@ -63,7 +66,7 @@ export default function FileUploadPage() {
         if (typeof projectName === 'string') {
             getAudioClips();
         }
-    }, [projectName]); // <- only runs when projectName changes
+    },[projectName] ); // <- only runs when projectName changes
 
     if (typeof projectName !== 'string') {
         return <div>Loading?</div>;
@@ -80,15 +83,22 @@ export default function FileUploadPage() {
             })
             
             if (response.ok) {
-                const { audio_files }: { audio_files: RawAudioClip[] } = await response.json();
-                console.log('raw audioClips:', audio_files);
-                const formattedClips: AudioData[] = audio_files.map(clip => ({
-                    name: clip.name,
-                    tags: clip.tags?.map(tag => tag.trim()).filter(Boolean) ?? [],
+                const res  = await response.json();
+                const audio_files = res.audio_files;
+                console.log('raw clips are', audio_files as RawAudioClip);
+                const formattedClips: AudioData[] = (audio_files as RawAudioClip[]).map(clip => ({
+                    file_name: clip.file_name,
+                    tags: (clip.tags as string)
+                        .split(',')
+                        .map(tag => tag.trim())
+                        .filter(Boolean),
+                    model: clip.model,
+                    language:clip.language,
                     dateAdded: new Date().toLocaleDateString(),
                     evaluated: "0/50",
                     rating: 0,
                 }));
+                console.log('formatted audioClips:', formattedClips);
                 setAudioData(formattedClips);
                 console.log('clips are',formattedClips)
             } else {
@@ -124,7 +134,6 @@ export default function FileUploadPage() {
         const formData = new FormData();
         formData.append("file", file);
         formData.append("fileName", newFileName);
-        //formData.append("tags", combinedTags);
         formData.append("model", model);
         formData.append("language", language);
         formData.append("min_proficiency", langProf);
@@ -196,7 +205,7 @@ export default function FileUploadPage() {
                             <Button className={styles.addAudioBtn} sx={{ marginLeft: "20px" }}  onClick={() => setIsModalOpen(true)}> + </Button>
                         </Box>
 
-                        <TableTest audioData={audioData}></TableTest>
+                        <Table audioData={audioData}></Table>
                         <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} hasCloseBtn>
                             <h2 className={styles.modalTitle}>Upload New Audio</h2>
 
