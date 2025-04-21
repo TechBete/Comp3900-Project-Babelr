@@ -865,3 +865,4 @@ def getRoleFromID():
         return jsonify({"role": str(role), "first_time": first_time})
     else:
         return jsonify({"error": "User ID not found"}), 404
+    

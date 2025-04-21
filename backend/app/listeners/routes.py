@@ -406,7 +406,7 @@ def testChangeDemographics():
         return jsonify({"error": "Listener not found"}), 404
 
     # Convince the type system that these exists
-
+    assert demographic is not None
     assert data is not None
     try:
         # mandatory fields information (nullable=False)
