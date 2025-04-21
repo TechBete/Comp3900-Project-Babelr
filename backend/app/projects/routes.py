@@ -1,5 +1,5 @@
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt, jwt_required, get_jwt_identity
-from app.models import Researcher, Project, AudioFile, ProjectStatus
+from app.models import Researcher, Project, ProjectStatus
 from flask import jsonify, request
 from app import db
 import app.helpers as helper
