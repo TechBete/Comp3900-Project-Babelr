@@ -9,6 +9,7 @@
     position: fixed;
     width: 100%;
     top: 0;
+    z-index: 1201;
 }
 
 .top-nav-right {
@@ -16,14 +17,6 @@
     align-items: center;
 }
 
-/* .search-bar {
-    display: flex;
-    align-items: center;
-    background: #eee;
-    padding: 5px;
-    border-radius: 5px;
-    margin-right: 20px;
-} */
 
 
 .profile-options span {
