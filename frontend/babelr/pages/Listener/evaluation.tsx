@@ -8,28 +8,31 @@ export default function Evaluation() {
     const [Error, setError] = useState("");
     const [audioPath, setAudioPath] = useState("");
     const [audioFile, setAudioFile] = useState('null');
+    const [metricsObj, setMetricsObj] = useState({});
 
     const fetchAudioPath = async () => {
-        const response = await fetch('http://127.0.0.1:8016/listener/getAssignedAudioFile', {
+        const response = await fetch('http://localhost:8016/listener/getAssignedAudioFile', {
             method:"GET",
             credentials: 'include'
         });
 
         const res = await response.json();
 
-        console.log('res: ', res.audio_file);
-        // setAudioPath(res);
+        console.log('!!res**: ', res);
+        console.log('!!audio_file path**: ', res.audio_file);
+        
         setAudioPath(res.audio_file);
-        console.log("audio path is: ", audioPath);
+        fetchAudioFileData(res.audio_file);
     };
 
-    const fetchAudioFileData = async () => {
-        const obj = filter_audio_path();
+    const fetchAudioFileData = async (audio_path: string) => {
+        console.log("audio path is: ", audioPath);
+        const obj = filter_audio_path(audio_path);
         console.log('obj: ', obj);
-        const project_name = obj['project_name']; // 'project name 2'; // 
-        const audio_file_name = obj['audio_file_name']; // 'audio file name 3'; // 
+        const project_name = obj['project_name'];
+        const audio_file_name = obj['audio_file_name'];
 
-        const response = await fetch('http://127.0.0.1:8016/audio/getAudioFileData', {
+        const response = await fetch('http://localhost:8016/audio/getAudioFileData', {
             method:"POST",
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({project_name, audio_file_name}),
@@ -38,24 +41,56 @@ export default function Evaluation() {
 
         const res = await response.json();
 
-        setAudioFile('hello world');
+        // res.audio_file.metrics
+        /*
+        "Clarity": {
+            "description": "How clear the audio sounds",
+            "max": 5,
+            "maximum label": "Clear",
+            "min": 1,
+            "minimum label": "Unclear"
+        }
+        */
+        setMetricsObj(res.audio_file.metrics);
 
-        console.log(audioFile);
-        console.log('res: ', res);
+        fetchAudioFile();
     }
 
-    const filter_audio_path = function() {
+    const fetchAudioFile = async () => {
+        const response = await fetch('http://localhost:8016/listener/getAudioFile', {
+            method:"GET",
+            credentials: 'include'
+        });
+
+        const res = await response.json();
+
+        console.log('!!resopnse audio file**: ', res);
+        console.log('!!audio file**: ', res.audio_file);
+        setAudioFile(res);
+    };
+
+    const filter_audio_path = function(audio_path: string) {
         // example = '/app/audioData/c1056c9e-962c-499d-83a8-599e784a4109/water bottle 1/temp_fntemp_ln/ch_2.wav'
-        const parts = audioPath.split('/');
+        const parts = audio_path.split('/');
         const project_name = parts[4];
         const audio_file_name = parts[parts.length - 1];
 
         return { project_name, audio_file_name };
     }
 
+    const metric_object_to_array = function (metric_obj: object) {
+        const metric_array: any[] = [];
+
+        Object.entries(metric_obj).forEach(([key, value]) => {
+            const mini_obj = {'name': key, ...value};
+            metric_array.push(mini_obj);
+        });
+
+        return metric_array;
+    }
+
     useEffect(() => {
         fetchAudioPath();
-        fetchAudioFileData();
     }, []);
 
     async function submitRating() {
@@ -83,29 +118,47 @@ export default function Evaluation() {
         }
     }
 
-    const test_metrics = [
+    /*
+    const test_metrics_1 = [
         {'name': 'Clarity', 'description': 'How clear is the speech?'},
         {'name': 'Intelligibility', 'description': 'How easy to understand is the speech?'}
     ]
+    */
 
-    const marks = [
-        {
-          value: 1,
-          label: '1',
+    const test_metrics_2 = {
+        "Clarity": {
+            "description": "How clear the audio sounds",
+            "max": 5,
+            "maximum label": "Clear",
+            "min": 1,
+            "minimum label": "Unclear"
         },
-        {
-          value: 5,
-          label: '5',
+        "Intelligibility": {
+            "description": "How easy it is to understand the audio",
+            "max": 5,
+            "maximum label": "Intelligible",
+            "min": 1,
+            "minimum label": "Unintelligible"
         },
-      ];
+        "Naturalness": {
+            "description": "How natural the audio sounds",
+            "max": 5,
+            "maximum label": "Natural",
+            "min": 1,
+            "minimum label": "Robotic"
+        }
+    }
 
-    const metric_grid = test_metrics.map((metric) => (
-        <div key={metric.name}>
-            <h2 className='metric-name'>{metric.name}</h2>
-            <h2 className='metric-description'>{metric.description}</h2>
-            <Slider defaultValue={3} step={1} min={1} max={5} id={metric.name} valueLabelDisplay="auto" marks={marks} />
-        </div>
-    ));
+    const metrics_array = metric_object_to_array(metricsObj);
+    const metric_grid_2 = metrics_array.map((metric) => {
+        return (
+            <div key={metric.name}>
+                <h2 className='metric-name'>{metric.name}</h2>
+                <h2 className='metric-description'>{metric.description}</h2>
+                <Slider defaultValue={3} step={1} min={metric.min} max={metric.max} id={metric.name} valueLabelDisplay="auto" marks={[{value: metric.min, label: metric['minimum label']}, {value: metric.max, label: metric['maximum label']}]} />
+            </div>
+        )
+    });
 
     return (
         <div>
@@ -117,11 +170,10 @@ export default function Evaluation() {
                             <h1>Evaluation</h1>
                             <p>Play the audio clip and rate it based on the provided metrics.</p>
                             <form className={styles["login-form"]} method="post" onSubmit={submitRating}>
-                                {/*audioUrl && <audio controls src={audioUrl}></audio>*/}
                                 {<audio controls id="audio" src="/ch_0.wav"></audio>}
-                                {/*<Button variant="contained" id='playButton'>Play</Button>*/}
-                                {metric_grid}
                                 <Button variant="contained" type='submit'>Submit Rating</Button>
+                                {metric_grid_2}
+                                {<audio controls id="audio" src={audioFile}></audio>}
                             </form>
                         </div>
                     </div>

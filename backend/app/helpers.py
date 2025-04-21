@@ -5,6 +5,7 @@ from password import PasswordHash
 import app.models as mod # models
 import os, smtplib
 import secrets
+from sqlalchemy import func
 
 # ========== 0. Helper Functions ==========
 
@@ -101,3 +102,17 @@ def get_user_demography(id):
 
 def get_researcher_demography(id):
     return mod.ResearcherDemographic.query.filter_by(researcher_id=id).first()
+
+def get_researcher_from_project_name(project_name):
+    researchers = [
+        r for r in mod.Researcher.query.all()
+        if any(project.get('name') == project_name for project in r.project_list)
+    ]
+
+    if len(researchers) > 0:
+        return researchers[0]
+    
+    return -1
+
+    return mod.Researcher.query.filter_by(project_name=project_name).first()
+    # project_list.getKeys('name')

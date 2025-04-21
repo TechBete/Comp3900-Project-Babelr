@@ -407,17 +407,18 @@ def getAudioFileData():
     if validation_error:
         return validation_error
 
-    researcher_id = get_jwt_identity()
-    researcher_id = uuid.UUID(researcher_id)
+    listener_id = get_jwt_identity()
+    listener_id = uuid.UUID(listener_id)
 
-    researcher = helper.is_researcher_id(researcher_id)
-    # Validate researcher
-    if not researcher:
-        return jsonify({"error": "Researcher not found"}), 404
-
+    listener = helper.is_listener_id(listener_id)
+    # Validate listener
+    if not listener:
+        return jsonify({"error": "Listener not found"}), 404
 
     projectName = data['project_name']
     audio_file_name = data['audio_file_name']
+
+    researcher = helper.get_researcher_from_project_name(projectName)
 
     try:
         with db.session.begin_nested():
