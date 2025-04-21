@@ -106,7 +106,7 @@ def addLanguage():
         if new_language not in listener.languages:
             listener.languages.append(new_language)
             flag_modified(listener, "languages")
-            #assignQualifiedAudio(listener)
+            assignQualifiedAudio(listener)
             logging.debug(f"user {listener} is assigned {listener.allocated_audio_queue}")
             db.session.commit()
     except IntegrityError as e:

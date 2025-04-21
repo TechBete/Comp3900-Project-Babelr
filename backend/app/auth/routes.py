@@ -217,24 +217,16 @@ def logout():
 ### be moved to the helpers file
 ### this will need to be updated to check in the audio table
 def assignQualifiedAudio(listener: Listener):
-        def getAllAudioData():
-            allResearchers = Researcher.query.all()
-            allAudio = list()
-            for researcher in allResearchers:
-                uploadedAudio = researcher.uploaded_audio
-                allAudio.extend(uploadedAudio)
-            return allAudio
         logging.debug('assiging qualified audio to the new listener')
-        allAudio = getAllAudioData()
+        allAudio = AudioFile.query.all()
         logging.debug(f"{allAudio}")
         for audio in allAudio:
-            (lang, min_proficiency) = getRequirements(audio['tags'])
-            logging.debug(f'audio {audio} requires {min_proficiency} in {lang}')
-            if isQualified(listener, lang, min_proficiency):
-                audio['allocated_listeners'].append(listener.id.hex)
-                listener.assigned_audio.append(audio)
-                flag_modified(listener, "assigned_audio")
-        logging.debug(f'listener {listener} is assigned {listener.assigned_audio}')
+            logging.debug(f'audio {audio} requires {audio.min_proficiency} in {audio.language}')
+            if isQualified(listener, audio.language, audio.min_proficiency):
+                audio.allocated_listeners.append(str(listener.id))
+                listener.allocated_audio_queue.append(str(audio.id))
+                flag_modified(listener, "allocated_audio_queue")
+        logging.debug(f'listener {listener} is assigned {listener.allocated_audio_queue}')
 
 '''
 # this route is for a Listener user to register to the platform

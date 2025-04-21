@@ -28,20 +28,18 @@ def isQualified(listener: Listener, lang, min_proficiency) -> bool:
 @audioBp.route('/uploadAudioFile', methods=['POST'])
 @jwt_required()
 def uploadAudioFile():
-    #def getQualifiedListeners(requirements: tuple[str, ProficiencyLevel]) -> list[Listener]:
-    #    (lang, min_proficiency) = requirements
-#
-    #    all_listeners = Listener.query.all()
-#
-    #    qualified_listeners = []
-#
-    #    for listener in all_listeners:
-    #        if isQualified(listener, lang, min_proficiency):
-    #            logging.debug(f'{listener} is qualified')
-    #            qualified_listeners.append(listener)
-#
-    #    logging.debug(f'qualified listeners: {qualified_listeners}')
-    #    return qualified_listeners
+    def getQualifiedListeners(lang: str, min_proficiency: ProficiencyLevel) -> list[Listener]:
+       all_listeners = Listener.query.all()
+
+       qualified_listeners = []
+
+       for listener in all_listeners:
+           if isQualified(listener, lang, min_proficiency):
+               logging.debug(f'{listener} is qualified')
+               qualified_listeners.append(listener)
+
+       logging.debug(f'qualified listeners: {qualified_listeners}')
+       return qualified_listeners
 
     data = request.form
     required_fields = ['project_name', 'model', 'language', 'min_proficiency', 'tags'] # new
@@ -81,13 +79,9 @@ def uploadAudioFile():
     file_path = os.path.join(researcher_name_dir, file.filename)
     file.save(file_path) # save the file in the directory
 
-    #tags = formatTags(data['tags'])
+    qualified_listener = getQualifiedListeners(data['language'], ProficiencyLevel[data['min_proficiency']])
 
-    #requirements = getRequirements(tags)
-    #qualified_listener = getQualifiedListeners(requirements)
-
-    #get_id = lambda listener: listener.id.hex
-    #qualified_listener_ids = list(map(get_id, qualified_listener))
+    qualified_listener_ids = list(map(str, qualified_listener))
     try:
         project = helper.find_project(data['project_name'], researcher_id)
 
@@ -98,7 +92,7 @@ def uploadAudioFile():
             return jsonify({"error": "The Project status must be set to 'draft' to upload audio clips"}), 400
 
         audio_data = AudioFile(
-            id=data.get(id, uuid.uuid4()),
+            id=str(data.get(id, uuid.uuid4())),
             file_name=file.filename,
             file_extension=filetype.guess(file_path).extension,
             file_path=file_path,
@@ -109,7 +103,7 @@ def uploadAudioFile():
             tags=data['tags'],
             researcher_id=str(researcher.id),
             project_name=project.project_name,
-            allocated_listeners=[]
+            allocated_listeners=[qualified_listener_ids]
         )
 
         if db.session.query(AudioFile).filter_by(file_path=file_path).first():
@@ -117,14 +111,14 @@ def uploadAudioFile():
         db.session.add(audio_data)
         project.audio_list.append(str(audio_data.id))
         flag_modified(project, "audio_list")
-        #for listener in qualified_listener:
-        #    if listener.currently_assigned_audio is None:
-        #        listener.currently_assigned_audio = audio_data.id
-        #        flag_modified(listener, "currently_assigned_audio")
-        #    else:
-        #        listener.allocated_audio_queue.append(audio_data.id)
-        #        flag_modified(listener, "allocated_audio_queue")
-        #    logging.debug(f'listener {listener} has assigned audio files {listener.assigned_audio}')
+        for listener in qualified_listener:
+           if listener.currently_assigned_audio is None:
+               listener.currently_assigned_audio = audio_data.id
+               flag_modified(listener, "currently_assigned_audio")
+           else:
+               listener.allocated_audio_queue.append(audio_data.id)
+               flag_modified(listener, "allocated_audio_queue")
+           logging.debug(f'listener {listener} has assigned audio files {listener.allocated_audio_queue}')
         db.session.commit()
     except Exception as e:
         db.session.rollback()
