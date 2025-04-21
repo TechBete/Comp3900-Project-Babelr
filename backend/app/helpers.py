@@ -1,8 +1,9 @@
+import logging
 from flask import jsonify
 from email.mime.text import MIMEText
 from itsdangerous import URLSafeTimedSerializer
 from password import PasswordHash
-from app.models import Researcher, Listener, Project, AudioFile # ls
+from app.models import ProficiencyLevel, Researcher, Listener, Project, AudioFile # ls
 from app import db
 import os, smtplib, re, uuid #(?) uuid not in use?
 

@@ -667,6 +667,13 @@ def updateProjectStatus():
             elif new_status == "in_progress":
                 project.status = ProjectStatus.in_progress
                 # add call to allocate listeners here
+                all_audio = project.audio_list.query.all()
+                listeners = list()
+                for audio in all_audio:
+                    listeners.extend(audio.update_allocated_listeners(db.session))
+
+                project.listener_list = [str(l.id) for l in listeners]
+                project.total_listeners = len(listeners)
                 
             db.session.commit()
     except Exception as e:
