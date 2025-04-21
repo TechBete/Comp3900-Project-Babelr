@@ -372,15 +372,17 @@ def changeDemographics():
     assert data is not None
     try:
         # mandatory fields information (nullable=False)
+        listener.first_name = data['first_name']
+        listener.last_name = data['last_name']
         listener.date_of_birth = data['date_of_birth']
         listener.country_of_residence = data['country_of_residence']
         listener.education = data['education']
         # optional fields (nullable=True)
         listener.gender = data['gender']
+        # background info should be a text box field with an 1k char limit 
         listener.background_info = data['background_info']
         # update databse and alert listern table
-        for field in ["first_name", "last_name", "background_info", "date_of_birth", "country_of_residence", "education", "gender"]:
-            flag_modified(listener, field)
+        db.session.add(listener)
         db.session.commit()
     except Exception as e:
         db.session.rollback()
