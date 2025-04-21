@@ -59,17 +59,68 @@ export default function FileUploadPage() {
     const [langProf, setLangProf] = useState<LangProf>(LangProf.none)
     const [uploadError, setUploadError] = useState("");
     const [audioData, setAudioData] = useState<AudioData[]>([]);
-    const [isStarted, setIsStarted] = useState(false);
+    const [status, setStatus] = useState('');
     
 
     useEffect(() => {
         if (typeof projectName === 'string') {
-            getAudioClips();
+            async function fetchProject()  {
+                getAudioClips();
+                const status: string = await getProjectStatus();  
+                setStatus(status);
+                
+            }
+            fetchProject();
         }
-    },[projectName] ); // <- only runs when projectName changes
+    },[projectName, status] ); // <- only runs when projectName changes
 
     if (typeof projectName !== 'string') {
         return <div>Loading?</div>;
+    }
+
+    async function startProject() {
+        try {
+            const response = await fetch('http://localhost:8016/projects/updateProjectStatus' , {
+                method:"POST",
+                credentials: 'include',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({project_name: projectName, status: 'in_progress'}),
+            })
+
+            if (response.ok) {
+                const res = await response.json();
+                console.log(res);
+                setStatus('');
+            } else {
+                const error = await response.json();
+                console.log(error);
+            }
+        } catch {
+        } 
+    }
+
+    async function getProjectStatus(): Promise<string> {
+        try {
+            const response = await fetch('http://localhost:8016/projects/getProject' , {
+                method:"POST",
+                credentials: 'include',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({project_name: projectName}),
+            })
+
+            if (response.ok) {
+                const res = await response.json();
+                const project = res.project;
+                console.log(project);
+                return project.status;
+            } else {
+                const error = await response.json();
+                console.log(error);
+                return ''
+            }
+        } catch {
+            return ''
+        }
     }
 
     async function getAudioClips() {
@@ -199,8 +250,8 @@ export default function FileUploadPage() {
                         </div>
 
                         <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end' }}>
-                            <Button className={`${styles.startButton} ${isStarted ? styles.inProgress : ''}`} sx={{ marginLeft: "auto" }}  onClick={() => setIsStarted(!isStarted)}>
-                                {isStarted ? "In Progress" : "Start"} 
+                            <Button className={`${styles.startButton} ${status === 'in_progress' ? styles.inProgress : ''}`} sx={{ marginLeft: "auto" }}  onClick={() => startProject()}>
+                                {status === 'in_progress'? "In Progress" : "Start"} 
                             </Button>
                             <Button className={styles.addAudioBtn} sx={{ marginLeft: "20px" }}  onClick={() => setIsModalOpen(true)}> + </Button>
                         </Box>
