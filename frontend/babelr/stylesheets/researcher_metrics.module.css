@@ -1,0 +1,73 @@
+.container {
+    display: flex;
+    height: 100vh;
+  }
+  
+.sidebar {
+    width: 250px;
+    flex-shrink: 0;
+}
+  
+.content {
+    flex: 1;
+    padding: 32px;
+    overflow: auto;
+}
+  
+.createButtonWrapper {
+    margin-top: 32px;
+}
+  
+.createButton {
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    background-color: #282d3f;
+}
+  
+.createButton:hover {
+    background-color: #1a1f2e;
+}
+  
+.metricCard {
+    padding: 16px;
+    border: 1px solid #ddd;
+    border-radius: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+  
+.metricDetails {
+    flex: 1;
+    padding-right: 16px;
+}
+  
+.slider {
+    color: #282d3f;
+}
+  
+.slider .MuiSlider-thumb {
+    background-color: #282d3f;
+}
+  
+.slider .MuiSlider-track {
+    background-color: #282d3f;
+}
+  
+.slider .MuiSlider-rail {
+    background-color: #b0b0b0;
+}
+  
+.actionButtons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+  
+.dialogForm {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 8px;
+}
+  
