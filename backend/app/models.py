@@ -228,9 +228,6 @@ class Listener(db.Model):
         Check whether this listener is qualified to evaluate an audio file
         """
         for language in self.languages:
-
-            logging.debug(f"Type of min proficiency is {type(audio.min_proficiency)}")
-
             if language['language'] == audio.language and ProficiencyLevel[language['proficiency'].lower()] >= audio.min_proficiency:
                 return True
         return False
