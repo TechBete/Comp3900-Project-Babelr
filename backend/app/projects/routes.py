@@ -1,4 +1,5 @@
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt, jwt_required, get_jwt_identity
+from sqlalchemy.orm import query
 from app.models import Researcher, Project, AudioFile, ProjectStatus
 from flask import jsonify, request
 from app import db
@@ -650,7 +651,7 @@ def updateProjectStatus():
     try:
         with db.session.begin_nested():
             # Check if project exists
-            project = helper.find_project(projectName, researcher_id)
+            project: Project | None = helper.find_project(projectName, researcher_id)
             
             if project is None:
                 return jsonify({"error": "Project not found"}), 404 # disallow project update if project does not exist
@@ -667,10 +668,12 @@ def updateProjectStatus():
             elif new_status == "in_progress":
                 project.status = ProjectStatus.in_progress
                 # add call to allocate listeners here
-                all_audio = project.audio_list.query.all()
                 listeners = list()
-                for audio in all_audio:
-                    listeners.extend(audio.update_allocated_listeners(db.session))
+                
+                for audio in list(filter(lambda x: x is not None, map(lambda id: AudioFile.query.filter_by(id=id).first(), project.audio_list))):
+                    assert isinstance(audio, AudioFile)
+                    listeners = audio.update_allocated_listeners()
+                    listeners.extend(listeners)
 
                 project.listener_list = [str(l.id) for l in listeners]
                 project.total_listeners = len(listeners)

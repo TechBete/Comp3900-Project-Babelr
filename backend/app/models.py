@@ -232,7 +232,7 @@ class Listener(db.Model):
                 return True
         return False
 
-    def update_allocated_audio(self, session: Session) -> list[AudioFile]:
+    def update_allocated_audio(self) -> list[AudioFile]:
         """
         This function is used to assign audio to a listener.
 
@@ -262,8 +262,6 @@ class Listener(db.Model):
                 self.assign_audio(audio)
                 qualifiedAudio.append(audio)
 
-        session.add(self)
-        session.commit()
         logging.debug(f'listener {self} is assigned {self.allocated_audio_queue}')
 
         return qualifiedAudio
@@ -361,19 +359,23 @@ class AudioFile(db.Model):
         logging.debug(f'qualified listeners: {qualified_listeners}')
         return qualified_listeners
 
-    def update_allocated_listeners(self, session) -> list[Listener]:
+    def update_allocated_listeners(self) -> list[Listener]:
         """
         Update the list of allocated listeners for this audio file, if there are changes in the listeners.
+
+        Returns the updated list of listeners.
         """
-        listeners = self.get_qualified_listeners()
+        new_allocated_listeners = self.get_qualified_listeners()
 
-        self.allocated_listeners = listeners
+        self.set_allocated_listeners(new_allocated_listeners)
 
-        for listener in listeners:
+        for listener in new_allocated_listeners:
             listener.assign_audio(self)
 
-        session.add(self)
-        session.commit()
-
         logging.debug(f"Audio file now is allocated {self.allocated_listeners}")
-        return listeners
+        return new_allocated_listeners
+
+    def set_allocated_listeners(self, new_allocated_listeners: list[str] | list[Listener] | list [str | Listener]):
+        # Ensure all elements of the list is a stringified UUID
+        new_allocated_listeners = [str(l.id) if isinstance(l, Listener) else l for l in new_allocated_listeners]
+        self.allocated_listeners = new_allocated_listeners

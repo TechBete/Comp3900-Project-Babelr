@@ -99,7 +99,7 @@ def sanitize_project_name(projectName):
 def check_invalid_project_name(projectName):
     return re.search(r'[<>:"/\\|?*]', projectName)
 
-def find_project(projectName, id):
+def find_project(projectName, id) -> Project | None:
     return Project.query.filter_by(project_name=projectName, creator_id=id).first()
 
 def find_researcher_project(projectName, id):

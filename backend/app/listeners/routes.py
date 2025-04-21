@@ -105,7 +105,7 @@ def addLanguage():
         if new_language not in listener.languages:
             listener.languages.append(new_language)
             flag_modified(listener, "languages")
-            listener.update_allocated_audio(db.session)
+            listener.update_allocated_audio()
             
             logging.debug(f"user {listener} is assigned {listener.allocated_audio_queue}")
             db.session.commit()
