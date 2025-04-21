@@ -1,8 +1,14 @@
+from __future__ import annotations # get python to recognise classes before they are declared
+import logging
+from typing import Self
 import enum, uuid
 from sqlalchemy.dialects.postgresql import UUID, ENUM
 from sqlalchemy import DDL, event
+from sqlalchemy.orm.attributes import flag_modified
+from sqlalchemy.orm.session import Session
 from app import db
 from functools import total_ordering
+
 
 #========== 1. Python Enums ==========
 class PermissionLevel(enum.Enum):
@@ -212,6 +218,55 @@ class Listener(db.Model):
     # once finishing evaluation of currently_assigned_audio, first element of this list will be moved to currently_assigned_audio for evaluation
     allocated_audio_queue     = db.Column(db.JSON, default=list) # list of video IDs completed by the listener
 
+    def assign_audio(self, audio: AudioFile):
+        self.allocated_audio_queue.append(str(audio.id))
+        flag_modified(self, "allocated_audio_queue")
+        logging.debug(f"Listener {self} is allocated {self.allocated_audio_queue}")
+
+    def is_qualified(self, audio: AudioFile) -> bool:
+        """
+        Check whether this listener is qualified to evaluate an audio file
+        """
+        for language in self.languages:
+            if language['language'] == audio.language and ProficiencyLevel[language['proficiency'].lower()] >= audio.min_proficiency:
+                return True
+        return False
+
+    def update_allocated_audio(self) -> list[AudioFile]:
+        """
+        This function is used to assign audio to a listener.
+
+        This is done by checking the listener's language proficiency and matching it with the 
+        audio's language requirements.
+
+        The function takes in a listener object and checks their language proficiency.
+
+        If the listener is qualified for the audio, the audio is assigned to the listener.
+
+        The function also updates the audio's allocated listeners list.
+
+        The function is called when a new listener is created.
+
+        The function is called in the createListener function.
+        """
+        
+
+        logging.debug('assiging qualified audio to the new listener')
+        allAudio: list[AudioFile] = AudioFile.query.all()
+        logging.debug(f"{allAudio}")
+        qualifiedAudio = list()
+        for audio in allAudio:
+            logging.debug(f'audio {audio} requires {audio.min_proficiency} in {audio.language}')
+            if self.is_qualified(audio):
+                audio.assign_listener(self)
+                self.assign_audio(audio)
+                qualifiedAudio.append(audio)
+
+        logging.debug(f'listener {self} is assigned {self.allocated_audio_queue}')
+
+        return qualifiedAudio
+
+
 class AudioFile(db.Model):
     __tablename__       = "audiofiles"
     id                  = db.Column(UUID(as_uuid=True), primary_key=True, nullable=False) # audio file uuid
@@ -261,4 +316,66 @@ class AudioFile(db.Model):
         "Clarity": 3
     }
     '''
-    
+    def __init__(self, id, file_name, file_extension, file_path, model, language, min_proficiency: str | ProficiencyLevel, metrics, tags, researcher_id, project_name) -> None:
+
+        self.id = id
+        self.file_name = file_name
+        self.file_extension = file_extension
+        self.file_path = file_path
+        self.model = model
+        self.language = language
+        self.min_proficiency = ProficiencyLevel[min_proficiency.lower()] if isinstance(min_proficiency, str) else min_proficiency
+        self.metrics = metrics
+        self.tags = tags
+        self.researcher_id = researcher_id
+        self.project_name = project_name
+
+        qualified = self.get_qualified_listeners()
+        allocated_listeners = list(map(lambda x: str(x.id), qualified))
+
+        for listener in qualified:
+            listener.assign_audio(self)
+
+        self.allocated_listeners = allocated_listeners
+
+    def assign_listener(self, listener: Listener):
+        self.allocated_listeners.append(str(listener.id))
+        flag_modified(self, "allocated_listeners")
+        logging.debug(f"Audio file {self} is allocated {self.allocated_listeners}")
+
+    def get_qualified_listeners(self: AudioFile) -> list[Listener]:
+        """
+        Get a list of listeners qualified to evaluate this audio file.
+        """
+        all_listeners: list[Listener] = Listener.query.all()
+        
+        qualified_listeners = []
+        
+        for listener in all_listeners:
+            if listener.is_qualified(self):
+                logging.debug(f'{listener} is qualified')
+                qualified_listeners.append(listener)
+        
+        logging.debug(f'qualified listeners: {qualified_listeners}')
+        return qualified_listeners
+
+    def update_allocated_listeners(self) -> list[Listener]:
+        """
+        Update the list of allocated listeners for this audio file, if there are changes in the listeners.
+
+        Returns the updated list of listeners.
+        """
+        new_allocated_listeners = self.get_qualified_listeners()
+
+        self.set_allocated_listeners(new_allocated_listeners)
+
+        for listener in new_allocated_listeners:
+            listener.assign_audio(self)
+
+        logging.debug(f"Audio file now is allocated {self.allocated_listeners}")
+        return new_allocated_listeners
+
+    def set_allocated_listeners(self, new_allocated_listeners: list[str] | list[Listener] | list [str | Listener]):
+        # Ensure all elements of the list is a stringified UUID
+        new_allocated_listeners = [str(l.id) if isinstance(l, Listener) else l for l in new_allocated_listeners]
+        self.allocated_listeners = new_allocated_listeners
