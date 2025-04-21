@@ -1,8 +1,9 @@
+import logging
 from flask import jsonify
 from email.mime.text import MIMEText
 from itsdangerous import URLSafeTimedSerializer
 from password import PasswordHash
-from app.models import Researcher, Listener, Project, AudioFile # ls
+from app.models import ProficiencyLevel, Researcher, Listener, Project, AudioFile # ls
 from app import db
 import os, smtplib, re, uuid #(?) uuid not in use?
 
@@ -98,7 +99,7 @@ def sanitize_project_name(projectName):
 def check_invalid_project_name(projectName):
     return re.search(r'[<>:"/\\|?*]', projectName)
 
-def find_project(projectName, id):
+def find_project(projectName, id) -> Project | None:
     return Project.query.filter_by(project_name=projectName, creator_id=id).first()
 
 def find_researcher_project(projectName, id):
