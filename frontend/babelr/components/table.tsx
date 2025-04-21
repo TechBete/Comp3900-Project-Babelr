@@ -8,7 +8,7 @@ import { Box, Button, Chip, Stack } from "@mui/material";
 
 
 interface AudioData {
-    name: string;
+    file_name: string;
     tags: string[];
     dateAdded: string;
     evaluated: string;
@@ -18,7 +18,7 @@ interface AudioData {
 
 
 
-export default function TableTest({ audioData }: { audioData: AudioData[] }) {
+export default function Table({ audioData }: { audioData: AudioData[] }) {
 
     // For filtering
     const tagOptions = useMemo(() => {
@@ -32,8 +32,20 @@ export default function TableTest({ audioData }: { audioData: AudioData[] }) {
   const columns = useMemo<MRT_ColumnDef<AudioData>[]>(
     () => [
       {
-        accessorKey: "name", // Recommended way
+        accessorKey: "file_name", // Recommended way
         header: "Audio Clips",
+        muiTableHeadCellProps: { sx: { color: "black" } },
+        Cell: ({ renderedCellValue }) => <strong>{renderedCellValue}</strong>
+      },
+      {
+        accessorKey: "language", // Recommended way
+        header: "Language",
+        muiTableHeadCellProps: { sx: { color: "black" } },
+        Cell: ({ renderedCellValue }) => <strong>{renderedCellValue}</strong>
+      },
+      {
+        accessorKey: "model", // Recommended way
+        header: "Model",
         muiTableHeadCellProps: { sx: { color: "black" } },
         Cell: ({ renderedCellValue }) => <strong>{renderedCellValue}</strong>
       },
@@ -118,7 +130,7 @@ export default function TableTest({ audioData }: { audioData: AudioData[] }) {
         Cell: ({ renderedCellValue }) => <strong>{renderedCellValue}</strong>
       },
     ],
-    [audioData, tagOptions] // Add tagOptions to dependencies
+    [tagOptions] // Add tagOptions to dependencies
   );
 
   const table = useMaterialReactTable({
