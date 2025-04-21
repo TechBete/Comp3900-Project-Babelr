@@ -12,7 +12,7 @@ import RoleCheck from "components/role_checker";
 function Project({ project_name, path, status, creator_name } : { project_name: string; path: string; status: string; creator_name: string }) {
     console.log('status is', status);
     const StatusStyle = () => {
-        if (status == "in-progress") {
+        if (status == "in_progress") {
             return <td className={styles["td"]}><span className={`${styles.status} ${styles["in-progress"]}`}>In Progress</span></td>
         }  else if (status == "draft") {
             return <td className={styles["td"]}><span className={`${styles.status} ${styles["draft"]}`}>Draft</span></td>
