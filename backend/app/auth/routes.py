@@ -221,12 +221,11 @@ def assignQualifiedAudio(listener: Listener):
         allAudio = AudioFile.query.all()
         logging.debug(f"{allAudio}")
         for audio in allAudio:
-            (lang, min_proficiency) = getRequirements(audio['tags'])
-            logging.debug(f'audio {audio} requires {min_proficiency} in {lang}')
-            if isQualified(listener, lang, min_proficiency):
+            logging.debug(f'audio {audio} requires {audio.min_proficiency} in {audio.language}')
+            if isQualified(listener, audio.language, audio.min_proficiency):
                 audio.allocated_listeners.append(str(listener.id))
-                listener.allocated_audio_queue.push(audio)
-                flag_modified(listener, "assigned_audio")
+                listener.allocated_audio_queue.append(str(audio.id))
+                flag_modified(listener, "allocated_audio_queue")
         logging.debug(f'listener {listener} is assigned {listener.allocated_audio_queue}')
 
 '''
