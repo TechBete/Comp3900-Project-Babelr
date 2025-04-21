@@ -7,6 +7,7 @@ import {
 import Navbar from "components/nav_bar_researcher";
 import Sidebar from "components/project_sidebar";
 import RoleCheck from "components/role_checker";
+import styles from "stylesheets/researcher_metrics.module.css";
 
 interface Metric {
   name: string;
@@ -33,6 +34,7 @@ const MetricsPage = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState<Metric>({
     name: "",
     minValue: 1,
@@ -48,21 +50,17 @@ const MetricsPage = () => {
     setForm({ ...form, [name]: name.includes("Value") ? Number(value) : value });
   };
 
-  // Move fetchMetrics function out of useEffect
   const fetchMetrics = async () => {
     if (!projectName || typeof projectName !== "string") return;
 
     const response = await fetch(`http://localhost:8016/projects/getProjectMetrics`, {
       method: "POST",
       credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ project_name: projectName }),
     });
 
     const data = await response.json();
-    console.log("Fetched metrics response:", data);
 
     if (data.metrics) {
       const parsedMetrics: Metric[] = (Object.entries(data.metrics) as [string, RawMetric][]).map(
@@ -76,7 +74,6 @@ const MetricsPage = () => {
           value: Math.round((metric.min + metric.max) / 2),
         })
       );
-      console.log("Parsed metrics array:", parsedMetrics);
       setMetrics(parsedMetrics);
     }
   };
@@ -87,23 +84,34 @@ const MetricsPage = () => {
 
   const handleSave = async () => {
     if (!projectName || typeof projectName !== "string") return;
-
+  
+    const errors: Record<string, string> = {};
+    if (!form.name.trim()) errors.name = "Metric name is required";
+    if (!form.minLabel.trim()) errors.minLabel = "Minimum label is required";
+    if (!form.maxLabel.trim()) errors.maxLabel = "Maximum label is required";
+    if (!form.description.trim()) errors.description = "Description is required";
+    if (form.minValue === null || form.minValue === undefined) errors.minValue = "Minimum value is required";
+    if (form.maxValue === null || form.maxValue === undefined) errors.maxValue = "Maximum value is required";
+    if (form.minValue >= form.maxValue) errors.minValue = "Min must be less than Max";
+  
+    setFormErrors(errors);
+  
+    if (Object.keys(errors).length > 0) return;
+  
     const existingNames = metrics.map((m) => m.name.toLowerCase());
     if (editingIndex === null && existingNames.includes(form.name.toLowerCase())) {
-      alert("A metric with this name already exists.");
+      setFormErrors({ name: "A metric with this name already exists" });
       return;
     }
-
+  
     const url = editingIndex !== null
       ? `http://localhost:8016/projects/updateProjectMetrics`
       : `http://localhost:8016/projects/setProjectMetricField`;
-
+  
     const response = await fetch(url, {
       method: "POST",
-      credentials: 'include',
-      headers: {
-        "Content-Type": "application/json",
-      },
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         project_name: projectName,
         metrics: {
@@ -117,15 +125,15 @@ const MetricsPage = () => {
         },
       }),
     });
-
+  
     const data = await response.json();
-    if (data.metrics) {
-      fetchMetrics(); // re-fetch after save
-    }
+    if (data.metrics) fetchMetrics();
+  
     setModalOpen(false);
     setEditingIndex(null);
     resetForm();
   };
+  
 
   const handleEdit = (index: number) => {
     setForm(metrics[index]);
@@ -135,35 +143,26 @@ const MetricsPage = () => {
 
   const handleDelete = async (index: number) => {
     if (!projectName || typeof projectName !== "string") return;
-  
+
     const metricName = metrics[index].name;
     const confirmDelete = window.confirm(`Are you sure you want to delete "${metricName}"?`);
     if (!confirmDelete) return;
-  
-    try {
-      const response = await fetch(`http://localhost:8016/projects/deleteProjectMetrics`, {
-        method: "POST",
-        credentials: 'include',
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          project_name: projectName,
-          metric: metricName,
-        }),
-      });
-  
-      const data = await response.json();
-      console.log("Delete response:", data);
-  
-      if (response.ok && data.message === "Project metric deleted successfully") {
-        fetchMetrics();
-      } else {
-        alert(data.error || "Failed to delete metric");
-      }
-    } catch (error) {
-      console.error("Error deleting metric:", error);
-      alert("An error occurred while deleting the metric.");
+
+    const response = await fetch(`http://localhost:8016/projects/deleteProjectMetrics`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        project_name: projectName,
+        metric: metricName,
+      }),
+    });
+
+    const data = await response.json();
+    if (response.ok && data.message === "Project metric deleted successfully") {
+      fetchMetrics();
+    } else {
+      alert(data.error || "Failed to delete metric");
     }
   };
 
@@ -183,6 +182,7 @@ const MetricsPage = () => {
       description: "",
       value: 3,
     });
+    setFormErrors({});
   };
 
   if (!projectName || typeof projectName !== "string") return null;
@@ -191,22 +191,16 @@ const MetricsPage = () => {
     <RoleCheck requiredRole="researcher">
       <div>
         <Navbar />
-        <Box display="flex" height="100vh">
-          <Box width="250px" flexShrink={0}>
+        <Box className={styles.container}>
+          <Box className={styles.sidebar}>
             <Sidebar project_name={projectName} />
           </Box>
 
-          <Box flex={1} p={4} overflow="auto">
-            <Box mt={4}>
+          <Box className={styles.content}>
+            <Box className={styles.createButtonWrapper}>
               <Button
                 variant="contained"
-                sx={{
-                  boxShadow: 2,
-                  backgroundColor: '#282d3f',
-                  '&:hover': {
-                    backgroundColor: '#1a1f2e',
-                  }
-                }}
+                className={styles.createButton}
                 onClick={() => {
                   resetForm();
                   setEditingIndex(null);
@@ -219,66 +213,27 @@ const MetricsPage = () => {
 
             <Box mt={4}>
               {metrics.map((metric, index) => (
-                <Box
-                  key={index}
-                  p={2}
-                  border={1}
-                  borderRadius={2}
-                  display="flex"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  mb={2}
-                >
-                  <Box flex={1} pr={2}>
+                <Box key={index} className={styles.metricCard}>
+                  <Box className={styles.metricDetails}>
                     <Typography variant="h6">{metric.name}</Typography>
                     <Typography variant="body2" color="textSecondary">
                       {metric.description}
                     </Typography>
                     <Box width="100%">
-                      {/* <Slider
-                        min={metric.minValue}
-                        max={metric.maxValue}
-                        value={metric.value}
-                        disabled
-                        valueLabelDisplay="auto"
-                        sx={{
-                          color: '#282d3f',
-                          '& .MuiSlider-thumb': {
-                            backgroundColor: '#282d3f',
-                          },
-                          '& .MuiSlider-track': {
-                            backgroundColor: '#282d3f',
-                          },
-                          '& .MuiSlider-rail': {
-                            backgroundColor: '#b0b0b0',
-                          },
-                        }}
-                      /> */}
                       <Slider
                         min={metric.minValue}
                         max={metric.maxValue}
-                        defaultValue={metric.value}
+                        defaultValue={metric.maxValue}
                         valueLabelDisplay="auto"
                         onChange={() => {}}
-                        sx={{
-                          color: '#282d3f',
-                          '& .MuiSlider-thumb': {
-                            backgroundColor: '#282d3f',
-                          },
-                          '& .MuiSlider-track': {
-                            backgroundColor: '#282d3f',
-                          },
-                          '& .MuiSlider-rail': {
-                            backgroundColor: '#b0b0b0',
-                          },
-                        }}
+                        className={styles.slider}
                       />
                     </Box>
                     <Typography>
                       {metric.minLabel} ({metric.minValue}) - {metric.maxLabel} ({metric.maxValue})
                     </Typography>
                   </Box>
-                  <Box display="flex" flexDirection="column" gap={1}>
+                  <Box className={styles.actionButtons}>
                     <Button variant="contained" onClick={() => handleEdit(index)}>Edit</Button>
                     <Button variant="contained" color="error" onClick={() => handleDelete(index)}>Delete</Button>
                   </Box>
@@ -289,29 +244,62 @@ const MetricsPage = () => {
             <Dialog open={modalOpen} onClose={handleClose}>
               <DialogTitle>{editingIndex !== null ? "Edit Metric" : "Add Metric"}</DialogTitle>
               <DialogContent>
-                <Box display="flex" flexDirection="column" gap={2}>
+                <Box className={styles.dialogForm}>
                   <TextField
                     name="name"
                     label="Metric Name"
                     value={form.name}
                     onChange={handleInputChange}
+                    error={!!formErrors.name}
+                    helperText={formErrors.name}
                     disabled={editingIndex !== null}
                   />
-                  <TextField name="minValue" type="number" label="Minimum Value" value={form.minValue} onChange={handleInputChange} />
-                  <TextField name="maxValue" type="number" label="Maximum Value" value={form.maxValue} onChange={handleInputChange} />
-                  <TextField name="minLabel" label="Minimum Label" value={form.minLabel} onChange={handleInputChange} />
-                  <TextField name="maxLabel" label="Maximum Label" value={form.maxLabel} onChange={handleInputChange} />
-                  <TextField name="description" label="Description" value={form.description} onChange={handleInputChange} />
+                  <TextField
+                    name="minValue"
+                    type="number"
+                    label="Minimum Value"
+                    value={form.minValue}
+                    onChange={handleInputChange}
+                    error={!!formErrors.minValue}
+                    helperText={formErrors.minValue}
+                  />
+                  <TextField
+                    name="maxValue"
+                    type="number"
+                    label="Maximum Value"
+                    value={form.maxValue}
+                    onChange={handleInputChange}
+                    error={!!formErrors.maxValue}
+                    helperText={formErrors.maxValue}
+                  />
+                  <TextField
+                    name="minLabel"
+                    label="Minimum Label"
+                    value={form.minLabel}
+                    onChange={handleInputChange}
+                    error={!!formErrors.minLabel}
+                    helperText={formErrors.minLabel}
+                  />
+                  <TextField
+                    name="maxLabel"
+                    label="Maximum Label"
+                    value={form.maxLabel}
+                    onChange={handleInputChange}
+                    error={!!formErrors.maxLabel}
+                    helperText={formErrors.maxLabel}
+                  />
+                  <TextField
+                    name="description"
+                    label="Description"
+                    value={form.description}
+                    onChange={handleInputChange}
+                    error={!!formErrors.description}
+                    helperText={formErrors.description}
+                  />
                   <Button
                     variant="contained"
+                    className={styles.createButton}
                     onClick={handleSave}
-                    sx={{
-                      boxShadow: 2,
-                      backgroundColor: '#282d3f',
-                      '&:hover': {
-                        backgroundColor: '#1a1f2e',
-                      }
-                    }}
                   >
                     Save
                   </Button>
