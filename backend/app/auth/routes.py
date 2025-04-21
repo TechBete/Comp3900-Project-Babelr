@@ -4,7 +4,6 @@ from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.exc import IntegrityError
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, decode_token, set_access_cookies, get_jwt
 from flask import request, jsonify, url_for, redirect
-from app.audio.routes import getRequirements, isQualified
 import app.helpers as helper
 from app.auth import authBp
 from app import db, jwt
@@ -201,32 +200,6 @@ def logout():
     db.session.query(Researcher).filter_by(jti=jti).update({'jti': None})
     db.session.commit()
     return jsonify({"message": "Logout successful"}), 200
-
-'''
-# this function is used to assign audio to a listener
-# this is done by checking the listener's language proficiency
-# and matching it with the audio's language requirements
-# the function takes in a listener object and checks their language proficiency
-# if the listener is qualified for the audio, the audio is assigned to the listener
-# the function also updates the audio's allocated listeners list
-# the function is called when a new listener is created
-# the function is called in the createListener function
-'''
-
-### check on whether this is needed in this file or if it should 
-### be moved to the helpers file
-### this will need to be updated to check in the audio table
-def assignQualifiedAudio(listener: Listener):
-        logging.debug('assiging qualified audio to the new listener')
-        allAudio = AudioFile.query.all()
-        logging.debug(f"{allAudio}")
-        for audio in allAudio:
-            logging.debug(f'audio {audio} requires {audio.min_proficiency} in {audio.language}')
-            if isQualified(listener, audio.language, audio.min_proficiency):
-                audio.allocated_listeners.append(str(listener.id))
-                listener.allocated_audio_queue.append(str(audio.id))
-                flag_modified(listener, "allocated_audio_queue")
-        logging.debug(f'listener {listener} is assigned {listener.allocated_audio_queue}')
 
 '''
 # this route is for a Listener user to register to the platform
