@@ -1,7 +1,7 @@
 from flask_jwt_extended import jwt_required, get_jwt_identity, jwt_required, get_jwt_identity
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.exc import IntegrityError
-from flask import jsonify, request
+from flask import jsonify, request, send_file
 from app.auth.routes import assignQualifiedAudio
 from app.listeners import userBp
 from app.models import Gender, Listener, ListenerDemographic
@@ -731,4 +731,9 @@ def getAudioFile():
         return jsonify({"error": "There is no assigned audio file"}), 404
 
     audio_file = listener.assigned_audio.pop(0)
-    return jsonify({"audio_file": audio_file})
+
+    try:
+        return send_file(audio_file.get('file_path'), mimetype='audio/wav')
+    except FileNotFoundError:
+        logging.error("File not found error occured")
+        return "File not found", 404

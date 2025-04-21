@@ -6,8 +6,7 @@ import Slider from '@mui/material/Slider';
 
 export default function Evaluation() {
     const [Error, setError] = useState("");
-    const [audioPath, setAudioPath] = useState("");
-    const [audioFile, setAudioFile] = useState('null');
+    const [audioURL, setAudioURL] = useState('null');
     const [metricsObj, setMetricsObj] = useState({});
 
     const fetchAudioPath = async () => {
@@ -17,18 +16,11 @@ export default function Evaluation() {
         });
 
         const res = await response.json();
-
-        console.log('!!res**: ', res);
-        console.log('!!audio_file path**: ', res.audio_file);
-        
-        setAudioPath(res.audio_file);
         fetchAudioFileData(res.audio_file);
     };
 
     const fetchAudioFileData = async (audio_path: string) => {
-        console.log("audio path is: ", audioPath);
         const obj = filter_audio_path(audio_path);
-        console.log('obj: ', obj);
         const project_name = obj['project_name'];
         const audio_file_name = obj['audio_file_name'];
 
@@ -41,18 +33,7 @@ export default function Evaluation() {
 
         const res = await response.json();
 
-        // res.audio_file.metrics
-        /*
-        "Clarity": {
-            "description": "How clear the audio sounds",
-            "max": 5,
-            "maximum label": "Clear",
-            "min": 1,
-            "minimum label": "Unclear"
-        }
-        */
         setMetricsObj(res.audio_file.metrics);
-
         fetchAudioFile();
     }
 
@@ -62,11 +43,9 @@ export default function Evaluation() {
             credentials: 'include'
         });
 
-        const res = await response.json();
-
-        console.log('!!resopnse audio file**: ', res);
-        console.log('!!audio file**: ', res.audio_file);
-        setAudioFile(res);
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        setAudioURL(url);
     };
 
     const filter_audio_path = function(audio_path: string) {
@@ -173,7 +152,7 @@ export default function Evaluation() {
                                 {<audio controls id="audio" src="/ch_0.wav"></audio>}
                                 <Button variant="contained" type='submit'>Submit Rating</Button>
                                 {metric_grid_2}
-                                {<audio controls id="audio" src={audioFile}></audio>}
+                                {<audio controls id="audio" src={audioURL}></audio>}
                             </form>
                         </div>
                     </div>
