@@ -2,9 +2,8 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, jwt_required, get
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.exc import IntegrityError
 from flask import jsonify, request
-from app.auth.routes import assignQualifiedAudio
 from app.listeners import userBp
-from app.models import Gender, Listener, AudioFile
+from app.models import Gender, Listener, AudioFile, RedeemShop
 import app.helpers as helpers
 import uuid, logging, os
 from app import db
@@ -106,7 +105,8 @@ def addLanguage():
         if new_language not in listener.languages:
             listener.languages.append(new_language)
             flag_modified(listener, "languages")
-            #assignQualifiedAudio(listener)
+            listener.update_allocated_audio()
+            
             logging.debug(f"user {listener} is assigned {listener.allocated_audio_queue}")
             db.session.commit()
     except IntegrityError as e:
@@ -431,7 +431,7 @@ def testChangeDemographics():
 @jwt_required()
 def submitRating():
     data = request.json
-    required_fields = ['audio_id']
+    required_fields = ['audio_id', 'ratings']
 
     validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
@@ -449,6 +449,16 @@ def submitRating():
     if not audio_file:
         return jsonify({"error": "Audio file not found"}), 404
 
+    ratings = data["ratings"]
+    # add evaluation in the audio listener list
+    eval_target = is_evaluated(user_id, audio_file.allocated_listeners)
+    if eval_target is None:
+        return jsonify({"error": "Listener is not allocated to the audio file"}), 404
+    else:
+        for metric in ratings:
+            eval_target[metric] = ratings[metric]
+
+    # update the evaluation status for listener
     listener.evaluation_history.append(audio_id)
     if not audio_id in listener.evaluation_history:
         return jsonify({"error": "Audio file failed transferring to evaluation history"}), 404
@@ -468,10 +478,52 @@ def submitRating():
 
     return jsonify({"message": "Rating submission(audio evaluation) Successful"}), 200
 
+def is_evaluated(id, allocated_listeners):
+    for item in allocated_listeners:
+        if item["listener_id"] == id:
+            return item
+    return None
+
 @userBp.route('/redeemRewards', methods=['POST', 'OPTIONS'])
 @jwt_required()
 def redeemRewards():
+    # TODO: finish this
     data = request.json
+    required_fields = ['redeem_name', 'point']
+
+    validation_error = helpers.validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+
+    coupon_name = data["redeem_name"]
+
+    # get user from uuid
+    user_id = get_jwt_identity()
+    user_id = uuid.UUID(user_id)
+    # check listener availability
+    listener = helpers.is_listener_id(user_id)
+    # check if listener exists
+    if not listener:
+        return jsonify({"error": "Listener not found"}), 404
+
+    try:
+        redeem_exists = RedeemShop.query.filter_by(name=coupon_name).first()
+        if not redeem_exists:
+            return jsonify({"error": "Redeem does not exists"}), 404
+
+        if listener.reward_points < redeem_exists.point:
+            return jsonify({"error": "Not enough points to redeem this coupon"}), 404
+
+        listener.reward_points = listener.reward_points - redeem_exists.point
+        flag_modified(listener, "reward_points")
+        db.session.commit()
+
+        # TODO: send out the email to listener (coupon number for now)
+
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Error: 500, An error has occured while redeem the points"}), 500
 
     return jsonify({'message': 'reward_id is: ' + data.reward_id})
 

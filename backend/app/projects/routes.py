@@ -1,4 +1,5 @@
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt, jwt_required, get_jwt_identity
+from sqlalchemy.orm import query
 from app.models import Researcher, Project, AudioFile, ProjectStatus
 from flask import jsonify, request
 from app import db
@@ -650,7 +651,7 @@ def updateProjectStatus():
     try:
         with db.session.begin_nested():
             # Check if project exists
-            project = helper.find_project(projectName, researcher_id)
+            project: Project | None = helper.find_project(projectName, researcher_id)
             
             if project is None:
                 return jsonify({"error": "Project not found"}), 404 # disallow project update if project does not exist
@@ -667,6 +668,15 @@ def updateProjectStatus():
             elif new_status == "in_progress":
                 project.status = ProjectStatus.in_progress
                 # add call to allocate listeners here
+                listeners = list()
+                
+                for audio in list(filter(lambda x: x is not None, map(lambda id: AudioFile.query.filter_by(id=id).first(), project.audio_list))):
+                    assert isinstance(audio, AudioFile)
+                    listeners = audio.update_allocated_listeners()
+                    listeners.extend(listeners)
+
+                project.listener_list = [str(l.id) for l in listeners]
+                project.total_listeners = len(listeners)
                 
             db.session.commit()
     except Exception as e:
@@ -729,7 +739,8 @@ def getProjects():
                         "creator_id": str(project.creator_id),
                         "creator_name": project.creator_name,
                         "audio_list": project.audio_list,
-                        "total_listeners": project.total_listeners
+                        "total_listeners": project.total_listeners,
+                        "listener_list": project.listener_list
                     }
                     project_list.append(project_dict)
 
@@ -810,11 +821,28 @@ def getProject():
                         
             if project is None:
                 return jsonify({"error": "Project not found"}), 404 # disallow returning project if project does not exist
+
+            # convert project object to dict
+            project_dict = {
+                "project_name": project.project_name,
+                "project_uuid": str(project.id),
+                "path": project.path,
+                "status": project.status.name,
+                "tags": project.tags,
+                "metrics": project.metrics,
+                "models": project.models,
+                "creator_id": str(project.creator_id),
+                "creator_name": project.creator_name,
+                "audio_list": project.audio_list,
+                "total_listeners": project.total_listeners,
+                "listener_list": project.listener_list
+            }
+
     except Exception as e:
         logging.debug(e)
         return jsonify({"error": "Error: 500, An error has occured while retrieving the project"}), 500
 
-    return jsonify({"project": project})
+    return jsonify({"project": project_dict}), 200
 
 '''
 # this route is to delete a project
