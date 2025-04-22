@@ -486,7 +486,6 @@ def is_evaluated(id, allocated_listeners):
 @userBp.route('/redeemRewards', methods=['POST', 'OPTIONS'])
 @jwt_required()
 def redeemRewards():
-    # TODO: finish this
     data = request.json
     required_fields = ['redeem_name', 'point']
 
@@ -513,18 +512,38 @@ def redeemRewards():
         if listener.reward_points < redeem_exists.point:
             return jsonify({"error": "Not enough points to redeem this coupon"}), 404
 
+        # Send out the email to listener with promo code provided from provider
+        send_coupon_email(listener.email, redeem_exists.name, redeem_exists.promo_code)
+        # subtract coupon points from listener point status
         listener.reward_points = listener.reward_points - redeem_exists.point
         flag_modified(listener, "reward_points")
         db.session.commit()
-
-        # TODO: send out the email to listener (coupon number for now)
-
     except Exception as e:
         db.session.rollback()
         logging.debug(e)
         return jsonify({"error": "Error: 500, An error has occured while redeem the points"}), 500
+    return jsonify({'message': 'Reward point successfully rewarded to listener'}), 200
 
-    return jsonify({'message': 'reward_id is: ' + data.reward_id})
+def send_coupon_email(receiver_email, coupon_name, promo_code):
+    subject = f"Babelr coupon code for {coupon_name}"
+    body = f"Thank you for submitting audio file evaluation,
+    we truly appreciate your time and effort to support research projects!
+    Here is your coupon code for {coupon_name}.
+    Please enter the code in the app"
+
+    msg = MIMEText(body, "plain")
+    msg["From"] = os.getenv('MAIL_USERNAME')
+    msg["To"] = receiver_email
+    msg["Subject"] = subject
+
+    try:
+        server = smtplib.SMTP('smtp.mail.yahoo.com', 587)
+        server.starttls()
+        server.login(os.getenv('MAIL_USERNAME'), os.getenv('MAIL_PASSWORD'))
+        server.sendmail(os.getenv('MAIL_USERNAME'), receiver_email, msg.as_string())
+        server.quit()
+    except Exception as e:
+        return jsonify({"error": "Error: 500, An error has occured while sending out the email"}), 500
 
 # This route is used to update the audio metrics for a listener
 # Args:
