@@ -429,7 +429,7 @@ def testChangeDemographics():
 @jwt_required()
 def submitRating():
     data = request.json
-    required_fields = ['audio_file_name', 'ratings']
+    required_fields = ['audio_id', 'ratings']
     # {audio_file_name: 'file_name', project_name: 'proj_name',
     # ratings': {'clarity': 3, 'intelligibility': 5}}
 
