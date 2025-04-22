@@ -1,13 +1,13 @@
 from __future__ import annotations # get python to recognise classes before they are declared
-import logging
-from typing import Self
-import enum, uuid
 from sqlalchemy.dialects.postgresql import UUID, ENUM
-from sqlalchemy import DDL, event
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.orm.session import Session
-from app import db
+from sqlalchemy import DDL, event
 from functools import total_ordering
+from typing import Self
+import enum, uuid, logging
+from flask import jsonify
+from app import db
 
 
 #========== 1. Python Enums ==========
@@ -177,11 +177,17 @@ class Project(db.Model):
     creator_name         = db.Column(db.String(128), nullable=False)
     # list of audio file uuid to track all uploaded audio file under the project
     audio_list           = db.Column(db.JSON, default=list)
-    '''
-    
-    '''
     total_listeners      = db.Column(db.Integer, default=0) # total number of listeners in the project
     listener_list        = db.Column(db.JSON, default=list) # list of all listener id within the project
+    '''
+    listener_list = [
+        {
+            "uuid of listener 1",
+            "uuid of listener 2",
+            ...,
+        }
+    ]
+    '''
 
 class Listener(db.Model):
     __tablename__ = "listeners"
@@ -249,7 +255,6 @@ class Listener(db.Model):
 
         The function is called in the createListener function.
         """
-        
 
         logging.debug('assiging qualified audio to the new listener')
         allAudio: list[AudioFile] = AudioFile.query.all()
@@ -261,9 +266,18 @@ class Listener(db.Model):
                 audio.assign_listener(self)
                 self.assign_audio(audio)
                 qualifiedAudio.append(audio)
-
-        logging.debug(f'listener {self} is assigned {self.allocated_audio_queue}')
-
+                project = Project.query.filter_by(project_name=audio.project_name, creator_id=audio.researcher_id).first()
+                if project:
+                    if str(self.id) not in project.listener_list:
+                        try:
+                            project.listener_list.append(str(self.id))
+                            flag_modified(project, "listener_list")
+                            project.total_listeners += 1
+                            db.session.commit()
+                        except Exception as e:
+                            db.session.rollback()
+                            return jsonify({"error": "Failed to update project listener list"}), 500
+                            
         return qualifiedAudio
 
 
@@ -304,7 +318,7 @@ class AudioFile(db.Model):
         }
     }
     '''
-    tags                = db.Column(db.JSON, default=list) 
+    tags                = db.Column(db.JSON, default=list)
     researcher_id       = db.Column(UUID(as_uuid=True),nullable=False)
     project_name        = db.Column(db.String(128), nullable=False)
     allocated_listeners = db.Column(db.JSON, default=list)
@@ -316,6 +330,7 @@ class AudioFile(db.Model):
         "Clarity": 3
     }
     '''
+    
     def __init__(self, id, file_name, file_extension, file_path, model, language, min_proficiency: str | ProficiencyLevel, metrics, tags, researcher_id, project_name) -> None:
 
         self.id = id
@@ -335,6 +350,18 @@ class AudioFile(db.Model):
 
         for listener in qualified:
             listener.assign_audio(self)
+            project = Project.query.filter_by(project_name=self.project_name, creator_id=self.researcher_id).first()
+            if project:
+                    if str(listener.id) not in project.listener_list:
+                        try:
+                            project.listener_list.append(str(listener.id))
+                            flag_modified(project, "listener_list")
+                            project.total_listeners += 1
+                            db.session.commit()
+                        except Exception as e:
+                            db.session.rollback()
+                            return jsonify({"error": "Failed to update project listener list"}), 500
+                            
 
         self.allocated_listeners = allocated_listeners
 
@@ -348,16 +375,21 @@ class AudioFile(db.Model):
         Get a list of listeners qualified to evaluate this audio file.
         """
         all_listeners: list[Listener] = Listener.query.all()
-        
+
         qualified_listeners = []
-        
+
         for listener in all_listeners:
             if listener.is_qualified(self):
                 logging.debug(f'{listener} is qualified')
                 qualified_listeners.append(listener)
-        
+
         logging.debug(f'qualified listeners: {qualified_listeners}')
         return qualified_listeners
+
+    def set_allocated_listeners(self, new_allocated_listeners: list[str] | list[Listener] | list [str | Listener]):
+        # Ensure all elements of the list is a stringified UUID
+        new_allocated_listeners = [str(l.id) if isinstance(l, Listener) else l for l in new_allocated_listeners]
+        self.allocated_listeners = new_allocated_listeners
 
     def update_allocated_listeners(self) -> list[Listener]:
         """
@@ -371,11 +403,26 @@ class AudioFile(db.Model):
 
         for listener in new_allocated_listeners:
             listener.assign_audio(self)
+            project = Project.query.filter_by(project_name=self.project_name, creator_id=self.researcher_id).first()
+            if project:
+                    if str(listener.id) not in project.listener_list:
+                        try:
+                            project.listener_list.append(str(listener.id))
+                            flag_modified(project, "listener_list")
+                            project.total_listeners += 1
+                            db.session.commit()
+                        except Exception as e:
+                            db.session.rollback()
+                            return jsonify({"error": "Failed to update project listener list"}), 500
+                            
 
         logging.debug(f"Audio file now is allocated {self.allocated_listeners}")
         return new_allocated_listeners
 
-    def set_allocated_listeners(self, new_allocated_listeners: list[str] | list[Listener] | list [str | Listener]):
-        # Ensure all elements of the list is a stringified UUID
-        new_allocated_listeners = [str(l.id) if isinstance(l, Listener) else l for l in new_allocated_listeners]
-        self.allocated_listeners = new_allocated_listeners
+
+class RedeemShop(db.Model):
+    __tablename__ = "redeem_shop"
+    id = db.Column(db.Integer, primary_key=True, nullable=False, autoincrement=True)
+    name = db.Column(db.String(128), nullable=False)
+    point = db.Column(db.Integer, nullable=False)
+    promo_code = db.Column(db.String(128), nullable=False)

@@ -1,8 +1,9 @@
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
-from flask import jsonify, request
+from sqlalchemy.orm.attributes import flag_modified
 from app.researchers import researchersBp
+from flask import jsonify, request
 import app.helpers as helper
-import uuid, logging
+import uuid
 from app import db
 
 '''
@@ -57,7 +58,7 @@ def getResearchers():
         "Password": user.pw_hash,
         
         "Date of Birth": user.date_of_birth,
-        "Gender": user.gender,
+        "Gender": str(user.gender),
         "Country": user.country_of_residence,
         "Education": user.education,
         "Organisation": user.organisation,
@@ -78,8 +79,6 @@ def getResearchers():
 ARGS:
     - first_name: str
     - last_name: str
-    - email: str
-    - password: str
     - date_of_birth: str
     - gender: str
     - country: str
@@ -120,57 +119,20 @@ def updateResearcherProfile():
         return jsonify({"error": "Researcher does not exist on database!"}), 400
 
     try:
-        
-        # Map of request field names to model field names
-        field_map = {
-            "first_name": "first_name",
-            "last_name": "last_name",
-            "email": "email",
-            "password": "pw_hash",
-            "date_of_birth": "date_of_birth",
-            "gender": 'gender',
-            "country": "country_of_residence",
-            "education": "education",
-            "organisation": "organisation"
-        }
-        
-        fields_to_update = []
-        for request_field, model_field in field_map.items():
-            if request_field in data:
-                # Check if the field is present in the request data
-                current_value = getattr(researcher, model_field)
-                new_value = data[request_field]
-                
-                # Check if the current value is different from the new value
-                if current_value != new_value:
-                    if request_field == "email":
-                        # Check if the email already exists in the database
-                        existing_researcher = helper.is_researcher_email(new_value)
-                        if existing_researcher:
-                            return jsonify({"error": "Email already exists!"}), 400
-                    # If the field is password, hash the new password
-                    if request_field == "password":
-                        new_value = helper.hash_password(new_value)
-                    
-                    if request_field == "first_name":
-                        helper.update_project_creator(current_value, new_value, researcher_id)
-                    
-                    
-                    # Update the field in the model
-                    setattr(researcher, model_field, new_value)
-                    fields_to_update.append(model_field)
-                
-                
-        if fields_to_update:
-            # Update the modified fields in the database
-            db.session.commit()
-        return jsonify({
-                    "message": "Researcher profile updated successfully",
-                    "updated fields": fields_to_update
-                    }), 200
-        
+        # mandatory fields information (nullable=False)
+        researcher.first_name = data['first_name']
+        researcher.last_name = data['last_name']
+        researcher.date_of_birth = data['date_of_birth']
+        researcher.country_of_residence = data['country_of_residence']
+        researcher.education = data['education']
+        researcher.organisation = data['organisation']
+        # optional fields (nullable=True)
+        researcher.gender = data['gender']
+        # update databse and alert listern table
+        db.session.add(researcher)
+        db.session.commit()
     except Exception as e:
         db.session.rollback()
-        logging.error(e)
-        return jsonify({"Error": "500, Internal Server Error"}), 500
+        return jsonify({"error": "An error has occurred while updating the Researcher Profile"}), 500
+    return jsonify({"message": "Profile Update successful"}), 200
 

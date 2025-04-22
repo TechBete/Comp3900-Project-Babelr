@@ -3,7 +3,7 @@ from flask import jsonify
 from email.mime.text import MIMEText
 from itsdangerous import URLSafeTimedSerializer
 from password import PasswordHash
-from app.models import ProficiencyLevel, Researcher, Listener, Project, AudioFile # ls
+from app.models import Researcher, Listener, Project, AudioFile # ls
 from app import db
 import os, smtplib, re, uuid #(?) uuid not in use?
 
@@ -62,7 +62,7 @@ def send_verification_email(receiver_email, verification_url):
         server.sendmail(os.getenv('MAIL_USERNAME'), receiver_email, msg.as_string())
         server.quit()
     except Exception as e:
-        return f"Error: {e}"
+        return jsonify({"error": "Error: 500, An error has occured while sending out the email"}), 500
 
 def is_existing_user_email(email):
     existing_listener = Listener.query.filter_by(email=email).first()
