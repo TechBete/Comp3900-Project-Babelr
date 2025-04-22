@@ -225,9 +225,11 @@ class Listener(db.Model):
     allocated_audio_queue     = db.Column(db.JSON, default=list) # list of video IDs completed by the listener
 
     def assign_audio(self, audio: AudioFile):
-        self.allocated_audio_queue.append(str(audio.id))
-        flag_modified(self, "allocated_audio_queue")
-        logging.debug(f"Listener {self} is allocated {self.allocated_audio_queue}")
+        if audio not in self.allocated_audio_queue:
+            # Add the new audio to the queue
+            self.allocated_audio_queue.append(str(audio.id))
+            flag_modified(self, "allocated_audio_queue")
+            logging.debug(f"Listener {self} is allocated {self.allocated_audio_queue}")
 
     def is_qualified(self, audio: AudioFile) -> bool:
         """

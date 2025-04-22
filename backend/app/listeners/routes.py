@@ -570,6 +570,7 @@ def send_coupon_email(receiver_email, coupon_name, promo_code):
 #    400: Error: Audio file does not exist
 #    500: Error: An error occurred while getting the audio file
 
+
 @userBp.route('/getAssignedAudioFile', methods=['GET'])
 @jwt_required()
 def getAssignedAudio():

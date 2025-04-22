@@ -389,9 +389,10 @@ def getAudioFileData():
             if project is None:
                 return jsonify({"error": "Project not found"}), 404
             
-            if audio_file.id not in project.audio_list:
-                if listener.id not in project.listener_list:
-                    return jsonify({"error": "Audio file not found"}), 404 
+            if audio_file.id in project.audio_list and listener.id in project.listener_list:
+                pass
+            else:
+                return jsonify({"error": "Either Audio file not found or User is Not Part of Assigned Project"}), 404 
             
             # ensure metrics are consistent with audio file and the project         
             # ensure that the metrics are in a valid format
