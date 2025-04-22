@@ -58,13 +58,13 @@ def getResearchers():
         "Password": user.pw_hash,
         
         "Date of Birth": user.date_of_birth,
-        "Gender": user.gender,
+        "Gender": str(user.gender),
         "Country": user.country_of_residence,
         "Education": user.education,
         "Organisation": user.organisation,
         
         "Project List": user.project_list,
-        }, 200)
+        }), 200 
 
 
 '''
