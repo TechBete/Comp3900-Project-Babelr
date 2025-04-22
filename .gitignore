@@ -7,3 +7,5 @@ audioData/
 cookies.txt
 out
 test
+package-lock.json
+.package-lock.json
