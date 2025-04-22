@@ -429,7 +429,9 @@ def testChangeDemographics():
 @jwt_required()
 def submitRating():
     data = request.json
-    required_fields = ['audio_id']
+    required_fields = ['audio_id', 'ratings']
+    # {audio_file_name: 'file_name', project_name: 'proj_name',
+    # ratings': {'clarity': 3, 'intelligibility': 5}}
 
     validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
@@ -447,6 +449,16 @@ def submitRating():
     if not audio_file:
         return jsonify({"error": "Audio file not found"}), 404
 
+    ratings = data["ratings"]
+    # add evaluation in the audio listener list
+    eval_target = is_evaluated(user_id, audio_file.allocated_listeners)
+    if eval_target is None:
+        return jsonify({"error": "Listener is not allocated to the audio file"}), 404
+    else:
+        for metric in ratings:
+            eval_target[metric] = ratings[metric]
+
+    # update the evaluation status for listener
     listener.evaluation_history.append(audio_id)
     if not audio_id in listener.evaluation_history:
         return jsonify({"error": "Audio file failed transferring to evaluation history"}), 404
@@ -465,6 +477,12 @@ def submitRating():
     db.session.commit()
 
     return jsonify({"message": "Rating submission(audio evaluation) Successful"}), 200
+
+def is_evaluated(id, allocated_listeners):
+    for item in allocated_listeners:
+        if item["listener_id"] == id:
+            return item
+    return None
 
 @userBp.route('/redeemRewards', methods=['POST', 'OPTIONS'])
 @jwt_required()
