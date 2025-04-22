@@ -3,10 +3,7 @@ from flask import jsonify
 from email.mime.text import MIMEText
 from itsdangerous import URLSafeTimedSerializer
 from password import PasswordHash
-import app.models as mod # models
-import os, smtplib
-import secrets
-from app.models import ProficiencyLevel, Researcher, Listener, Project, AudioFile # ls
+from app.models import Researcher, Listener, Project, AudioFile # ls
 from app import db
 import os, smtplib, re, uuid #(?) uuid not in use?
 
@@ -98,23 +95,6 @@ def blind_login(id):
 
 def sanitize_project_name(projectName):
     return re.sub(r'[^\w\s-]', '', projectName).strip()
-
-def get_researcher_demography(id):
-    return mod.ResearcherDemographic.query.filter_by(researcher_id=id).first()
-
-def get_researcher_from_project_name(project_name):
-    researchers = [
-        r for r in mod.Researcher.query.all()
-        if any(project.get('name') == project_name for project in r.project_list)
-    ]
-
-    if len(researchers) > 0:
-        return researchers[0]
-    
-    return -1
-
-    return mod.Researcher.query.filter_by(project_name=project_name).first()
-    # project_list.getKeys('name')
 
 def check_invalid_project_name(projectName):
     return re.search(r'[<>:"/\\|?*]', projectName)

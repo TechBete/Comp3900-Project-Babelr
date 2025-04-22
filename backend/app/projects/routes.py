@@ -674,9 +674,6 @@ def updateProjectStatus():
                     assert isinstance(audio, AudioFile)
                     listeners = audio.update_allocated_listeners()
                     listeners.extend(listeners)
-
-                project.listener_list = [str(l.id) for l in listeners]
-                project.total_listeners = len(listeners)
                 
             db.session.commit()
     except Exception as e:
