@@ -667,33 +667,25 @@ def getAssignedAudio():
         if not isinstance(listener.assigned_audio, list):
             return jsonify({"error": "Invalid audio file format"}), 400
 
-        audio_file = listener.assigned_audio[0]
-        # check if listener assigned audio has the correct fields
-        if not all(key in listener.assigned_audio[0] for key in ['file_path', 'name', 'file_extension']):
-            return jsonify({"error": "Invalid audio file format"}), 400
-        # get the first audio file assigned to the listener
-
-        audio_file_path = audio_file['file_path']
-        audio_file_name = audio_file['name']
-        audio_file_extension = audio_file['file_extension']
-
-        audio_file_src = os.path.join(
-            audio_file_path,
-            audio_file_name + '.' + audio_file_extension
-        )
-        logging.debug(audio_file_src)
-
-        # check if the audio file exists
-        if not os.path.exists(audio_file_src):
-            logging.warning("Audio file does not exist: {}".format(audio_file_src))
+        audio_file = listener.assigned_audio.pop(0)
+        
+        # check if audio file exists
+        if not audio_file:
             return jsonify({"error": "Audio file does not exist"}), 400
-
+        
+        # assign file to currently_assigned_audio for listener
+        
+        listener.currently_assigned_audio = audio_file
+        db.session.add(listener)
+        db.session.commit()
+        
+        # return uuid of the audio file
+        return jsonify({"audio_file": str(audio_file)}), 200
+        
     except Exception as e:
-        logging.error("An error occurred while getting the audio file: {}".format(e))
-        return jsonify({"error": "Error: 500, An error occurred while getting the audio file"}), 500
+        db.session.rollback()
+        return jsonify({"error": "Error: 500, An error occurred while getting the audio file"}), 500        
 
-    # return the audio file src
-    return jsonify({"audio_file: {}".format(audio_file_src)}), 200
 
 # update listener profile
 # update listener languages to be done in a different route
