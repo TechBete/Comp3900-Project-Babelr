@@ -177,9 +177,6 @@ class Project(db.Model):
     creator_name         = db.Column(db.String(128), nullable=False)
     # list of audio file uuid to track all uploaded audio file under the project
     audio_list           = db.Column(db.JSON, default=list)
-    '''
-    
-    '''
     total_listeners      = db.Column(db.Integer, default=0) # total number of listeners in the project
     listener_list        = db.Column(db.JSON, default=list) # list of all listener id within the project
 
@@ -249,7 +246,6 @@ class Listener(db.Model):
 
         The function is called in the createListener function.
         """
-        
 
         logging.debug('assiging qualified audio to the new listener')
         allAudio: list[AudioFile] = AudioFile.query.all()
@@ -304,7 +300,7 @@ class AudioFile(db.Model):
         }
     }
     '''
-    tags                = db.Column(db.JSON, default=list) 
+    tags                = db.Column(db.JSON, default=list)
     researcher_id       = db.Column(UUID(as_uuid=True),nullable=False)
     project_name        = db.Column(db.String(128), nullable=False)
     allocated_listeners = db.Column(db.JSON, default=list)
@@ -348,14 +344,14 @@ class AudioFile(db.Model):
         Get a list of listeners qualified to evaluate this audio file.
         """
         all_listeners: list[Listener] = Listener.query.all()
-        
+
         qualified_listeners = []
-        
+
         for listener in all_listeners:
             if listener.is_qualified(self):
                 logging.debug(f'{listener} is qualified')
                 qualified_listeners.append(listener)
-        
+
         logging.debug(f'qualified listeners: {qualified_listeners}')
         return qualified_listeners
 
@@ -379,3 +375,9 @@ class AudioFile(db.Model):
         # Ensure all elements of the list is a stringified UUID
         new_allocated_listeners = [str(l.id) if isinstance(l, Listener) else l for l in new_allocated_listeners]
         self.allocated_listeners = new_allocated_listeners
+
+class RedeemShop(db.Model):
+    __tablename__ = "redeem_shop"
+    id = db.Column(db.Integer, primary_key=True, nullable=False, autoincrement=True)
+    name = db.Column(db.String(128), nullable=False)
+    point = db.Column(db.Integer, nullable=False)
