@@ -425,3 +425,4 @@ class RedeemShop(db.Model):
     id = db.Column(db.Integer, primary_key=True, nullable=False, autoincrement=True)
     name = db.Column(db.String(128), nullable=False)
     point = db.Column(db.Integer, nullable=False)
+    promo_code = db.Column(db.String(128), nullable=False)
