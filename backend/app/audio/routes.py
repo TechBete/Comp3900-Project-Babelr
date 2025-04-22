@@ -340,9 +340,9 @@ def getAudioFileData():
     listener_id = get_jwt_identity()
     listener_id = uuid.UUID(listener_id)
 
-    listener_id = helper.is_listener_id(listener_id)
+    listener = helper.is_listener_id(listener_id)
     # Validate researcher
-    if not listener_id:
+    if not listener:
         return jsonify({"error": "listener not found"}), 404
 
     audio_id = data['audio_id']
@@ -359,6 +359,10 @@ def getAudioFileData():
             project = helper.find_project(audio_file.project_name, audio_file.researcher_id)
             if project is None:
                 return jsonify({"error": "Project not found"}), 404
+            
+            if audio_file.id not in project.audio_list:
+                if listener.id not in project.listener_list:
+                    return jsonify({"error": "Audio file not found"}), 404 
             
             # ensure metrics are consistent with audio file and the project         
             # ensure that the metrics are in a valid format
