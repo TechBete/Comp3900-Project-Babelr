@@ -64,7 +64,7 @@ def getResearchers():
         "Organisation": user.organisation,
         
         "Project List": user.project_list,
-        }, 200)
+        }), 200 
 
 
 '''
