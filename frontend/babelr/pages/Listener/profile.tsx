@@ -161,6 +161,11 @@ export default function ProfilePage() {
   };
 
   const handlePersonalInfoSave = async () => {
+    if (!firstName || !lastName || !dateOfBirth || !gender || !country || !education || !backgroundInfo) {
+      alert("Please fill in all fields before saving.");
+      return;
+    }
+  
     try {
       const res = await fetch("http://localhost:8016/listener/changeDemographics", {
         method: "POST",
@@ -299,7 +304,7 @@ export default function ProfilePage() {
                   </List>
                 </CardContent>
               </Card>
-
+              
               {/* Password Modal */}
               <Dialog open={isPasswordEditOpen} onClose={handlePasswordEditClose} fullWidth maxWidth="sm">
                 <DialogTitle sx={{ pt: 4 }}>Update Password</DialogTitle>
@@ -330,7 +335,7 @@ export default function ProfilePage() {
                       labelId="gender-label"
                       id="gender-select"
                       value={gender}
-                      label="Gender" // This is important to fix the border issue
+                      label="Gender"
                       onChange={(e) => setGender(e.target.value)}
                     >
                       <MenuItem value="male">Male</MenuItem>
@@ -359,7 +364,7 @@ export default function ProfilePage() {
                     select
                     fullWidth
                     margin="dense"
-                    value={newProficiency}
+                    value={newProficiency || ""}
                     onChange={(e) => setNewProficiency(e.target.value)}
                     sx={{ mt: 2 }}
                   >
