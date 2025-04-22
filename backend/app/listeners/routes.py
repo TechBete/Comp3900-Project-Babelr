@@ -372,6 +372,8 @@ def changeDemographics():
     assert data is not None
     try:
         # mandatory fields information (nullable=False)
+        listener.first_name = data['first_name']
+        listener.last_name = data['last_name']
         listener.date_of_birth = data['date_of_birth']
         listener.country_of_residence = data['country_of_residence']
         listener.education = data['education']
@@ -379,12 +381,11 @@ def changeDemographics():
         listener.gender = data['gender']
         listener.background_info = data['background_info']
         # update databse and alert listern table
-        for field in ["first_name", "last_name", "background_info", "date_of_birth", "country_of_residence", "education", "gender"]:
-            flag_modified(listener, field)
+        db.session.add(listener)
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": f"An error has occurred while updating the demographics: {e}"}), 500
+        return jsonify({"error": "An error has occurred while updating the demographics"}), 500
     return jsonify({"message": "Demographic Edit successful"}), 200
 
 # dont forget to remove this test route for final version
@@ -667,65 +668,25 @@ def getAssignedAudio():
         if not isinstance(listener.assigned_audio, list):
             return jsonify({"error": "Invalid audio file format"}), 400
 
-        audio_file = listener.assigned_audio[0]
-        # check if listener assigned audio has the correct fields
-        if not all(key in listener.assigned_audio[0] for key in ['file_path', 'name', 'file_extension']):
-            return jsonify({"error": "Invalid audio file format"}), 400
-        # get the first audio file assigned to the listener
-
-        audio_file_path = audio_file['file_path']
-        audio_file_name = audio_file['name']
-        audio_file_extension = audio_file['file_extension']
-
-        audio_file_src = os.path.join(
-            audio_file_path,
-            audio_file_name + '.' + audio_file_extension
-        )
-        logging.debug(audio_file_src)
-
-        # check if the audio file exists
-        if not os.path.exists(audio_file_src):
-            logging.warning("Audio file does not exist: {}".format(audio_file_src))
+        audio_file = listener.assigned_audio.pop(0)
+        
+        # check if audio file exists
+        if not audio_file:
             return jsonify({"error": "Audio file does not exist"}), 400
-
-    except Exception as e:
-        logging.error("An error occurred while getting the audio file: {}".format(e))
-        return jsonify({"error": "Error: 500, An error occurred while getting the audio file"}), 500
-
-    # return the audio file src
-    return jsonify({"audio_file: {}".format(audio_file_src)}), 200
-
-# update listener profile
-# update listener languages to be done in a different route
-@userBp.route('/updateListenerProfile', methods=['POST'])
-@jwt_required()
-def updateListenerProfile():
-    data = request.json
-
-    listener_id = get_jwt_identity()
-    listener_id = uuid.UUID(listener_id)
-
-    # check if listener is valid user
-    listener = helpers.is_listener_id(listener_id)
-    if not listener:
-        return jsonify({"error": "Listener does not exist on database!"}), 400
-
-    try:
-        listener.first_name = data['first_name']
-        listener.last_name = data['last_name']
-        listener.email = data['email']
-        listener.background_info = data['background_info']
-        for key, value in data.items():
-            if getattr(listener, key, None) != value:
-                setattr(listener, key, value)
-                flag_modified(listener, key)
+        
+        # assign file to currently_assigned_audio for listener
+        
+        listener.currently_assigned_audio = audio_file
+        db.session.add(listener)
         db.session.commit()
+        
+        # return uuid of the audio file
+        return jsonify({"audio_file": str(audio_file)}), 200
+        
     except Exception as e:
         db.session.rollback()
-        logging.error(f"An error occurred while updating researcher's organisation: {e}")
-        return jsonify({"error": "Error: 500, An error occurred while updating the researcher's organisation"}), 500
+        return jsonify({"error": "Error: 500, An error occurred while getting the audio file"}), 500        
 
-    return jsonify({"message": "Listener profile updated successfully"}), 200
 
 @userBp.route('/getAudioFile')
 @jwt_required()

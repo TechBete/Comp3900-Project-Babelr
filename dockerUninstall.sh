@@ -1,5 +1,7 @@
 #! /bin/bash
 
+# This script is used to uninstall Babelr from a Docker container.
+
 echo "Doing this will remove all Babelr Docker Containers, Networks, Volumes and Saved Data"
 read -p "Are you Sure? " -n 1 -r
 echo    # (optional) move to a new line
@@ -9,8 +11,4 @@ then
     echo "Removing Babelr Docker containers, networks, and volumes..."
     docker-compose down -v
 
-    # Rebuild and start the Docker containers
-    echo "Rebuilding and starting Babelr Docker containers..."
-    docker-compose up --build
-    
 fi
