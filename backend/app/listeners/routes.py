@@ -39,7 +39,7 @@ def getListener():
         "Current audio": user.currently_assigned_audio if user.currently_assigned_audio else None,
         "Evaluation history": user.evaluation_history if user.evaluation_history else None,
         "Allocated audio queue": user.allocated_audio_queue if user.allocated_audio_queue else None,
-        })
+        }), 200 
 
 # Test route for /getListener/<uuid:listener_id> , remove for final
 @userBp.route('/testGetListener', methods=['GET'])
