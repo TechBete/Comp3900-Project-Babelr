@@ -2,7 +2,6 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, jwt_required, get
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.exc import IntegrityError
 from flask import jsonify, request, send_file
-from app.auth.routes import assignQualifiedAudio
 from app.listeners import userBp
 from app.models import Gender, Listener, AudioFile, RedeemShop
 import app.helpers as helpers
@@ -669,14 +668,14 @@ def getAssignedAudio():
         # reached
 
         # check if listener has any assigned audio
-        if not listener.assigned_audio:
+        if not listener.allocated_audio_queue:
             return jsonify({"error": "No audio file assigned to the listener"}), 400
 
         # check if listener assigned audio is a list
-        if not isinstance(listener.assigned_audio, list):
+        if not isinstance(listener.allocated_audio_queue, list):
             return jsonify({"error": "Invalid audio file format"}), 400
 
-        audio_file = listener.assigned_audio.pop(0)
+        audio_file = listener.allocated_audio_queue.pop(0)
         
         # check if audio file exists
         if not audio_file:
@@ -687,6 +686,8 @@ def getAssignedAudio():
         listener.currently_assigned_audio = audio_file
         db.session.add(listener)
         db.session.commit()
+
+        logging.debug(f"audio_file: {audio_file}")
         
         # return uuid of the audio file
         return jsonify({"audio_file": str(audio_file)}), 200
@@ -704,16 +705,18 @@ def getAudioFile():
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
-    logging.debug(f"assigned audio {listener.assigned_audio}")
+    logging.debug(f"assigned audio {listener.allocated_audio_queue}")
 
-    if len(listener.assigned_audio) == 0:
+    if len(listener.allocated_audio_queue) == 0:
         return jsonify({"error": "There is no assigned audio file"}), 404
     # forgot to add to current before popping
-    listener.currently_assigned_audio = listener.assigned_audio[0]
-    audio_file = listener.assigned_audio.pop(0)
+    listener.currently_assigned_audio = listener.allocated_audio_queue[0]
+    audio_file_id = listener.allocated_audio_queue.pop(0)
 
+    audio_file = helpers.get_audio_from_audio_id(audio_file_id)
+    
     try:
-        return send_file(audio_file.get('file_path'), mimetype='audio/wav')
+        return send_file(audio_file.file_path, mimetype='audio/wav')
     except FileNotFoundError:
         logging.error("File not found error occured")
         return "File not found", 404

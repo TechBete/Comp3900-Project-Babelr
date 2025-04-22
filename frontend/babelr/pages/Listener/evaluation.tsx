@@ -19,15 +19,11 @@ export default function Evaluation() {
         fetchAudioFileData(res.audio_file);
     };
 
-    const fetchAudioFileData = async (audio_path: string) => {
-        const obj = filter_audio_path(audio_path);
-        const project_name = obj['project_name'];
-        const audio_file_name = obj['audio_file_name'];
-
+    const fetchAudioFileData = async (audio_id: string) => {
         const response = await fetch('http://localhost:8016/audio/getAudioFileData', {
             method:"POST",
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({project_name, audio_file_name}),
+            body: JSON.stringify({audio_id}),
             credentials: 'include'
         });
 
@@ -47,15 +43,6 @@ export default function Evaluation() {
         const url = URL.createObjectURL(blob);
         setAudioURL(url);
     };
-
-    const filter_audio_path = function(audio_path: string) {
-        // example = '/app/audioData/c1056c9e-962c-499d-83a8-599e784a4109/water bottle 1/temp_fntemp_ln/ch_2.wav'
-        const parts = audio_path.split('/');
-        const project_name = parts[4];
-        const audio_file_name = parts[parts.length - 1];
-
-        return { project_name, audio_file_name };
-    }
 
     const metric_object_to_array = function (metric_obj: object) {
         const metric_array: any[] = [];
@@ -97,14 +84,7 @@ export default function Evaluation() {
         }
     }
 
-    /*
-    const test_metrics_1 = [
-        {'name': 'Clarity', 'description': 'How clear is the speech?'},
-        {'name': 'Intelligibility', 'description': 'How easy to understand is the speech?'}
-    ]
-    */
-
-    const test_metrics_2 = {
+    const test_metrics = {
         "Clarity": {
             "description": "How clear the audio sounds",
             "max": 5,
@@ -129,7 +109,7 @@ export default function Evaluation() {
     }
 
     const metrics_array = metric_object_to_array(metricsObj);
-    const metric_grid_2 = metrics_array.map((metric) => {
+    const metric_grid = metrics_array.map((metric) => {
         return (
             <div key={metric.name}>
                 <h2 className='metric-name'>{metric.name}</h2>
@@ -149,10 +129,9 @@ export default function Evaluation() {
                             <h1>Evaluation</h1>
                             <p>Play the audio clip and rate it based on the provided metrics.</p>
                             <form className={styles["login-form"]} method="post" onSubmit={submitRating}>
-                                {<audio controls id="audio" src="/ch_0.wav"></audio>}
-                                <Button variant="contained" type='submit'>Submit Rating</Button>
-                                {metric_grid_2}
                                 {<audio controls id="audio" src={audioURL}></audio>}
+                                {metric_grid}
+                                <Button variant="contained" type='submit'>Submit Rating</Button>
                             </form>
                         </div>
                     </div>
