@@ -1,19 +1,38 @@
-from sqlalchemy.orm.attributes import flag_modified
-from app.audio.routes import getRequirements, isQualified, uploadAudioFile
-from flask import request, jsonify, url_for, redirect
-from app.models import Researcher, Listener, PermissionLevel, ListenerDemographic, ResearcherDemographic
-
-from app import db, jwt
-from app.auth import authBp
-from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, decode_token, set_access_cookies, get_jwt
+from app.models import Listener, Researcher, Project, AudioFile, PermissionLevel, Gender
 from email_validator import validate_email, EmailNotValidError
+from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.exc import IntegrityError
+from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, decode_token, set_access_cookies, get_jwt
+from flask import request, jsonify, url_for, redirect
 import app.helpers as helper
+from app.auth import authBp
+from app import db, jwt
 import uuid, logging
 
-# moved all authentication related functions to this file
-# to make it easier to manage
+'''
+# this route is to verify a user's email address
+# this is done by sending a get request to the /verify/<token> endpoint
+# the route is called when the user registers an account
+# the user will receive an email with a link to verify their account
+# the link will contain a token that is used to verify the user's email address
 
+ARGS:
+    - token: str
+
+RESPONSE:
+    - 200: Successful verification
+    - 400: Validation error
+    - 404: Invalid token
+
+RETURNS:
+    - redirect to login page
+    
+UPDATES:
+    - Database: Listener, Researcher
+    - is_verified: bool
+'''
+
+# this route is to verify a user's email address
 @authBp.route('/verify/<token>')
 def verify_email(token):
     email = helper.verify_token(token)
@@ -22,8 +41,8 @@ def verify_email(token):
         return redirect(url_for('auth.login')), 404
 
     # Find user and mark as verified
-    listener = Listener.query.filter_by(email=email).first()
-    user = listener if listener else Researcher.query.filter_by(email=email).first()
+    listener = helper.is_listener_email(email)
+    user = listener if listener else helper.is_researcher_email(email)
 
     if user and not user.is_verified:
         user.is_verified = True
@@ -33,6 +52,35 @@ def verify_email(token):
 
     return redirect(url_for('auth.login'))
 
+'''
+# this route is for a user to login to the platform
+# this is done by sending a post request to the /login endpoint
+# the user must provide their email and password in the request body
+# the email and password are then validated and checked against the database
+# if the email and password are valid, a JWT token is created and returned to the user
+# the token is then used to authenticate the user for future requests
+# the token is set as a cookie in the response
+# the token is then used to authenticate the user for future requests
+
+ARGS:
+    - email: str
+    - pw: str
+
+RESPONSE:
+    - 200: Successful login
+    - 400: Validation error
+    - 401: Invalid email-password combination
+    - 404: Email not verified
+    - 500: Internal server error
+    
+RETURNS:
+    - None
+
+UPDATES:
+    - Database: Listener, Researcher
+    - jti: str
+    - JWT token: token
+'''
 @authBp.route('/login', methods=['POST'])
 def login():
     data = request.json
@@ -49,7 +97,7 @@ def login():
     if password == '' or Email == '':
         return jsonify({"error": "Email or Password cannot be empty"}), 400
 
-    # add password length and format check in later iteration
+    # add password length and format check if necessary later
 
     # check if email is structured correctly
     try:
@@ -115,11 +163,34 @@ def login():
             # set the access token as a cookie in the response
             response = jsonify({"Login": "Successful"})
             set_access_cookies(response,token)
-            # response.set_cookie("accesstoken", token, samesite="None")
 
             return response
     return jsonify({"error": "Failed Login. Either Email or password was incorrect"}), 401   # update frontend for error message popup
 
+'''
+# this route is for a user to logout of the platform
+# this is done by sending a post request to the /logout endpoint
+# the user will be logged out of the platform via the jwt token
+# the token is then invalidated in the database
+
+# upon relogin, the jwt token will be updated and the user will be able to login again
+
+ARGS:
+    - None
+    
+RESPONSE:
+    - 200: Successful logout
+
+RETURNS:
+    - None
+
+UPDATES:
+    - Database: Listener, Researcher
+    - jti: None
+
+'''
+
+#logout route needs work to get it implemented correctly
 # unset cookie on logout - look into this when possible
 @authBp.route('/logout', methods=['POST'])
 @jwt_required()
@@ -129,25 +200,41 @@ def logout():
     db.session.query(Researcher).filter_by(jti=jti).update({'jti': None})
     db.session.commit()
     return jsonify({"message": "Logout successful"}), 200
-def assignQualifiedAudio(listener: Listener):
-        def getAllAudioData():
-            allResearchers = Researcher.query.all()
-            allAudio = list()
-            for researcher in allResearchers:
-                uploadedAudio = researcher.uploaded_audio
-                allAudio.extend(uploadedAudio)
-            return allAudio
-        logging.debug('assiging qualified audio to the new listener')
-        allAudio = getAllAudioData()
-        logging.debug(f"{allAudio}")
-        for audio in allAudio:
-            (lang, min_proficiency) = getRequirements(audio['tags'])
-            logging.debug(f'audio {audio} requires {min_proficiency} in {lang}')
-            if isQualified(listener, lang, min_proficiency):
-                audio['allocated_listeners'].append(listener.id.hex)
-                listener.assigned_audio.append(audio)
-                flag_modified(listener, "assigned_audio")
-        logging.debug(f'listener {listener} is assigned {listener.assigned_audio}')
+
+'''
+# this route is for a Listener user to register to the platform
+# this is done by sending a post request to the /registerListener endpoint
+# the user must provide their first name, last name, email and password in the request body
+# the email and password are then validated and checked against the database
+# if the email and password are valid, the password is hashed using argon2
+# the user's information is then added to the database
+
+ARGS:
+    - first_name: str
+    - last_name: str
+    - email: str
+    - pw: str
+    
+RESPONSE:
+    - 200: Successful registration
+    - 400: Validation error
+    - 404: Email not verified
+    - 403: User already registered
+    - 401: Invalid email-password combination
+    - 409: Email already registered
+    - 500: Internal server error
+    
+RETURNS:
+    - None
+    
+UPDATES:
+    - Database: Listener
+    - AudioFile: allocated_listeners
+    - Project: allocated_listeners
+
+'''
+
+# this route is for a Listener user to register to the platform
 @authBp.route('/registerListener', methods=['POST'])
 def createListener():
     data = request.json
@@ -178,28 +265,28 @@ def createListener():
         email=data['email'],
         pw_hash=hashed_password.value,
         permission=PermissionLevel.listener,
-        background_info=data.get('background_info', ''),
         reward_points=0,
-        is_verified=False,
-        languages=([] if not data.get('languages') else data['languages']),
-        assigned_audio=([] if not data.get('assigned_audio') else data['assigned_audio']),
-        first_time =True,
-    )
-
-    demo = ListenerDemographic(
-        listener_id=user.id,
+        background_info=data.get('background_info', ""),
         date_of_birth="",
-        gender='other',
+        gender=Gender.other,
         country_of_residence="",
-        education=""
+        education="",
+        languages=[],
+        is_verified=False,
+        jti = None,
+        blindlogin = None,
+        first_time =True,
+        currently_assigned_audio=[],
+        evaluation_history=[],
+        allocated_audio_queue=[],
     )
-
+    
     try:
         db.session.add(user)
-        db.session.add(demo)
-        assignQualifiedAudio(user)
+        #assignQualifiedAudio(user)
         db.session.commit()
-
+        # this redirects to a 404 page, need to check that routing is done correctly
+        # to redirect to the login page
         token = helper.generate_verification_token(data['email'])
         verification_url = url_for('auth.verify_email', token=token, _external=True)
         helper.send_verification_email(data['email'], verification_url)
@@ -215,6 +302,37 @@ def createListener():
     # Ensure languages_proficiency is serialized as a list
     return jsonify({"message": "Registration Successful"}), 200
 
+'''
+# this route is for a Researcher user to register to the platform
+# this is done by sending a post request to the /registerResearcher endpoint
+# the user must provide their first name, last name, email and password in the request body
+# the email and password are then validated and checked against the database
+# if the email and password are valid, the password is hashed using argon2
+# the user's information is then added to the database
+
+ARGS:
+    - first_name: str
+    - last_name: str
+    - email: str
+    - pw: str
+
+RESPONSE:
+    - 200: Successful registration
+    - 400: Validation error
+    - 400: Email already registered
+    - 400: Database integrity error
+    - 401: Invalid email-password combination
+    - 403: User already registered
+    - 500: Internal server error
+    
+RETURNS:
+    - None
+    
+UPDATES:
+    - Database: Researcher 
+    
+'''
+# this route is for a Researcher user to register to the platform
 @authBp.route('/registerResearcher', methods=['POST'])
 def createResearcher():
     data = request.json
@@ -226,7 +344,7 @@ def createResearcher():
     Email = data['email']
     # Check if email already exists
     if helper.is_existing_user_email(Email):
-        return jsonify({"error": "Email already registered"}), 400
+        return jsonify({"error": "Email already registered"}), 403
 
     # check if email is structured correctly
     try:
@@ -244,11 +362,16 @@ def createResearcher():
         email=data['email'],
         pw_hash=hashed_password.value,
         permission=PermissionLevel.researcher,
-        organisation=data.get('organisation', ''),
-        is_verified=False,
         project_list=[],
-        uploaded_audio=[],
-        first_time =True,
+        date_of_birth="",
+        gender=Gender.other,
+        country_of_residence="",
+        education="",
+        organisation="",
+        is_verified=False,
+        jti= None,
+        blindlogin = None,
+        first_time =True
     )
     
     try:
@@ -269,19 +392,51 @@ def createResearcher():
         return jsonify({"error": "Error Code: 500"}), 500
     return jsonify({"message": "Registration Successful"})
 
+'''
+# this function is for a user to create a test user
+# necessary for presentation purposes but can be removed 
+# before deployment
+'''
 # remove this function before Prod
+# update route for project and audio creation
 def createTestUser():
     data = {
         "first_name": "Alice",
         "last_name": "Bob",
         "email": "test@user.com",
         "pw": "Eve123",
+        "date_of_birth": "1959-06-11",
+        "country_of_residence": "Australia",
+        "education": "Bachelor of Arts",
+        "gender": "other",
+    }
+    
+    data2 = {
+        "first_name": "Jim",
+        "last_name": "Bill",
+        "email": "research@user.com",
+        "pw": "Jim123",
+        "date_of_birth": "2000-09-08",
+        "country_of_residence": "Australia",
+        "education": "HSC",
+        "gender": "male",
+    }
+
+    data3 = {
+        "first_name": "Kate",
+        "last_name": "Smith",
+        "email": "ksmith@listen.com",
+        "pw": "kate",
+        "date_of_birth": "2000-09-08",
+        "country_of_residence": "Australia",
+        "education": "HSC",
+        "gender": "female",
     }
 
     test_lang = [
     {
-        "language": "English", 
-        "proficiency": "Native", 
+        "language": "English",
+        "proficiency": "Native",
     }, {
         "language": "Japanese",
         "proficiency": "Elementary",
@@ -290,84 +445,56 @@ def createTestUser():
         "proficiency": "Bilingual",
     }]
 
-    data2 = {
-        "first_name": "Jim",
-        "last_name": "Bill",
-        "email": "research@user.com",
-        "pw": "Jim123",
-    }
-
-    data3 = {
-        "first_name": "Kate",
-        "last_name": "Smith",
-        "email": "ksmith@listen.com",
-        "pw": "kate",
-    }
 
     # Hash the user password
     hashed_password = helper.hash_password(data)
     hashed_password2 = helper.hash_password(data2)
     hashed_password3 = helper.hash_password(data3)
 
-    demo_data = {
-        "date_of_birth": "1959-06-11",
-        "country_of_residence": "Australia",
-        "education": "Bachelor of Arts",
-        "gender": "female"
-    }
-
-    demo_data2 = {
-        "date_of_birth": "2000-09-08",
-        "country_of_residence": "Australia",
-        "education": "HSC",
-        "gender": "female"
-    }
-
-    demo = ListenerDemographic(
-        date_of_birth=demo_data['date_of_birth'],
-        country_of_residence=demo_data['country_of_residence'],
-        education=demo_data['education'],
-        gender=demo_data['gender']
-    )
-
-    demo2 = ListenerDemographic(
-        date_of_birth=demo_data2['date_of_birth'],
-        country_of_residence=demo_data2['country_of_residence'],
-        education=demo_data2['education'],
-        gender=demo_data2['gender']
-    )
-
-
     user = Listener(
-        id="736259a4-aea2-4de7-aa87-5764e1db624b",    # generate a random uuid if not provided
+        id="736259a4-aea2-4de7-aa87-5764e1db624b",
         first_name=data['first_name'],
         last_name=data['last_name'],
         email=data['email'],
         pw_hash=hashed_password.value,
         permission=PermissionLevel.listener,
-        background_info="ahhhhhhhhhhhh",
         reward_points=5,
-        is_verified=True,
+        background_info="testbackground",
+        date_of_birth=data["date_of_birth"],
+        gender=data["gender"],
+        country_of_residence=data["country_of_residence"],
+        education=data["education"],
         languages=test_lang,
-        demographic=demo,
-        assigned_audio=([] if not data.get('assigned_audio') else data['assigned_audio']),
-        first_time=False 
+        is_verified=True,
+        jti = None,
+        blindlogin = None, 
+        first_time=False,
+        currently_assigned_audio=[],
+        evaluation_history=[],
+        allocated_audio_queue=["3975b85e-05a5-4671-944b-d53b5a167420"],
     )
 
     allocated_listener = Listener(
-        id="20658871-860a-4a87-a520-11800b9f3632",    # generate a random uuid if not provided
+        id="20658871-860a-4a87-a520-11800b9f3632",
         first_name=data3['first_name'],
         last_name=data3['last_name'],
         email=data3['email'],
         pw_hash=hashed_password3.value,
         permission=PermissionLevel.listener,
-        background_info="ayo",
         reward_points=15,
-        is_verified=True,
+        background_info="ayo",
+        date_of_birth=data3["date_of_birth"],
+        gender=data3["gender"],
+        country_of_residence=data3["country_of_residence"],
+        education=data3["education"],
         languages=test_lang,
-        demographic=demo2,
-        assigned_audio=([] if not data.get('assigned_audio') else data['assigned_audio']),
+        is_verified=True,
+        jti = None,
+        blindlogin = None,
         first_time=False,
+        currently_assigned_audio=[],
+        evaluation_history=[],
+        allocated_audio_queue=["3975b85e-05a5-4671-944b-d53b5a167420"],
     )
 
     user2 = Researcher(
@@ -377,59 +504,25 @@ def createTestUser():
         email=data2['email'],
         pw_hash=hashed_password2.value,
         permission=PermissionLevel.researcher,
-        is_verified=True,
         project_list=[
         {
-            "name": "Test Project 1",
-            "path": "",
-            "status": "Draft",
-            "tags": [],
-            "metrics": {
-                        "Naturalness": {
-                        "min": 1,
-                        "max": 5,
-                        "minimum label": "Robotic",
-                        "maximum label": "Natural",
-                        "description": "How natural the audio sounds"
-                        },
-                        "Intelligibility": {
-                        "min": 1,
-                        "max": 5,
-                        "minimum label": "Unintelligible",
-                        "maximum label": "Intelligible",
-                        "description": "How easy it is to understand the audio"
-                        },
-                        "Clarity": {
-                        "min": 1,
-                        "max": 5,
-                        "minimum label": "Unclear",
-                        "maximum label": "Clear",
-                        "description": "How clear the audio sounds"
-                        },
-            },
-            "creator id": "20658111-860a-4a87-a520-11800b9f36e9",
-            "creator": data2['first_name'],
-            "Audio File Name": "testFile1",
-            "Audio File Path": "./audioData/Bill/TestProject1/",
-        }],
-        uploaded_audio=[{
-            "name": "testFile1",
-            "file_extension": ".wav",
-            "file_path": "./audioData/Bill/TestProject1/",
-            "allocated_listeners": [user.id, allocated_listener.id],
-            "metrics": {
-                "Naturalness": 0,
-                "Intelligibility": 0,
-                "Clarity": 0
-            },
-            "tags": ["model3A", "Japanese", "elementary"],
+            "project_id": "3975b85e-05a5-4671-944b-d53b5a167420",
             "project_name": "Test Project 1",
-            "project_path": "projects/Test Project 1/",
-            "Researcher": "20658111-860a-4a87-a520-11800b9f36e9",
             
-        }],
+        }
+        ],
+        date_of_birth= data2["date_of_birth"],
+        gender= data2["gender"],
+        country_of_residence= data2["country_of_residence"],
+        education= data2["education"],
+        organisation="University of Paris",
+        is_verified=True,
+        jti = None,
+        blindlogin = None,
         first_time=False,
     )
+    
+    # update project and audio tables with information
 
     try:
         with db.session.begin_nested():
@@ -443,6 +536,10 @@ def createTestUser():
             if not existing_listener:
                 db.session.add(allocated_listener)
             db.session.commit()
+            # update audio and project tables with information
+            # db.session.add(test_project)
+            # db.session.add(test_audio)
+            # db.session.commit()
         # no need to send verification email for testing account
     except IntegrityError as e:
         db.session.rollback()
@@ -454,6 +551,39 @@ def createTestUser():
         return jsonify({"error": "Error Code: 500"}), 500
     return jsonify({"message": "Registration Successful"})
 
+'''
+# this route is to update (reset) a user's password
+# this is done by sending a post request to the /userResetPassword endpoint
+# the user must provide a new password and the password confirmationation string (same password) 
+# in the request body.
+# the users JWT is verified then the password is updated in the database
+# the user must be logged in to access this route
+
+ARGS:
+    - pw: str
+    - pw_confirmation: str
+    - JWT token: token
+
+RESPONSE:
+    - 200: Successful password reset
+    - 400: Validation error
+    - 400: Password cannot be empty
+    - 400: Passwords do not match
+    - 400: Email does not match the one registered with the account
+    - 400: Email is not of proper format
+    - 400: Password cannot be the same as the previous password
+    - 404: User not found
+    - 500: An error has occured while updating the password
+    - 500: Database integrity error
+    - 500: Database rollback error
+    - 500: Internal server error
+    
+RETURNS:
+    - None
+    
+UPDATES:
+    - pw_hash: str
+'''
 
 # this route is to reset a user's password
 @authBp.route('/userResetPassword', methods=['POST'])
@@ -509,6 +639,37 @@ def userResetPassword():
             logging.debug(e)
             return jsonify({"error": "Error: 500, An error has occured while updating the password"}), 500
 
+'''
+# this route is to reset a user's password if they have forgotten thier password
+# this is done by sending a post request to the /blindEmailParse endpoint
+# the user must provide their email in the request body
+# the email is then validated and checked against the database
+# if the email is valid, a blind login uuid is generated and returned to the user
+# the user must then use this uuid to reset their password
+# the route will need to be updated to send the uuid to the user's email
+
+ARGS:
+    - email: str
+    
+RESPONSE:
+    - 200: verification email sent (tbd)
+    - 200: blind login uuid generated
+    - 400: Validation error
+    - 400: Email cannot be empty
+    - 400: Email is not of proper format
+    - 404: Email not found
+    - 500: Database integrity error
+    - 500: Database rollback error
+    - 500: Internal server error
+
+RETURNS:
+    - blindlogin: str(uuid)
+    - email: str
+    
+UPDATES:
+    - blindlogin: str(uuid)
+        
+'''
 # this route is to reset a user's password if they have forgotten thier password
 # this is to be updated to use email user verification once decerntralization is implemented
 @authBp.route('/blindEmailParse', methods=['POST'])
@@ -535,16 +696,48 @@ def blindEmailParse():
     existing_researcher = helper.is_researcher_email(Email)
 
     # return blind login uuid
-    # update to new logic once decentralization is implemented
+    # need to update this to send the uuid to the email
     if existing_listener:
         existing_listener.blindlogin = uuid.uuid4()
         db.session.commit() # update the database with the new blind login uuid, atomic commit
-        return jsonify({"listener_id": str(existing_listener.blindlogin), "email": str(existing_listener.email)}) # added underscore for my sanity
+        return jsonify({"listener_id": str(existing_listener.blindlogin), "email": str(existing_listener.email)}), 200 # added underscore for my sanity
     else:
         existing_researcher.blindlogin = uuid.uuid4()
         db.session.commit() # update the database with the new blind login uuid, atomic commit
-        return jsonify({"researcher_id": str(existing_researcher.blindlogin), "email": str(existing_researcher.email)})   # added underscore for my sanity
+        return jsonify({"researcher_id": str(existing_researcher.blindlogin), "email": str(existing_researcher.email)}), 200   # added underscore for my sanity
 
+'''
+# this route is to reset a user's password if they have forgotten thier password
+# this is done by sending a post request to the /blindPasswordReset endpoint
+# the user must provide their new password and the password confirmationation string (same password), 
+# as well as the blind login uuid in the request body
+# the password is then validated and checked against the database and updated
+
+ARGS:
+    - pw: str
+    - pw_confirmation: str
+    - id: str(uuid)
+
+RESPONSE:
+    - 200: Successful password reset
+    - 400: Validation error
+    - 400: Password cannot be empty
+    - 400: Passwords do not match
+    - 400: Password cannot be the same as the previous password
+    - 404: User not found
+    - 500: An error has occured while updating the password
+    - 500: Database integrity error
+    - 500: Database rollback error
+    - 500: Internal server error
+
+RETURNS:
+    - None
+    
+UPDATES:
+    - pw_hash: str
+    - blindlogin: str(uuid)
+    
+'''
 # this route is to reset a user's password if they have forgotten thier password after email verification
 @authBp.route('/blindPasswordReset', methods=['POST'])
 def blindPasswordReset():
@@ -572,17 +765,48 @@ def blindPasswordReset():
 
     if isUser:
         hashed_password = helper.hash_password(data)
+        pw_validated = helper.validate_Password(data, isUser.pw_hash)
+
+        if pw_validated:
+            return jsonify({"error": "Error: Password cannot be the same as the previous password"}), 400
+       
         try:
             isUser.pw_hash = hashed_password.value
+            isUser.blindlogin = None
+            # unset the blind login uuid
             db.session.commit()
-            return jsonify({"message": "Password reset successful"})
+            # update the database with the new password, atomic commit
+            return jsonify({"message": "Password reset successful"}), 200
         except Exception as e:
             db.session.rollback()
             logging.debug(e)
             return jsonify({"error": "Error: 500, An error has occured while updating the password"}), 500
 
-# Helper function to get user role from uuid
-# should be moved to helpers.py
+'''
+# this route is to get the permission level of a user
+# this is done by sending a get request to the /getRoleFromID endpoint
+# the user must have a valid jwt token to access this route
+# the token is then used to get the user's id from the database
+# the user's role is then returned in the response
+
+ARGS:
+    - None
+    
+RESPONSE:
+    - 200: Successful
+    - 400: Validation error
+    - 401: Invalid token
+    - 404: User not found
+    - 500: Internal server error
+    
+RETURNS:
+    - role: str
+
+UPDATES:
+    - first_time: bool
+
+'''
+# this route is to get the role of a user
 @authBp.route('/getRoleFromID', methods=['GET'])
 @jwt_required()
 def getRoleFromID():
@@ -602,7 +826,7 @@ def getRoleFromID():
         role = listener.permission.value
         return jsonify({"role": str(role), "first_time": first_time})
     elif not listener and researcher:
-        role = researcher.permission.value       
+        role = researcher.permission.value
         return jsonify({"role": str(role), "first_time": first_time})
     else:
         return jsonify({"error": "User ID not found"}), 404

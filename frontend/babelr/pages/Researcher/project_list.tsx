@@ -9,28 +9,26 @@ import RoleCheck from "components/role_checker";
 
 
 
-function Project({ name, path, status, creator } : { name: string; path: string; status: string; creator: string }) {
-    
+function Project({ project_name, path, status, creator_name } : { project_name: string; path: string; status: string; creator_name: string }) {
+    console.log('status is', status);
     const StatusStyle = () => {
-        if (status == "in-progress") {
+        if (status == "in_progress") {
             return <td className={styles["td"]}><span className={`${styles.status} ${styles["in-progress"]}`}>In Progress</span></td>
-        } else if (status == "complete") {
-            return <td className={styles["td"]}><span className={`${styles.status} ${styles["complete"]}`}>Complete</span></td>
-        } else if (status == "Draft") {
+        }  else if (status == "draft") {
             return <td className={styles["td"]}><span className={`${styles.status} ${styles["draft"]}`}>Draft</span></td>
         }
     };
 
     return (
         <tr className={styles["tr"]}>
-            <td className={styles["td"]}><Link className={styles["projects-link"]} href={`${path}/audioclips`}>{name}</Link></td>
+            <td className={styles["td"]}><Link className={styles["projects-link"]} href={`${path}/audioclips`}>{project_name}</Link></td>
             {StatusStyle()}
-            <td className={styles["td"]}>{creator}</td>
+            <td className={styles["td"]}>{creator_name}</td>
         </tr>
     );
 }
 
-function ProjectList({ projects }: { projects: { name: string; path: string; status: string; creator: string }[] }) {
+function ProjectList({ projects }: { projects: { project_name: string; path: string; status: string; creator_name: string }[] }) {
     return (
         <tbody>
             {projects.map((project_dict, index) => (
@@ -44,7 +42,7 @@ function ProjectList({ projects }: { projects: { name: string; path: string; sta
 
 export default function MainScreen() {
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [projectName, setProjectName] = useState("Project_4"); // change this to empty string later for production
+    const [projectName, setProjectName] = useState(""); // change this to empty string later for production
     const [createError, setCreateError] = useState("");
     const [projectsData, setProjectData] = useState([]);
 

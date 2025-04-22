@@ -8,27 +8,30 @@ import styles from "stylesheets/file_upload.module.css";
 // import AudioClipsTable from "components/clips_table";
 import {Box, Button} from "@mui/material";
 
-import TableTest from "components/table";
+import Table from "components/table";
 import RoleCheck from "components/role_checker";
 
 interface AudioData {
-    name: string;
+    file_name: string;
     tags: string[];
+    model: string;
+    language: string;
     dateAdded: string;
     evaluated: string;
     rating: number;
 }
 
 type RawAudioClip = {
-    name: string;
-    tags: string[]; // update this based on actual structure if needed
+    file_name: string;
+    tags: string; // update this based on actual structure if needed
     Researcher: string;
     file_extension: string;
     file_path: string;
     allocated_listeners: never[];
     project_name: string;
     project_path: string;
-    metrics: never; // or type it properly if you use it
+    model: string;
+    language: string;
 };
 
 
@@ -56,17 +59,68 @@ export default function FileUploadPage() {
     const [langProf, setLangProf] = useState<LangProf>(LangProf.none)
     const [uploadError, setUploadError] = useState("");
     const [audioData, setAudioData] = useState<AudioData[]>([]);
-    const [isStarted, setIsStarted] = useState(false);
+    const [status, setStatus] = useState('');
     
 
     useEffect(() => {
         if (typeof projectName === 'string') {
-            getAudioClips();
+            async function fetchProject()  {
+                getAudioClips();
+                const status: string = await getProjectStatus();  
+                setStatus(status);
+                
+            }
+            fetchProject();
         }
-    }, [projectName]); // <- only runs when projectName changes
+    },[projectName, status] ); // <- only runs when projectName changes
 
     if (typeof projectName !== 'string') {
         return <div>Loading?</div>;
+    }
+
+    async function startProject() {
+        try {
+            const response = await fetch('http://localhost:8016/projects/updateProjectStatus' , {
+                method:"POST",
+                credentials: 'include',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({project_name: projectName, status: 'in_progress'}),
+            })
+
+            if (response.ok) {
+                const res = await response.json();
+                console.log(res);
+                setStatus('');
+            } else {
+                const error = await response.json();
+                console.log(error);
+            }
+        } catch {
+        } 
+    }
+
+    async function getProjectStatus(): Promise<string> {
+        try {
+            const response = await fetch('http://localhost:8016/projects/getProject' , {
+                method:"POST",
+                credentials: 'include',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({project_name: projectName}),
+            })
+
+            if (response.ok) {
+                const res = await response.json();
+                const project = res.project;
+                console.log(project);
+                return project.status;
+            } else {
+                const error = await response.json();
+                console.log(error);
+                return ''
+            }
+        } catch {
+            return ''
+        }
     }
 
     async function getAudioClips() {
@@ -80,15 +134,22 @@ export default function FileUploadPage() {
             })
             
             if (response.ok) {
-                const { audio_files }: { audio_files: RawAudioClip[] } = await response.json();
-                console.log('raw audioClips:', audio_files);
-                const formattedClips: AudioData[] = audio_files.map(clip => ({
-                    name: clip.name,
-                    tags: clip.tags?.map(tag => tag.trim()).filter(Boolean) ?? [],
+                const res  = await response.json();
+                const audio_files = res.audio_files;
+                console.log('raw clips are', audio_files as RawAudioClip);
+                const formattedClips: AudioData[] = (audio_files as RawAudioClip[]).map(clip => ({
+                    file_name: clip.file_name,
+                    tags: (clip.tags as string)
+                        .split(',')
+                        .map(tag => tag.trim())
+                        .filter(Boolean),
+                    model: clip.model,
+                    language:clip.language,
                     dateAdded: new Date().toLocaleDateString(),
                     evaluated: "0/50",
                     rating: 0,
                 }));
+                console.log('formatted audioClips:', formattedClips);
                 setAudioData(formattedClips);
                 console.log('clips are',formattedClips)
             } else {
@@ -119,12 +180,15 @@ export default function FileUploadPage() {
 
         const fileExtension = file.name.split(".").pop(); // Keep original extension
         const newFileName = `${fileName}.${fileExtension}`;
-        const combinedTags = [model, language, langProf, tags].filter(Boolean).join(",");
+        //const combinedTags = [model, language, langProf, tags].filter(Boolean).join(",");
 
         const formData = new FormData();
         formData.append("file", file);
         formData.append("fileName", newFileName);
-        formData.append("tags", combinedTags);
+        formData.append("model", model);
+        formData.append("language", language);
+        formData.append("min_proficiency", langProf);
+        formData.append("tags", tags);
         if (typeof projectName === 'string') {
             formData.append("project_name", projectName);
         }
@@ -186,13 +250,13 @@ export default function FileUploadPage() {
                         </div>
 
                         <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end' }}>
-                            <Button className={`${styles.startButton} ${isStarted ? styles.inProgress : ''}`} sx={{ marginLeft: "auto" }}  onClick={() => setIsStarted(!isStarted)}>
-                                {isStarted ? "In Progress" : "Start"} 
+                            <Button className={`${styles.startButton} ${status === 'in_progress' ? styles.inProgress : ''}`} sx={{ marginLeft: "auto" }}  onClick={() => startProject()}>
+                                {status === 'in_progress'? "In Progress" : "Start"} 
                             </Button>
                             <Button className={styles.addAudioBtn} sx={{ marginLeft: "20px" }}  onClick={() => setIsModalOpen(true)}> + </Button>
                         </Box>
 
-                        <TableTest audioData={audioData}></TableTest>
+                        <Table audioData={audioData}></Table>
                         <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} hasCloseBtn>
                             <h2 className={styles.modalTitle}>Upload New Audio</h2>
 
