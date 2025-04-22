@@ -444,7 +444,7 @@ def submitRating():
         return jsonify({"error": "Listener not found"}), 404
     # check if audio file to submit ratings exists
     audio_id = data['audio_id']
-    audio_file = AudioFile.query.filter_by(id=audio_id).first()
+    audio_file = helpers.get_audio_from_audio_id(audio_id)
     if not audio_file:
         return jsonify({"error": "Audio file not found"}), 404
 
@@ -661,14 +661,14 @@ def getAssignedAudio():
             return jsonify({"error": "Listener not found"}), 404
 
         # check if listener has any assigned audio
-        if not listener.assigned_audio:
+        if not listener.allocated_audio_queue:
             return jsonify({"error": "No audio file assigned to the listener"}), 400
 
         # check if listener assigned audio is a list
-        if not isinstance(listener.assigned_audio, list):
+        if not isinstance(listener.allocated_audio_queue, list):
             return jsonify({"error": "Invalid audio file format"}), 400
 
-        audio_file = listener.assigned_audio.pop(0)
+        audio_file = listener.allocated_audio_queue.pop(0)
         
         # check if audio file exists
         if not audio_file:
