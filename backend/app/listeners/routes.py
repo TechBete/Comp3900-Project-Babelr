@@ -1,11 +1,12 @@
 from flask_jwt_extended import jwt_required, get_jwt_identity, jwt_required, get_jwt_identity
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.exc import IntegrityError
+from email.mime.text import MIMEText
 from flask import jsonify, request
 from app.listeners import userBp
 from app.models import Gender, Listener, AudioFile, RedeemShop
 import app.helpers as helpers
-import uuid, logging, os
+import uuid, logging, os, smtplib
 from app import db
 
 
@@ -38,7 +39,7 @@ def getListener():
         "Current audio": user.currently_assigned_audio if user.currently_assigned_audio else None,
         "Evaluation history": user.evaluation_history if user.evaluation_history else None,
         "Allocated audio queue": user.allocated_audio_queue if user.allocated_audio_queue else None,
-        })
+        }), 200 
 
 # Test route for /getListener/<uuid:listener_id> , remove for final
 @userBp.route('/testGetListener', methods=['GET'])
@@ -386,7 +387,7 @@ def changeDemographics():
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": f"An error has occurred while updating the demographics: {e}"}), 500
+        return jsonify({"error": "An error has occurred while updating the demographics"}), 500
     return jsonify({"message": "Demographic Edit successful"}), 200
 
 # dont forget to remove this test route for final version
@@ -408,7 +409,6 @@ def testChangeDemographics():
         return jsonify({"error": "Listener not found"}), 404
 
     # Convince the type system that these exists
-    assert demographic is not None
     assert data is not None
     try:
         # mandatory fields information (nullable=False)
@@ -445,7 +445,7 @@ def submitRating():
         return jsonify({"error": "Listener not found"}), 404
     # check if audio file to submit ratings exists
     audio_id = data['audio_id']
-    audio_file = AudioFile.query.filter_by(id=audio_id).first()
+    audio_file = helpers.get_audio_from_audio_id(audio_id)
     if not audio_file:
         return jsonify({"error": "Audio file not found"}), 404
 
@@ -487,7 +487,6 @@ def is_evaluated(id, allocated_listeners):
 @userBp.route('/redeemRewards', methods=['POST', 'OPTIONS'])
 @jwt_required()
 def redeemRewards():
-    # TODO: finish this
     data = request.json
     required_fields = ['redeem_name', 'point']
 
@@ -514,18 +513,38 @@ def redeemRewards():
         if listener.reward_points < redeem_exists.point:
             return jsonify({"error": "Not enough points to redeem this coupon"}), 404
 
+        # Send out the email to listener with promo code provided from provider
+        send_coupon_email(listener.email, redeem_exists.name, redeem_exists.promo_code)
+        # subtract coupon points from listener point status
         listener.reward_points = listener.reward_points - redeem_exists.point
         flag_modified(listener, "reward_points")
         db.session.commit()
-
-        # TODO: send out the email to listener (coupon number for now)
-
     except Exception as e:
         db.session.rollback()
         logging.debug(e)
         return jsonify({"error": "Error: 500, An error has occured while redeem the points"}), 500
+    return jsonify({'message': 'Reward point successfully rewarded to listener'}), 200
 
-    return jsonify({'message': 'reward_id is: ' + data.reward_id})
+def send_coupon_email(receiver_email, coupon_name, promo_code):
+    subject = f"Babelr coupon code for {coupon_name}"
+    body = f"""Thank you for submitting audio file evaluation,
+    we truly appreciate your time and effort to support research projects!
+    Here is your coupon code for {coupon_name}.
+    Please enter the code in the app"""
+
+    msg = MIMEText(body, "plain")
+    msg["From"] = os.getenv('MAIL_USERNAME')
+    msg["To"] = receiver_email
+    msg["Subject"] = subject
+
+    try:
+        server = smtplib.SMTP('smtp.mail.yahoo.com', 587)
+        server.starttls()
+        server.login(os.getenv('MAIL_USERNAME'), os.getenv('MAIL_PASSWORD'))
+        server.sendmail(os.getenv('MAIL_USERNAME'), receiver_email, msg.as_string())
+        server.quit()
+    except Exception as e:
+        return jsonify({"error": "Error: 500, An error has occured while sending out the email"}), 500
 
 # This route is used to update the audio metrics for a listener
 # Args:
@@ -662,14 +681,14 @@ def getAssignedAudio():
             return jsonify({"error": "Listener not found"}), 404
 
         # check if listener has any assigned audio
-        if not listener.assigned_audio:
+        if not listener.allocated_audio_queue:
             return jsonify({"error": "No audio file assigned to the listener"}), 400
 
         # check if listener assigned audio is a list
-        if not isinstance(listener.assigned_audio, list):
+        if not isinstance(listener.allocated_audio_queue, list):
             return jsonify({"error": "Invalid audio file format"}), 400
 
-        audio_file = listener.assigned_audio.pop(0)
+        audio_file = listener.allocated_audio_queue.pop(0)
         
         # check if audio file exists
         if not audio_file:
@@ -688,38 +707,6 @@ def getAssignedAudio():
         db.session.rollback()
         return jsonify({"error": "Error: 500, An error occurred while getting the audio file"}), 500        
 
-
-# update listener profile
-# update listener languages to be done in a different route
-@userBp.route('/updateListenerProfile', methods=['POST'])
-@jwt_required()
-def updateListenerProfile():
-    data = request.json
-
-    listener_id = get_jwt_identity()
-    listener_id = uuid.UUID(listener_id)
-
-    # check if listener is valid user
-    listener = helpers.is_listener_id(listener_id)
-    if not listener:
-        return jsonify({"error": "Listener does not exist on database!"}), 400
-
-    try:
-        listener.first_name = data['first_name']
-        listener.last_name = data['last_name']
-        listener.email = data['email']
-        listener.background_info = data['background_info']
-        for key, value in data.items():
-            if getattr(listener, key, None) != value:
-                setattr(listener, key, value)
-                flag_modified(listener, key)
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        logging.error(f"An error occurred while updating researcher's organisation: {e}")
-        return jsonify({"error": "Error: 500, An error occurred while updating the researcher's organisation"}), 500
-
-    return jsonify({"message": "Listener profile updated successfully"}), 200
 
 @userBp.route('/getAudioFile')
 @jwt_required()

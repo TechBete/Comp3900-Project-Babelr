@@ -9,6 +9,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt, jwt_requ
 from sqlalchemy.orm.attributes import flag_modified
 from app.statistics import statisticsBp
 import math
+from itertools import product
 
 
 # old hard-coded testing routes for frontend testing
@@ -164,10 +165,12 @@ def getGraphStats():
 def getProjectSummary():
     data = request.json
     required_fields = ['project_name']
+
     # check validity of required fields
     validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
+
     # Get researcher information using uuid
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
@@ -213,7 +216,7 @@ def getProjectSummary():
                     for k, v in eval_result.items():
                         if k != "listener_id":
                             lang_mod_tuple["sum"] += v
-                            
+
                 # edge case where there's no reviews
                 if lang_mod_tuple["count"] == 0:
                     continue
@@ -254,6 +257,88 @@ def getProjectSummary():
 
     return jsonify({'summary_stats': summary_stats})
 
+
+@statisticsBp.route('/getGraphStats', methods=['POST'])
+@jwt_required()
+def getGraphStats():
+    data = request.json
+    required_fields = ['project_name']
+
+    # check validity of required fields
+    validation_error = helpers.validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+
+    # Get researcher information using uuid
+    researcher_id = get_jwt_identity()
+    researcher_id = uuid.UUID(researcher_id)
+    # search researcher name from researcher uuid
+    researcher = helpers.is_researcher_id(researcher_id)
+    if not researcher:
+        return jsonify({"error": "Researcher not found"}), 404
+
+    project = helpers.find_project(data['project_name'],researcher_id)
+
+    metrics = project.metrics.keys()
+    models = project.models
+    # all possible combinations with metrics and models of project
+    # model_metric_tuple_list = [{"model": mo, "metric": me} for mo, me in product(metrics, metrics)]
+    # logging.debug(model_metric_tuple_list) # test
+
+    graph_stats = []
+
+    for model in models:
+        for metric in metrics:
+            eval_sum = 0
+            count = 0
+            mean = 0
+            sum_for_std = 0
+            std = 0
+            ci_low = 0
+            ci_high = 0
+
+            for audio_id in project.audio_list:
+                audio_file = helpers.get_audio_from_audio_id(audio_id)
+                if audio_file.model == model:
+                    for evaluation in audio_file.allocated_listeners:
+                        eval_sum += evaluation[model]
+                        if evaluation[model]:
+                            count += 1
+            if count == 0 :
+                mean = 0
+            else:
+                mean = eval_sum / count
+
+            for audio_id in project.audio_list:
+                audio_file = helpers.get_audio_from_audio_id(audio_id)
+                if audio_file.model == model:
+                    for evaluation in audio_file.allocated_listeners:
+                        sum_for_std += pow((evaluation[model] - mean), 2)
+
+            if count == 0:
+                std = 0
+                ci_low = 0
+                ci_high = 0
+            else:
+                std = math.sqrt(sum_for_std / count)
+                z = 1.96 # confidence level value with 95% of confidence
+                ci_low = mean - (z * (std / math.sqrt(count)))
+                ci_high = mean + (z * (std / math.sqrt(count)))
+
+            # z = 1.96 # confidence level value with 95% of confidence
+            # ci_low = mean - (z * (std / math.sqrt(count)))
+            # ci_high = mean + (z * (std / math.sqrt(count)))
+            data = {
+                'model': model,
+                'metric': metric,
+                'mean': mean,
+                'std': std,
+                'ci_low': ci_low,
+                'ci_high': ci_high
+            }
+            graph_stats.append(data)
+
+    return jsonify({'graph_stats': graph_stats})
 
 @statisticsBp.route('/getDemographicStats', methods=['POST'])
 @jwt_required()

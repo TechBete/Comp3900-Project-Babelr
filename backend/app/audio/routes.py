@@ -90,6 +90,26 @@ def uploadAudioFile():
         db.session.add(audio_data)
         project.audio_list.append(str(audio_data.id))
         flag_modified(project, "audio_list")
+        
+        # update project with the audio file tags and model
+        # check to see if tag is already inside project tags
+        add_tags = data['tags']
+        if isinstance(add_tags, str):
+            added_tags = [tag.strip() for tag in add_tags.split(',')]  # Split by ',' and remove extra spaces
+        elif isinstance(add_tags, list):
+            added_tags = [str(tag).strip() for tag in add_tags]
+
+        for tag in added_tags:
+            if tag not in project.tags:
+                project.tags.append(tag)
+        
+        flag_modified(project, "tags")
+                
+        # check to see if model is already inside project model
+        if data['model'] not in project.models:
+            project.models.append(data['model'])
+        flag_modified(project, "models")
+
         db.session.commit()
     except Exception as e:
         db.session.rollback()
@@ -246,17 +266,24 @@ def getProjectAudioFiles():
             # Check if audio files exist
             if project.audio_list == []:
                 return jsonify({"error": "No audio files found for this project"}), 404
-            
+
             # Get the audio files for the specified project
             audio_files = []
             audio_files = helper.get_all_audio_files(projectName, researcher_id)
             if not audio_files or audio_files == []:
                 return jsonify({"error": "Audio files not found"}), 404
-            
+
             # convert audio_files to serializable format
             serialized_audio_files = []
             for audio_file in audio_files:
                 if hasattr(audio_file, '__dict__'):
+                    num_of_allocated = 0
+                    num_of_evaluated = 0
+                    for listener in audio_file.allocated_listeners:
+                        if len(listener) > 1:
+                            num_of_evaluated += 1
+                        num_of_allocated += 1
+
                     # If field is an ORM object like AudioFile
                     audio_file_dict = {
                         "id": str(getattr(audio_file, 'id', '')) if getattr(audio_file, 'id', '') else None,
@@ -271,12 +298,14 @@ def getProjectAudioFiles():
                         "researcher_id": str(getattr(audio_file, 'researcher_id', '')) if getattr(audio_file, 'researcher_id', '') else None,
                         "project_name": getattr(audio_file, 'project_name', ''),
                         "allocated_listeners": getattr(audio_file, 'allocated_listeners', []),
+                        "num_of_allocated": num_of_allocated,
+                        "num_of_evaluated": num_of_evaluated,
                     }
                     serialized_audio_files.append(audio_file_dict)
                 else:
                     # If already a basic type (string, int, etc.)
                     serialized_audio_files.append(audio_file)
-            
+
     except Exception as e:
         logging.debug(e)
         return jsonify({"error": "Error: 500, An error has occured while retrieving the audio files"}), 500
