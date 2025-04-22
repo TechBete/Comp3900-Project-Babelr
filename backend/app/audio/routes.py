@@ -298,8 +298,8 @@ def getProjectAudioFiles():
                         "researcher_id": str(getattr(audio_file, 'researcher_id', '')) if getattr(audio_file, 'researcher_id', '') else None,
                         "project_name": getattr(audio_file, 'project_name', ''),
                         "allocated_listeners": getattr(audio_file, 'allocated_listeners', []),
-                        "num_of_allocated": num_of_allocated
-                        "num_of_evaluated": num_of_evaluated
+                        "num_of_allocated": num_of_allocated,
+                        "num_of_evaluated": num_of_evaluated,
                     }
                     serialized_audio_files.append(audio_file_dict)
                 else:
