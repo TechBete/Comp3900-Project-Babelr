@@ -347,8 +347,6 @@ def getAudioFileData():
 
     audio_id = data['audio_id']
 
-    researcher = helper.get_researcher_from_project_name(projectName)
-
     try:
         with db.session.begin_nested():
             # Check if project exists
