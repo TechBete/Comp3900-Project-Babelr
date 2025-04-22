@@ -139,7 +139,7 @@ export default function ResearcherProfilePage() {
     setFirstName(researcherData["First Name"]);
     setLastName(researcherData["Last Name"]);
     setDateOfBirth(researcherData["Date of Birth"]);
-    setGender(researcherData.Gender || "");
+    setGender(researcherData.Gender?.replace("Gender.", "") || "");
     setCountry(researcherData["Country"]);
     setEducation(researcherData.Education);
     setOrganisation(researcherData.Organisation);
@@ -191,7 +191,7 @@ export default function ResearcherProfilePage() {
       <Container sx={{ maxWidth: "700px !important" }}>
         <Box mt={12} display="flex" flexDirection="column" gap={4} pb={4}>
           <Typography variant="h4" fontWeight="bold" gutterBottom>
-            Researcher Profile
+            Profile
           </Typography>
 
           {!researcherData ? (
@@ -221,7 +221,7 @@ export default function ResearcherProfilePage() {
               <Card>
                 <CardContent>
                 <Box display="flex" justifyContent="space-between" mb={2}>
-                  <Typography variant="h6">Personal Information</Typography>
+                  <Typography variant="h6">Personal Info</Typography>
                   <Button size="small" onClick={handlePersonalInfoEditOpen}>Edit Info</Button>
                 </Box>
                 <Divider sx={{ mb: 2 }} />
@@ -242,7 +242,7 @@ export default function ResearcherProfilePage() {
                       />
                     </ListItem>
                     <ListItem>
-                      <ListItemText primary="Country" secondary={researcherData["Country"]} />
+                      <ListItemText primary="Country of Residence" secondary={researcherData["Country"]} />
                     </ListItem>
                     <ListItem>
                       <ListItemText primary="Education" secondary={researcherData["Education"]} />
@@ -289,7 +289,13 @@ export default function ResearcherProfilePage() {
           </Dialog>
           
           {/* Personal Info Edit Modal */}
-          <Dialog open={isPersonalInfoEditOpen} onClose={handlePersonalInfoEditClose} fullWidth maxWidth="sm">
+          <Dialog
+            open={isPersonalInfoEditOpen}
+            onClose={handlePersonalInfoEditClose}
+            fullWidth
+            maxWidth="sm"
+            sx={{ "& .MuiDialog-paper": { minHeight: 690 } }}
+          >
             <DialogTitle sx={{ pt: 4 }}>Edit Personal Info</DialogTitle>
             <DialogContent>
               <TextField
@@ -314,7 +320,7 @@ export default function ResearcherProfilePage() {
                 sx={{ mt: 2 }}
               />
               {/* Gender Dropdown */}
-              <FormControl fullWidth margin="dense">
+              <FormControl fullWidth margin="dense" sx={{ mt: 2 }}>
                 <InputLabel id="gender-label">Gender</InputLabel>
                 <Select
                   labelId="gender-label"
@@ -350,7 +356,7 @@ export default function ResearcherProfilePage() {
                 sx={{ mt: 2 }}
               />
             </DialogContent>
-            <DialogActions sx={{ pb: 3, px: 3 }}>
+            <DialogActions sx={{ p: 0, pb: 3, px: 3 }}>
               <Button onClick={handlePersonalInfoEditClose}>Cancel</Button>
               <Button variant="contained" onClick={handlePersonalInfoSave}>Save</Button>
             </DialogActions>
