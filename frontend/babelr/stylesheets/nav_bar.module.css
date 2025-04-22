@@ -2,10 +2,10 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: white;
+    background-color: #2B4450;
     height: 50px;
     padding: 10px 20px;
-    border-bottom: 1px solid #ccc;
+    border-bottom: 1px solid 2B4450;
     position: fixed;
     width: 100%;
     top: 0;
@@ -22,4 +22,5 @@
 .profile-options span {
     margin-left: 15px;
     cursor: pointer;
+    color: #DFEBED;
 }

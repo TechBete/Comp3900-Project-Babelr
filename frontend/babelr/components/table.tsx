@@ -5,15 +5,9 @@ import {
   useMaterialReactTable
 } from "material-react-table";
 import { Box, Button, Chip, Stack } from "@mui/material";
+import { AudioData } from "pages/app/audioData/[userId]/[projectName]/audioclips";
 
 
-interface AudioData {
-    file_name: string;
-    tags: string[];
-    dateAdded: string;
-    evaluated: string;
-    rating: number;
-}
 
 
 
@@ -112,20 +106,14 @@ export default function Table({ audioData }: { audioData: AudioData[] }) {
         },
       },
       {
-        accessorKey: "dateAdded", // Recommended way
-        header: "Date Added",
-        muiTableHeadCellProps: { sx: { color: "black" } },
-        Cell: ({ renderedCellValue }) => <strong>{renderedCellValue}</strong>
-      },
-      {
         accessorKey: "evaluated", // Recommended way
         header: "Evaluated",
         muiTableHeadCellProps: { sx: { color: "black" } },
         Cell: ({ renderedCellValue }) => <strong>{renderedCellValue}</strong>
       },
       {
-        accessorKey: "rating", // Recommended way
-        header: "Rating",
+        accessorKey: "allocated", // Recommended way
+        header: "Allocated",
         muiTableHeadCellProps: { sx: { color: "black" } },
         Cell: ({ renderedCellValue }) => <strong>{renderedCellValue}</strong>
       },
