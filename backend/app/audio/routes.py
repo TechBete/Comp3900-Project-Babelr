@@ -598,3 +598,26 @@ def updateAllAudioMetrics():
         logging.debug(e)
         return jsonify({"error": "Error: 500, An error has occured while updating the audio file metrics"}), 500
     return jsonify({"message": "Audio metrics updated successfully"}), 200
+
+
+@audioBp.route('getAudioFiles', methods=['GET'])
+def getAudioFiles():
+    AudioFiles = AudioFile.query.all()
+    audio_files = []
+    for audio_file in AudioFiles:
+        audio_files.append({
+            "id": str(audio_file.id),
+            "file_name": audio_file.file_name,
+            "file_extension": audio_file.file_extension,
+            "file_path": audio_file.file_path,
+            "model": audio_file.model,
+            "language": audio_file.language,
+            "min_proficiency": str(audio_file.min_proficiency),
+            "metrics": audio_file.metrics,
+            "tags": audio_file.tags,
+            "researcher_id": str(audio_file.researcher_id),
+            "project_name": audio_file.project_name,
+            "allocated_listeners": audio_file.allocated_listeners,
+        })
+    return jsonify({"audio_files": audio_files}), 200
+    

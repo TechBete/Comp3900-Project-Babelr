@@ -462,6 +462,12 @@ def submitRating():
     if not audio_id in listener.evaluation_history:
         return jsonify({"error": "Audio file failed transferring to evaluation history"}), 404
 
+    # find user in audio file allocated listeners and append ratings to user id
+    if listener.id in audio_file.allocated_listeners:
+        audio_file.allocated_listeners[listener.id] = audio_file.allocated_listeners.get(listener.id, {})
+        for metric in ratings:
+             audio_file.allocated_listeners[listener.id][metric] = ratings[metric]
+
     # if listener has more than one allocated audio in the queue, move that audio file to currently_assigned_audio
     # otherwise, keep currently_assigned_audio as null.
     if listener.allocated_audio_queue != [] or listener.allocated_audio_queue is not None:

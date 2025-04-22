@@ -366,9 +366,10 @@ class AudioFile(db.Model):
         self.allocated_listeners = allocated_listeners
 
     def assign_listener(self, listener: Listener):
-        self.allocated_listeners.append(str(listener.id))
-        flag_modified(self, "allocated_listeners")
-        logging.debug(f"Audio file {self} is allocated {self.allocated_listeners}")
+        if not any(listener_entry["listener_id"] == str(listener.id) for listener_entry in self.allocated_listeners):
+            self.allocated_listeners.append({"listener_id": str(listener.id)})
+            flag_modified(self, "allocated_listeners")
+            logging.debug(f"Audio file {self} is allocated {self.allocated_listeners}")
 
     def get_qualified_listeners(self: AudioFile) -> list[Listener]:
         """
@@ -388,7 +389,7 @@ class AudioFile(db.Model):
 
     def set_allocated_listeners(self, new_allocated_listeners: list[str] | list[Listener] | list [str | Listener]):
         # Ensure all elements of the list is a stringified UUID
-        new_allocated_listeners = [str(l.id) if isinstance(l, Listener) else l for l in new_allocated_listeners]
+        new_allocated_listeners = [{"listener_id": str(l.id)} if isinstance(l, Listener) else l for l in new_allocated_listeners]
         self.allocated_listeners = new_allocated_listeners
 
     def update_allocated_listeners(self) -> list[Listener]:
