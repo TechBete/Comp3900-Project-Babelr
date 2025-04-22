@@ -53,15 +53,14 @@ export default function RatingChart({ data }: Props) {
   };
 
   const getSTDDataset = () => {
-    return selectedModels.map((model) => ({
-      label: model,
-      data: filtered
-        .filter((d) => d.model === model)
-        .map((d) => ({
-          x: d.metric,
-          y: d.std,
-        })),
-    }));
+    return selectedMetrics.map((metric) => {
+      const row: { metric: string; [model: string]: number | string } = { metric };
+      selectedModels.forEach((model) => {
+        const entry = filtered.find((d) => d.metric === metric && d.model === model);
+        row[model] = entry?.std ?? 0;
+      });
+      return row;
+    });
   };
 
   return (
@@ -146,21 +145,14 @@ export default function RatingChart({ data }: Props) {
     />
   ) : chartType === 'std' ? (
     <BarChart
-      dataset={selectedMetrics.map((metric) => {
-        const row: { metric: string; [model: string]: number | string } = { metric };
-        selectedModels.forEach((model) => {
-          const entry = filtered.find((d) => d.metric === metric && d.model === model);
-          row[model] = entry?.std ?? 0;
-        });
-        return row;
-      })}
+      dataset={getSTDDataset()}
       xAxis={[{ scaleType: 'band', dataKey: 'metric' }]}
       series={selectedModels.map((model) => ({
         dataKey: model,
         label: model,
       }))}
       grid={{ horizontal: true }}
-      borderRadius={20}
+      borderRadius={10}
       height={300}
     />
   ): (
