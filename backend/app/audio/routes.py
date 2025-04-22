@@ -90,6 +90,26 @@ def uploadAudioFile():
         db.session.add(audio_data)
         project.audio_list.append(str(audio_data.id))
         flag_modified(project, "audio_list")
+        
+        # update project with the audio file tags and model
+        # check to see if tag is already inside project tags
+        add_tags = data['tags']
+        if isinstance(add_tags, str):
+            added_tags = [tag.strip() for tag in add_tags.split(',')]  # Split by ',' and remove extra spaces
+        elif isinstance(add_tags, list):
+            added_tags = [str(tag).strip() for tag in add_tags]
+
+        for tag in added_tags:
+            if tag not in project.tags:
+                project.tags.append(tag)
+        
+        flag_modified(project, "tags")
+                
+        # check to see if model is already inside project model
+        if data['model'] not in project.models:
+            project.models.append(data['model'])
+        flag_modified(project, "models")
+
         db.session.commit()
     except Exception as e:
         db.session.rollback()

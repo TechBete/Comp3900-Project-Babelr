@@ -373,6 +373,8 @@ def changeDemographics():
     assert data is not None
     try:
         # mandatory fields information (nullable=False)
+        listener.first_name = data['first_name']
+        listener.last_name = data['last_name']
         listener.date_of_birth = data['date_of_birth']
         listener.country_of_residence = data['country_of_residence']
         listener.education = data['education']
@@ -380,12 +382,11 @@ def changeDemographics():
         listener.gender = data['gender']
         listener.background_info = data['background_info']
         # update databse and alert listern table
-        for field in ["first_name", "last_name", "background_info", "date_of_birth", "country_of_residence", "education", "gender"]:
-            flag_modified(listener, field)
+        db.session.add(listener)
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": f"An error has occurred while updating the demographics: {e}"}), 500
+        return jsonify({"error": "An error has occurred while updating the demographics"}), 500
     return jsonify({"message": "Demographic Edit successful"}), 200
 
 # dont forget to remove this test route for final version
@@ -693,38 +694,6 @@ def getAssignedAudio():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": "Error: 500, An error occurred while getting the audio file"}), 500
-
-# update listener profile
-# update listener languages to be done in a different route
-@userBp.route('/updateListenerProfile', methods=['POST'])
-@jwt_required()
-def updateListenerProfile():
-    data = request.json
-
-    listener_id = get_jwt_identity()
-    listener_id = uuid.UUID(listener_id)
-
-    # check if listener is valid user
-    listener = helpers.is_listener_id(listener_id)
-    if not listener:
-        return jsonify({"error": "Listener does not exist on database!"}), 400
-
-    try:
-        listener.first_name = data['first_name']
-        listener.last_name = data['last_name']
-        listener.email = data['email']
-        listener.background_info = data['background_info']
-        for key, value in data.items():
-            if getattr(listener, key, None) != value:
-                setattr(listener, key, value)
-                flag_modified(listener, key)
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        logging.error(f"An error occurred while updating researcher's organisation: {e}")
-        return jsonify({"error": "Error: 500, An error occurred while updating the researcher's organisation"}), 500
-
-    return jsonify({"message": "Listener profile updated successfully"}), 200
 
 @userBp.route('/getAudioFile')
 @jwt_required()
