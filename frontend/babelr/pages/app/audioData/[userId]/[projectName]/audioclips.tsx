@@ -11,14 +11,13 @@ import {Box, Button} from "@mui/material";
 import Table from "components/table";
 import RoleCheck from "components/role_checker";
 
-interface AudioData {
+export interface AudioData {
     file_name: string;
     tags: string[];
     model: string;
     language: string;
-    dateAdded: string;
-    evaluated: string;
-    rating: number;
+    evaluated: number;
+    allocated: number;
 }
 
 type RawAudioClip = {
@@ -32,6 +31,8 @@ type RawAudioClip = {
     project_path: string;
     model: string;
     language: string;
+    num_of_allocated: number;
+    num_of_evaluated: number;
 };
 
 
@@ -145,9 +146,8 @@ export default function FileUploadPage() {
                         .filter(Boolean),
                     model: clip.model,
                     language:clip.language,
-                    dateAdded: new Date().toLocaleDateString(),
-                    evaluated: "0/50",
-                    rating: 0,
+                    evaluated: clip.num_of_evaluated,
+                    allocated: clip.num_of_allocated,
                 }));
                 console.log('formatted audioClips:', formattedClips);
                 setAudioData(formattedClips);
@@ -240,12 +240,12 @@ export default function FileUploadPage() {
                                 <p>{audioData.length}</p>
                             </div>
                             <div className={styles.metricBox}>
-                                <h3>Average Rating</h3>
-                                <p>{(audioData.reduce((sum, audio) => sum + audio.rating, 0) / audioData.length || 0).toFixed(2)}</p>
+                                <h3>Allocated Listeners</h3>
+                                <p>{audioData.filter(audio => audio.allocated).length}</p>
                             </div>
                             <div className={styles.metricBox}>
                                 <h3>Evaluated Clips</h3>
-                                <p>{audioData.filter(audio => audio.evaluated !== "0/50").length}</p>
+                                <p>{audioData.filter(audio => audio.evaluated).length}</p>
                             </div>
                         </div>
 

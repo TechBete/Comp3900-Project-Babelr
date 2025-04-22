@@ -1,22 +1,27 @@
 /* General Page Styling */
-.project-body {
+.projectBody {
+    /* display: flex; */
     font-family: Arial, sans-serif;
     margin: 0;
     margin-top: 30px;
     padding: 0;
-    background-color: #f4f4f4;
+    background-color: #DFEBED;
     height: 100vh;
+    width: 100vw;
 }
 
 .container {
     display: flex;
+    flex-grow: 1;
     height: 100vh;
+    width: 100wh;
     margin-top: 50px;
 }
 
 .mainContent {
     flex: 1;
     padding: 20px;
+    background-color: #DFEBED;
 }
 
 /* Heading */
