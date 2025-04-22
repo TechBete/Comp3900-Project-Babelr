@@ -106,10 +106,11 @@ export default function LanguageSelector() {
                                             required
                                         >
                                             <option value="">Proficiency</option>
-                                            <option>Beginner</option>
-                                            <option>Intermediate</option>
-                                            <option>Advanced</option>
-                                            <option>Native</option>
+                                            <option value="elementary">Elementary</option>
+                                            <option value="limited_working">Limited Working</option>
+                                            <option value="professional">Professional</option>
+                                            <option value="native">Native</option>
+                                            <option value="bilingual">Bilingual</option>
                                         </select>
 
                                         <button type="button" onClick={() => removeLanguage(index)} style={{ background: "transparent", border: "none", fontSize: "1.2em", cursor: "pointer" }}>

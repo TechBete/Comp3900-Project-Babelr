@@ -266,17 +266,24 @@ def getProjectAudioFiles():
             # Check if audio files exist
             if project.audio_list == []:
                 return jsonify({"error": "No audio files found for this project"}), 404
-            
+
             # Get the audio files for the specified project
             audio_files = []
             audio_files = helper.get_all_audio_files(projectName, researcher_id)
             if not audio_files or audio_files == []:
                 return jsonify({"error": "Audio files not found"}), 404
-            
+
             # convert audio_files to serializable format
             serialized_audio_files = []
             for audio_file in audio_files:
                 if hasattr(audio_file, '__dict__'):
+                    num_of_allocated = 0
+                    num_of_evaluated = 0
+                    for listener in audio_file.allocated_listeners:
+                        if len(listener) > 1:
+                            num_of_evaluated += 1
+                        num_of_allocated += 1
+
                     # If field is an ORM object like AudioFile
                     audio_file_dict = {
                         "id": str(getattr(audio_file, 'id', '')) if getattr(audio_file, 'id', '') else None,
@@ -291,12 +298,14 @@ def getProjectAudioFiles():
                         "researcher_id": str(getattr(audio_file, 'researcher_id', '')) if getattr(audio_file, 'researcher_id', '') else None,
                         "project_name": getattr(audio_file, 'project_name', ''),
                         "allocated_listeners": getattr(audio_file, 'allocated_listeners', []),
+                        "num_of_allocated": num_of_allocated,
+                        "num_of_evaluated": num_of_evaluated,
                     }
                     serialized_audio_files.append(audio_file_dict)
                 else:
                     # If already a basic type (string, int, etc.)
                     serialized_audio_files.append(audio_file)
-            
+
     except Exception as e:
         logging.debug(e)
         return jsonify({"error": "Error: 500, An error has occured while retrieving the audio files"}), 500
@@ -385,7 +394,6 @@ def getAudioFileData():
                 if listener.id not in project.listener_list:
                     return jsonify({"error": "Audio file not found"}), 404
             '''
-            
             # ensure metrics are consistent with audio file and the project         
             # ensure that the metrics are in a valid format
             if not isinstance(project.metrics, dict):
@@ -594,3 +602,26 @@ def updateAllAudioMetrics():
         logging.debug(e)
         return jsonify({"error": "Error: 500, An error has occured while updating the audio file metrics"}), 500
     return jsonify({"message": "Audio metrics updated successfully"}), 200
+
+
+@audioBp.route('getAudioFiles', methods=['GET'])
+def getAudioFiles():
+    AudioFiles = AudioFile.query.all()
+    audio_files = []
+    for audio_file in AudioFiles:
+        audio_files.append({
+            "id": str(audio_file.id),
+            "file_name": audio_file.file_name,
+            "file_extension": audio_file.file_extension,
+            "file_path": audio_file.file_path,
+            "model": audio_file.model,
+            "language": audio_file.language,
+            "min_proficiency": str(audio_file.min_proficiency),
+            "metrics": audio_file.metrics,
+            "tags": audio_file.tags,
+            "researcher_id": str(audio_file.researcher_id),
+            "project_name": audio_file.project_name,
+            "allocated_listeners": audio_file.allocated_listeners,
+        })
+    return jsonify({"audio_files": audio_files}), 200
+    

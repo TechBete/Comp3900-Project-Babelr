@@ -62,7 +62,7 @@ def send_verification_email(receiver_email, verification_url):
         server.sendmail(os.getenv('MAIL_USERNAME'), receiver_email, msg.as_string())
         server.quit()
     except Exception as e:
-        return f"Error: {e}"
+        return jsonify({"error": "Error: 500, An error has occured while sending out the email"}), 500
 
 def is_existing_user_email(email):
     existing_listener = Listener.query.filter_by(email=email).first()
@@ -99,7 +99,7 @@ def sanitize_project_name(projectName):
 def check_invalid_project_name(projectName):
     return re.search(r'[<>:"/\\|?*]', projectName)
 
-def find_project(projectName, id) -> Project | None:
+def find_project(projectName, id):
     return Project.query.filter_by(project_name=projectName, creator_id=id).first()
 
 def find_researcher_project(projectName, id):
@@ -129,8 +129,4 @@ def get_all_audio_files(projectName, id):
     return AudioFile.query.filter_by(project_name=projectName, researcher_id=id).all()
 
 def get_audio_from_audio_id(id):
-    audio_file = AudioFile.query.filter_by(id=id).first()
-    if not audio_file:
-        return jsonify({"error": "Audio file not found"}), 404
-
-    return audio_file
+    return AudioFile.query.filter_by(id=id).first()
