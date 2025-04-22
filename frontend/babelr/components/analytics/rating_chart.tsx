@@ -11,7 +11,6 @@ import {
   Typography,
 } from '@mui/material';
 import { BarChart } from '@mui/x-charts/BarChart';
-import { LineChart } from '@mui/x-charts/LineChart';
 import ConfidenceIntervalChart from './confidence_interval_chart';
 
 export type ChartType = 'mean' | 'std' | 'ci';
@@ -54,15 +53,14 @@ export default function RatingChart({ data }: Props) {
   };
 
   const getSTDDataset = () => {
-    return selectedModels.map((model) => ({
-      label: model,
-      data: filtered
-        .filter((d) => d.model === model)
-        .map((d) => ({
-          x: d.metric,
-          y: d.std,
-        })),
-    }));
+    return selectedMetrics.map((metric) => {
+      const row: { metric: string; [model: string]: number | string } = { metric };
+      selectedModels.forEach((model) => {
+        const entry = filtered.find((d) => d.metric === metric && d.model === model);
+        row[model] = entry?.std ?? 0;
+      });
+      return row;
+    });
   };
 
   return (
@@ -146,20 +144,21 @@ export default function RatingChart({ data }: Props) {
       height={300}
     />
   ) : chartType === 'std' ? (
-    <LineChart
-      xAxis={[{ data: getSTDDataset()[0]?.data.map((d) => d.x), scaleType: 'band' }]}
-      series={getSTDDataset().map((series) => ({
-        data: series.data.map((d) => d.y),
-        label: series.label,
-        showMark: true,
-        lineStyle: { strokeWidth: 0 }
+    <BarChart
+      dataset={getSTDDataset()}
+      xAxis={[{ scaleType: 'band', dataKey: 'metric' }]}
+      series={selectedModels.map((model) => ({
+        dataKey: model,
+        label: model,
       }))}
+      grid={{ horizontal: true }}
+      borderRadius={10}
       height={300}
     />
-  ) : (
+  ): (
     <ConfidenceIntervalChart data={filtered}/>
   )}
-</Box>
+      </Box>
     </Box>
   );
 }
