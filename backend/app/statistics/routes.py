@@ -304,19 +304,30 @@ def getGraphStats():
                         eval_sum += evaluation[model]
                         if evaluation[model]:
                             count += 1
-            if count == 0:
-                continue
+            if count == 0 :
+                mean = 0
             else:
                 mean = eval_sum / count
+
             for audio_id in project.audio_list:
                 audio_file = helpers.get_audio_from_audio_id(audio_id)
                 if audio_file.model == model:
                     for evaluation in audio_file.allocated_listeners:
                         sum_for_std += pow((evaluation[model] - mean), 2)
-            std = math.sqrt(sum_for_std / count)
-            z = 1.96 # confidence level value with 95% of confidence
-            ci_low = mean - (z * (std / math.sqrt(count)))
-            ci_high = mean + (z * (std / math.sqrt(count)))
+
+            if count == 0:
+                std = 0
+                ci_low = 0
+                ci_high = 0
+            else:
+                std = math.sqrt(sum_for_std / count)
+                z = 1.96 # confidence level value with 95% of confidence
+                ci_low = mean - (z * (std / math.sqrt(count)))
+                ci_high = mean + (z * (std / math.sqrt(count)))
+
+            # z = 1.96 # confidence level value with 95% of confidence
+            # ci_low = mean - (z * (std / math.sqrt(count)))
+            # ci_high = mean + (z * (std / math.sqrt(count)))
             data = {
                 'model': model,
                 'metric': metric,
