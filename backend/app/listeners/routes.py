@@ -3,7 +3,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.exc import IntegrityError
 from flask import jsonify, request
 from app.listeners import userBp
-from app.models import Gender, Listener, AudioFile
+from app.models import Gender, Listener, AudioFile, RedeemShop
 import app.helpers as helpers
 import uuid, logging, os
 from app import db
@@ -494,7 +494,6 @@ def redeemRewards():
         return validation_error
 
     coupon_name = data["redeem_name"]
-    coupon_point = data["point"]
 
     # get user from uuid
     user_id = get_jwt_identity()
@@ -505,16 +504,20 @@ def redeemRewards():
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
-    if listener.reward_points < coupon_point:
-        return jsonify({"error": "Not enough points to redeem this coupon"}), 404
-
     try:
-        # TODO: if coupon name is exists on the redeem shop list - after implementing db
+        redeem_exists = RedeemShop.query.filter_by(name=coupon_name).first()
+        if not redeem_exists:
+            return jsonify({"error": "Redeem does not exists"}), 404
 
-        listener.reward_points = listener.reward_points - coupon_point
-        flag_modified(listener, "reward_points") # TODO
+        if listener.reward_points < redeem_exists.point:
+            return jsonify({"error": "Not enough points to redeem this coupon"}), 404
+
+        listener.reward_points = listener.reward_points - redeem_exists.point
+        flag_modified(listener, "reward_points")
         db.session.commit()
-        # TODO: send out the email to listener
+
+        # TODO: send out the email to listener (coupon number for now)
+
     except Exception as e:
         db.session.rollback()
         logging.debug(e)
