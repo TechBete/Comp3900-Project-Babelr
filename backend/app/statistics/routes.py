@@ -167,7 +167,7 @@ def getProjectSummary():
     # check validity of required fields
     validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
-        return validation_erro
+        return validation_error
     # Get researcher information using uuid
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
