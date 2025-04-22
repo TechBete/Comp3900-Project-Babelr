@@ -1,11 +1,12 @@
 from flask_jwt_extended import jwt_required, get_jwt_identity, jwt_required, get_jwt_identity
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.exc import IntegrityError
+from email.mime.text import MIMEText
 from flask import jsonify, request
 from app.listeners import userBp
 from app.models import Gender, Listener, AudioFile, RedeemShop
 import app.helpers as helpers
-import uuid, logging, os
+import uuid, logging, os, smtplib
 from app import db
 
 
@@ -407,7 +408,6 @@ def testChangeDemographics():
         return jsonify({"error": "Listener not found"}), 404
 
     # Convince the type system that these exists
-    assert demographic is not None
     assert data is not None
     try:
         # mandatory fields information (nullable=False)
@@ -526,10 +526,10 @@ def redeemRewards():
 
 def send_coupon_email(receiver_email, coupon_name, promo_code):
     subject = f"Babelr coupon code for {coupon_name}"
-    body = f"Thank you for submitting audio file evaluation,
+    body = f"""Thank you for submitting audio file evaluation,
     we truly appreciate your time and effort to support research projects!
     Here is your coupon code for {coupon_name}.
-    Please enter the code in the app"
+    Please enter the code in the app"""
 
     msg = MIMEText(body, "plain")
     msg["From"] = os.getenv('MAIL_USERNAME')
