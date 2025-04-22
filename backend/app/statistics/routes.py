@@ -282,14 +282,20 @@ def getGraphStats():
     metrics = project.metrics.keys()
     models = project.models
     # all possible combinations with metrics and models of project
-    model_metric_tuple_list = [{"model": mo, "metric": me} for mo, me in product(metrics, metrics)]
-    logging.debug(model_metric_tuple_list) # test
+    # model_metric_tuple_list = [{"model": mo, "metric": me} for mo, me in product(metrics, metrics)]
+    # logging.debug(model_metric_tuple_list) # test
 
     graph_stats = []
 
     for model in models:
         for metric in metrics:
-            eval_sum, count, mean, sum_for_std, std, ci_low, ci_high = 0
+            eval_sum = 0
+            count = 0
+            mean = 0
+            sum_for_std = 0
+            std = 0
+            ci_low = 0
+            ci_high = 0
 
             for audio_id in project.audio_list:
                 audio_file = helpers.get_audio_from_audio_id(audio_id)
@@ -298,7 +304,10 @@ def getGraphStats():
                         eval_sum += evaluation[model]
                         if evaluation[model]:
                             count += 1
-            mean = eval_sum / count
+            if count == 0:
+                continue
+            else:
+                mean = eval_sum / count
             for audio_id in project.audio_list:
                 audio_file = helpers.get_audio_from_audio_id(audio_id)
                 if audio_file.model == model:
