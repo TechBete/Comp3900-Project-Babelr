@@ -380,6 +380,7 @@ def changeDemographics():
         listener.education = data['education']
         # optional fields (nullable=True)
         listener.gender = data['gender']
+        # background info should be a text box field with an 1k char limit 
         listener.background_info = data['background_info']
         # update databse and alert listern table
         db.session.add(listener)
