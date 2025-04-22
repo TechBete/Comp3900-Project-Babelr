@@ -38,7 +38,7 @@ export default function Rewards_shop() {
 
     const reward_grid = test_reward_list.map((reward) => (
         <div key={reward.id} className="w-45 h-45 bg-gray-200 p-2 flex flex-col items-center justify-between rounded-lg shadow-md">
-          <Image src='/babelr_icon.png' alt={reward.title} className="w-20 h-20 object-cover rounded-md" />
+          <img src='/babelr_icon.png' alt={reward.title} className="w-20 h-20 object-cover rounded-md" />
           <h2 className="text-center text-sm font-medium">{reward.title}</h2>
           <h4 className="text-center text-sm font-medium">{reward.cost} Points</h4>
           <Button variant="contained" onClick={() => Redeem(reward.id)}>Redeem</Button>

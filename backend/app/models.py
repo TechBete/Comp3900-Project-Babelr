@@ -346,7 +346,7 @@ class AudioFile(db.Model):
         self.project_name = project_name
 
         qualified = self.get_qualified_listeners()
-        allocated_listeners = list(map(lambda x: str(x.id), qualified))
+        allocated_listeners = list(map(lambda x: {"listener_id": str(x.id)}, qualified))
 
         for listener in qualified:
             listener.assign_audio(self)
