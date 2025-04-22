@@ -58,7 +58,7 @@ def getResearchers():
         "Password": user.pw_hash,
         
         "Date of Birth": user.date_of_birth,
-        "Gender": str(user.gender),
+        "Gender": str(user.gender.value),
         "Country": user.country_of_residence,
         "Education": user.education,
         "Organisation": user.organisation,
@@ -136,3 +136,30 @@ def updateResearcherProfile():
         return jsonify({"error": "An error has occurred while updating the Researcher Profile"}), 500
     return jsonify({"message": "Profile Update successful"}), 200
 
+@researchersBp.route('/updateFirstTime', methods=['POST'])
+@jwt_required()
+def updateFirstTime():
+    data = request.json
+    
+    if not data:
+        return jsonify({"error": "No data was provided"}), 400
+    
+    researcher_id = get_jwt_identity()
+    researcher_id = uuid.UUID(researcher_id)
+    
+    # search researcher name from researcher uuid
+    researcher = helper.is_researcher_id(researcher_id)
+    
+    if not researcher:
+        return jsonify({"error": "Researcher does not exist on database!"}), 400
+    try:
+        # update fields
+        researcher.first_name = data['first_name']
+        researcher.last_name = data['last_name']
+        researcher.organisation = data['organisation']
+        db.session.add(researcher)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "An error has occurred while updating the Researcher Profile"}), 500
+    return jsonify({"message": "Profile Update successful"}), 200
