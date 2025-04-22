@@ -11,6 +11,17 @@ import {
   ListItemText,
   Divider,
   Box,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Alert,
+  FormControl,
+  MenuItem,
+  InputLabel,
+  Select
 } from "@mui/material";
 
 type ResearcherData = {
@@ -29,6 +40,23 @@ type ResearcherData = {
 export default function ResearcherProfilePage() {
   const [researcherData, setResearcherData] = useState<ResearcherData | null>(null);
 
+  // Password modal state
+  const [isPasswordEditOpen, setIsPasswordEditOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Personal info modal state
+  const [isPersonalInfoEditOpen, setIsPersonalInfoEditOpen] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [gender, setGender] = useState("");
+  const [country, setCountry] = useState("");
+  const [education, setEducation] = useState("");
+  const [organisation, setOrganisation] = useState("");
+  
   useEffect(() => {
     getResearcherData();
   }, []);
@@ -45,12 +73,117 @@ export default function ResearcherProfilePage() {
         console.log("Fetched researcher data:", data); // Debugging the fetched data
         setResearcherData(data);
       } else {
-        console.error("Failed to fetch researcher data.");
+        const error = await response.json();
+        console.error("Error fetching listener data:", error);
       }
     } catch (err) {
-      console.error("Fetch error:", err);
+      console.error("Network error:", err);
     }
   }
+
+  // Open password edit modal
+  const handlePasswordEditOpen = () => {
+    setIsPasswordEditOpen(true);
+    setNewPassword("");
+    setConfirmPassword("");
+    setErrorMsg(null);
+    setSuccessMsg(null);
+  };
+
+  // Close password edit modal
+  const handlePasswordEditClose = () => setIsPasswordEditOpen(false);
+
+  // Save the new password
+  const handlePasswordSave = async () => {
+    if (!newPassword || !confirmPassword) {
+      setErrorMsg("Both fields are required.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setErrorMsg("Passwords do not match.");
+      return;
+    }
+
+    try {
+      const res = await fetch("http://localhost:8016/auth/userResetPassword", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ pw: newPassword, pw_confirmation: confirmPassword }),
+      });
+
+      const result = await res.json();
+
+      if (res.ok) {
+        setSuccessMsg("Password updated successfully.");
+        setErrorMsg(null);
+        setTimeout(() => {
+          setIsPasswordEditOpen(false);
+        }, 1500);
+      } else {
+        setErrorMsg(result.error || "Failed to update password.");
+        setSuccessMsg(null);
+      }
+    } catch (err) {
+      console.error("Error updating password:", err);
+      setErrorMsg("Server error occurred.");
+    }
+  };
+
+  const handlePersonalInfoEditOpen = () => {
+    if (!researcherData) return;
+    setIsPersonalInfoEditOpen(true);
+    setFirstName(researcherData["First Name"]);
+    setLastName(researcherData["Last Name"]);
+    setDateOfBirth(researcherData["Date of Birth"]);
+    setGender(researcherData.Gender || "");
+    setCountry(researcherData["Country"]);
+    setEducation(researcherData.Education);
+    setOrganisation(researcherData.Organisation);
+  };
+
+  const handlePersonalInfoEditClose = () => {
+    setIsPersonalInfoEditOpen(false);
+  };
+
+  const handlePersonalInfoSave = async () => {
+    if (!firstName || !lastName || !dateOfBirth || !gender || !country || !education || !organisation) {
+      alert("Please fill in all fields before saving.");
+      return;
+    }
+
+    try {
+      const res = await fetch("http://localhost:8016/researcher/updateResearcherProfile", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          first_name: firstName,
+          last_name: lastName,
+          date_of_birth: dateOfBirth,
+          country_of_residence: country,
+          education: education,
+          gender: gender,
+          organisation: organisation,
+        }),
+      });
+
+      const result = await res.json();
+
+      if (res.ok) {
+        setIsPersonalInfoEditOpen(false);
+        getResearcherData();
+      } else {
+        alert(result.error || "Error saving personal info");
+      }
+    } catch (err) {
+      console.error("Error saving personal info:", err);
+      alert("Server error occurred.");
+    }
+  };
 
   return (
     <RoleCheck requiredRole="researcher">
@@ -65,19 +198,13 @@ export default function ResearcherProfilePage() {
             <Typography>Loading...</Typography>
           ) : (
             <>
-              {/* Debugging: Show entire researcher data */}
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>Full Researcher Data (Debugging)</Typography>
-                  <Divider sx={{ mb: 2 }} />
-                  <Typography variant="body2">{JSON.stringify(researcherData, null, 2)}</Typography>
-                </CardContent>
-              </Card>
-
               {/* User Details */}
               <Card>
                 <CardContent>
-                  <Typography variant="h6" gutterBottom>User Details</Typography>
+                  <Box display="flex" justifyContent="space-between" mb={2}>
+                    <Typography variant="h6">User Details</Typography>
+                    <Button size="small" onClick={handlePasswordEditOpen}>Update Password</Button>
+                  </Box>
                   <Divider sx={{ mb: 2 }} />
                   <List>
                     <ListItem>
@@ -93,8 +220,11 @@ export default function ResearcherProfilePage() {
               {/* Personal Info */}
               <Card>
                 <CardContent>
-                  <Typography variant="h6" gutterBottom>Personal Info</Typography>
-                  <Divider sx={{ mb: 2 }} />
+                <Box display="flex" justifyContent="space-between" mb={2}>
+                  <Typography variant="h6">Personal Information</Typography>
+                  <Button size="small" onClick={handlePersonalInfoEditOpen}>Edit Info</Button>
+                </Box>
+                <Divider sx={{ mb: 2 }} />
                   <List>
                     <ListItem>
                       <ListItemText primary="First Name" secondary={researcherData["First Name"]} />
@@ -106,7 +236,10 @@ export default function ResearcherProfilePage() {
                       <ListItemText primary="Date of Birth" secondary={researcherData["Date of Birth"]} />
                     </ListItem>
                     <ListItem>
-                      <ListItemText primary="Gender" secondary={researcherData["Gender"] || "Not specified"} />
+                      <ListItemText
+                        primary="Gender"
+                        secondary={researcherData["Gender"]?.replace("Gender.", "") || "Not specified"}
+                      />
                     </ListItem>
                     <ListItem>
                       <ListItemText primary="Country" secondary={researcherData["Country"]} />
@@ -120,8 +253,108 @@ export default function ResearcherProfilePage() {
                   </List>
                 </CardContent>
               </Card>
+
             </>
           )}
+
+          {/* Password Edit Modal */}
+          <Dialog open={isPasswordEditOpen} onClose={handlePasswordEditClose} fullWidth maxWidth="sm">
+            <DialogTitle sx={{ pt: 4 }}>Update Password</DialogTitle>
+            <DialogContent>
+              {errorMsg && <Alert severity="error" sx={{ mb: 2 }}>{errorMsg}</Alert>}
+              {successMsg && <Alert severity="success" sx={{ mb: 2 }}>{successMsg}</Alert>}
+              <TextField
+                label="New Password"
+                type="password"
+                fullWidth
+                margin="dense"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                sx={{ mt: 2 }}
+              />
+              <TextField
+                label="Confirm Password"
+                type="password"
+                fullWidth
+                margin="dense"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                sx={{ mt: 2 }}
+              />
+            </DialogContent>
+            <DialogActions sx={{ pb: 3, px: 3 }}>
+              <Button onClick={handlePasswordEditClose}>Cancel</Button>
+              <Button variant="contained" onClick={handlePasswordSave}>Save</Button>
+            </DialogActions>
+          </Dialog>
+          
+          {/* Personal Info Edit Modal */}
+          <Dialog open={isPersonalInfoEditOpen} onClose={handlePersonalInfoEditClose} fullWidth maxWidth="sm">
+            <DialogTitle sx={{ pt: 4 }}>Edit Personal Info</DialogTitle>
+            <DialogContent>
+              <TextField
+                label="First Name"
+                fullWidth
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                sx={{ mt: 2 }}
+              />
+              <TextField
+                label="Last Name"
+                fullWidth
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                sx={{ mt: 2 }}
+              />
+              <TextField
+                label="Date of Birth"
+                fullWidth
+                value={dateOfBirth}
+                onChange={(e) => setDateOfBirth(e.target.value)}
+                sx={{ mt: 2 }}
+              />
+              {/* Gender Dropdown */}
+              <FormControl fullWidth margin="dense">
+                <InputLabel id="gender-label">Gender</InputLabel>
+                <Select
+                  labelId="gender-label"
+                  id="gender-select"
+                  value={gender}
+                  label="Gender"
+                  onChange={(e) => setGender(e.target.value)}
+                >
+                  <MenuItem value="male">Male</MenuItem>
+                  <MenuItem value="female">Female</MenuItem>
+                  <MenuItem value="other">Other</MenuItem>
+                </Select>
+              </FormControl>
+              <TextField
+                label="Country"
+                fullWidth
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                sx={{ mt: 2 }}
+              />
+              <TextField
+                label="Education"
+                fullWidth
+                value={education}
+                onChange={(e) => setEducation(e.target.value)}
+                sx={{ mt: 2 }}
+              />
+              <TextField
+                label="Organisation"
+                fullWidth
+                value={organisation}
+                onChange={(e) => setOrganisation(e.target.value)}
+                sx={{ mt: 2 }}
+              />
+            </DialogContent>
+            <DialogActions sx={{ pb: 3, px: 3 }}>
+              <Button onClick={handlePersonalInfoEditClose}>Cancel</Button>
+              <Button variant="contained" onClick={handlePersonalInfoSave}>Save</Button>
+            </DialogActions>
+          </Dialog>
         </Box>
       </Container>
     </RoleCheck>
