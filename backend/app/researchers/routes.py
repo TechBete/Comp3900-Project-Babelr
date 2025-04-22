@@ -125,8 +125,6 @@ def updateResearcherProfile():
         field_map = {
             "first_name": "first_name",
             "last_name": "last_name",
-            "email": "email",
-            "password": "pw_hash",
             "date_of_birth": "date_of_birth",
             "gender": 'gender',
             "country": "country_of_residence",
@@ -142,24 +140,13 @@ def updateResearcherProfile():
                 new_value = data[request_field]
                 
                 # Check if the current value is different from the new value
-                if current_value != new_value:
-                    if request_field == "email":
-                        # Check if the email already exists in the database
-                        existing_researcher = helper.is_researcher_email(new_value)
-                        if existing_researcher:
-                            return jsonify({"error": "Email already exists!"}), 400
-                    # If the field is password, hash the new password
-                    if request_field == "password":
-                        new_value = helper.hash_password(new_value)
-                    
+                if current_value != new_value:                    
                     if request_field == "first_name":
                         helper.update_project_creator(current_value, new_value, researcher_id)
-                    
-                    
+                                        
                     # Update the field in the model
                     setattr(researcher, model_field, new_value)
                     fields_to_update.append(model_field)
-                
                 
         if fields_to_update:
             # Update the modified fields in the database
