@@ -162,8 +162,8 @@ def getGraphStats():
 @statisticsBp.route('/getProjectSummary', methods=['POST'])
 @jwt_required()
 def getProjectSummary():
-    data = request.form
-    required_fields = ['project_name', 'metric']
+    data = request.json
+    required_fields = ['project_name']
     # check validity of required fields
     validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
@@ -177,12 +177,12 @@ def getProjectSummary():
         return jsonify({"error": "Researcher not found"}), 404
 
     project = helpers.find_project(data['project_name'],researcher_id)
-    metric = data["metric"]
+    # metric = data["metric"]
 
     summary = []
 
     # add all model-language tuple in summary
-    for audio_id in audio_list:
+    for audio_id in project.audio_list:
         audio_file = helpers.get_audio_from_audio_id(audio_id)
         exists = any(
             item["model"] == audio_file.model and item["language"] == audio_file.language
@@ -200,9 +200,9 @@ def getProjectSummary():
                 "ci_low": 0,
                 "ci_high": 0
             })
-
+    logging.debug("model-language pairs are %s", summary)
     # calculate mean for each model-language tuple
-    for audio_id in audio_list:
+    for audio_id in project.audio_list:
         audio_file = helpers.get_audio_from_audio_id(audio_id)
 
         for lang_mod_tuple in summary:
@@ -210,26 +210,34 @@ def getProjectSummary():
                 # calculate mean
                 for eval_result in audio_file.allocated_listeners:
                     lang_mod_tuple["count"] += 1
-                    lang_mod_tuple["sum"] += eval_result[metric]
+                    for k, v in eval_result.items():
+                        if k != "listener_id":
+                            lang_mod_tuple["sum"] += v
+                            
+                # edge case where there's no reviews
+                if lang_mod_tuple["count"] == 0:
+                    continue
+
                 lang_mod_tuple["mean"] = lang_mod_tuple["sum"] / lang_mod_tuple["count"]
 
                 # calculate standard deviation
                 for eval_result in audio_file.allocated_listeners:
-                    lang_mod_tuple["sum_for_std"] += pow((eval_result[metric] - lang_mod_tuple["mean"]), 2)
+                    for k, v in eval_result.items():
+                        if k != "listener_id":
+                            lang_mod_tuple["sum_for_std"] += pow((v - lang_mod_tuple["mean"]), 2)
                 lang_mod_tuple["std"] = math.sqrt(lang_mod_tuple["sum_for_std"] / lang_mod_tuple["count"])
 
                 # calculate confidence interval
                 sample_mean = lang_mod_tuple["mean"]
                 z = 1.96 # with 95% of confidence level value
                 sample_standard_deviation = lang_mod_tuple["std"]
-                n = sample_size
+                n = lang_mod_tuple["count"]
 
                 ci_low = sample_mean - (z * (sample_standard_deviation / math.sqrt(n)))
                 ci_high = sample_mean + (z * (sample_standard_deviation / math.sqrt(n)))
 
                 lang_mod_tuple["ci_low"] = ci_low
                 lang_mod_tuple["ci_high"] = ci_high
-
 
     summary_stats = [
         {
@@ -242,6 +250,7 @@ def getProjectSummary():
         }
         for mod_lang_tuple in summary
     ]
+    logging.debug(summary_stats)
 
     return jsonify({'summary_stats': summary_stats})
 
