@@ -39,7 +39,7 @@ def getListener():
         "Current audio": user.currently_assigned_audio if user.currently_assigned_audio else None,
         "Evaluation history": user.evaluation_history if user.evaluation_history else None,
         "Allocated audio queue": user.allocated_audio_queue if user.allocated_audio_queue else None,
-        })
+        }), 200 
 
 # Test route for /getListener/<uuid:listener_id> , remove for final
 @userBp.route('/testGetListener', methods=['GET'])
@@ -380,6 +380,7 @@ def changeDemographics():
         listener.education = data['education']
         # optional fields (nullable=True)
         listener.gender = data['gender']
+        # background info should be a text box field with an 1k char limit 
         listener.background_info = data['background_info']
         # update databse and alert listern table
         db.session.add(listener)
@@ -461,6 +462,12 @@ def submitRating():
     listener.evaluation_history.append(audio_id)
     if not audio_id in listener.evaluation_history:
         return jsonify({"error": "Audio file failed transferring to evaluation history"}), 404
+
+    # find user in audio file allocated listeners and append ratings to user id
+    if listener.id in audio_file.allocated_listeners:
+        audio_file.allocated_listeners[listener.id] = audio_file.allocated_listeners.get(listener.id, {})
+        for metric in ratings:
+             audio_file.allocated_listeners[listener.id][metric] = ratings[metric]
 
     # if listener has more than one allocated audio in the queue, move that audio file to currently_assigned_audio
     # otherwise, keep currently_assigned_audio as null.
