@@ -3,7 +3,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.exc import IntegrityError
 from flask import jsonify, request
 from app.listeners import userBp
-from app.models import Gender, Listener, AudioFile
+from app.models import Gender, Listener, AudioFile, RedeemShop
 import app.helpers as helpers
 import uuid, logging, os
 from app import db
@@ -430,8 +430,6 @@ def testChangeDemographics():
 def submitRating():
     data = request.json
     required_fields = ['audio_id', 'ratings']
-    # {audio_file_name: 'file_name', project_name: 'proj_name',
-    # ratings': {'clarity': 3, 'intelligibility': 5}}
 
     validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
@@ -487,7 +485,43 @@ def is_evaluated(id, allocated_listeners):
 @userBp.route('/redeemRewards', methods=['POST', 'OPTIONS'])
 @jwt_required()
 def redeemRewards():
+    # TODO: finish this
     data = request.json
+    required_fields = ['redeem_name', 'point']
+
+    validation_error = helpers.validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+
+    coupon_name = data["redeem_name"]
+
+    # get user from uuid
+    user_id = get_jwt_identity()
+    user_id = uuid.UUID(user_id)
+    # check listener availability
+    listener = helpers.is_listener_id(user_id)
+    # check if listener exists
+    if not listener:
+        return jsonify({"error": "Listener not found"}), 404
+
+    try:
+        redeem_exists = RedeemShop.query.filter_by(name=coupon_name).first()
+        if not redeem_exists:
+            return jsonify({"error": "Redeem does not exists"}), 404
+
+        if listener.reward_points < redeem_exists.point:
+            return jsonify({"error": "Not enough points to redeem this coupon"}), 404
+
+        listener.reward_points = listener.reward_points - redeem_exists.point
+        flag_modified(listener, "reward_points")
+        db.session.commit()
+
+        # TODO: send out the email to listener (coupon number for now)
+
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Error: 500, An error has occured while redeem the points"}), 500
 
     return jsonify({'message': 'reward_id is: ' + data.reward_id})
 

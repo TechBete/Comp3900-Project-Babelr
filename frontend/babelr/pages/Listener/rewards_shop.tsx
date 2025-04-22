@@ -50,6 +50,8 @@ export default function Rewards_shop() {
             <Navbar_Listener></Navbar_Listener>
             <div className={styles["second_bar"]}>
                 <h1 className="">Rewards Shop</h1>
+                <p></p>
+                <p></p>
                 <p>Please redeem information below.</p>
             </div>
             <div className={styles["container"]}>
