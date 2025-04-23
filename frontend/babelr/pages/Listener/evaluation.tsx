@@ -97,15 +97,9 @@ export default function Evaluation() {
     }
 
     async function submitRating() {
-        console.log("Submit rating was hit!!!", sliders);
-
         // JSON.stringify({...sliders, 'audio_id': audioID})
 
         try {
-            console.log('current slider values:', sliders);
-            console.log('audioId and ratings');
-            console.log({audioID, 'ratings': sliders});
-
             const response = await fetch(`http://localhost:8016/listener/submitRating`, {
                 method:"POST",
                 headers: {'Content-Type': 'application/json'},
