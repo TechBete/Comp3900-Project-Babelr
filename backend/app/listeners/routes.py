@@ -107,7 +107,6 @@ def addLanguage():
             flag_modified(listener, "languages")
             listener.update_allocated_audio()
             
-            logging.debug(f"user {listener} is assigned {listener.allocated_audio_queue}")
             db.session.commit()
     except IntegrityError as e:
         db.session.rollback()
