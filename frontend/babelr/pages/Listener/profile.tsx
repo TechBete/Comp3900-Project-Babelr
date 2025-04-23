@@ -254,7 +254,17 @@ export default function ProfilePage() {
                 <CardContent>
                   <Box display="flex" justifyContent="space-between" mb={2}>
                     <Typography variant="h6">User Details</Typography>
-                    <Button size="small" onClick={handlePasswordEditOpen}>Update Password</Button>
+                    <Button 
+                      size="small" 
+                      sx={{
+                        color: "#2b4450",
+                        "&:hover": {
+                          backgroundColor: "rgba(43, 68, 80, 0.08)", 
+                        },
+                      }}
+                      onClick={handlePasswordEditOpen}>
+                      Update Password
+                    </Button>
                   </Box>
                   <Divider sx={{ mb: 2 }} />
                   <List>
@@ -270,7 +280,17 @@ export default function ProfilePage() {
                 <CardContent>
                   <Box display="flex" justifyContent="space-between" mb={2}>
                     <Typography variant="h6">Personal Info</Typography>
-                    <Button size="small" onClick={handlePersonalInfoEditOpen}>Edit Info</Button>
+                    <Button 
+                      size="small" 
+                      sx={{
+                        color: "#2b4450",
+                        "&:hover": {
+                          backgroundColor: "rgba(43, 68, 80, 0.08)", 
+                        },
+                      }}
+                      onClick={handlePersonalInfoEditOpen}>
+                      Edit Info
+                    </Button>
                   </Box>
                   <Divider sx={{ mb: 2 }} />
                   <List>
@@ -293,7 +313,17 @@ export default function ProfilePage() {
                   <List>
                     {listenerData.languages[0]?.map((lang, idx) => (
                       <ListItem key={idx} secondaryAction={
-                        <Button size="small" onClick={() => handleLanguageEditOpen(lang.language, lang.proficiency)}>Edit</Button>
+                        <Button 
+                          size="small" 
+                          sx={{
+                            color: "#2b4450",
+                            "&:hover": {
+                              backgroundColor: "rgba(43, 68, 80, 0.08)", 
+                            },
+                          }}
+                          onClick={() => handleLanguageEditOpen(lang.language, lang.proficiency)}>
+                          Edit
+                        </Button>
                       }>
                         <ListItemText
                           primary={lang.language}
@@ -315,8 +345,27 @@ export default function ProfilePage() {
                   <TextField label="Confirm Password" type="password" fullWidth margin="dense" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} sx={{ mt: 2 }} />
                 </DialogContent>
                 <DialogActions sx={{ pb: 3, px: 3 }}>
-                  <Button onClick={handlePasswordEditClose}>Cancel</Button>
-                  <Button variant="contained" onClick={handlePasswordSave}>Save</Button>
+                  <Button 
+                    sx={{
+                      color: "#2b4450",
+                      "&:hover": {
+                        backgroundColor: "rgba(43, 68, 80, 0.08)", 
+                      },
+                    }}                  
+                    onClick={handlePasswordEditClose}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    variant="contained"   
+                    sx={{
+                    backgroundColor: "#2b4450",
+                    "&:hover": {
+                      backgroundColor: "#1f333c",
+                    },
+                    }}  
+                    onClick={handlePasswordSave}>
+                    Save
+                  </Button>
                 </DialogActions>
               </Dialog>
 
@@ -348,8 +397,25 @@ export default function ProfilePage() {
                   <TextField label="Background Info" fullWidth multiline rows={3} margin="dense" value={backgroundInfo} onChange={(e) => setBackgroundInfo(e.target.value)} sx={{ mt: 2 }} />
                 </DialogContent>
                 <DialogActions sx={{ pb: 3, px: 3 }}>
-                  <Button onClick={handlePersonalInfoEditClose}>Cancel</Button>
-                  <Button variant="contained" onClick={handlePersonalInfoSave}>Save</Button>
+                  <Button 
+                    sx={{
+                      color: "#2b4450",
+                      "&:hover": {
+                        backgroundColor: "rgba(43, 68, 80, 0.08)", 
+                      },
+                    }}                  
+                    onClick={handlePersonalInfoEditClose}>Cancel</Button>
+                  <Button 
+                    variant="contained" 
+                    sx={{
+                      backgroundColor: "#2b4450",
+                      "&:hover": {
+                        backgroundColor: "#1f333c",
+                      },
+                      }}
+                    onClick={handlePersonalInfoSave}>
+                    Save
+                  </Button>
                 </DialogActions>
               </Dialog>
 
@@ -376,8 +442,28 @@ export default function ProfilePage() {
                   </TextField>
                 </DialogContent>
                 <DialogActions sx={{ pb: 3, px: 3 }}>
-                  <Button onClick={handleLanguageEditClose}>Cancel</Button>
-                  <Button variant="contained" onClick={handleLanguageSave}>Save</Button>
+                  <Button 
+                    sx={{
+                      color: "#2b4450",
+                      "&:hover": {
+                        backgroundColor: "rgba(43, 68, 80, 0.08)", 
+                      },
+                    }}
+                    onClick={handleLanguageEditClose}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    variant="contained" 
+                    sx={{
+                      backgroundColor: "#2b4450",
+                      "&:hover": {
+                        backgroundColor: "#1f333c",
+                      },
+                      }}
+                    onClick={handleLanguageSave}>
+                    Save
+                  </Button>
                 </DialogActions>
               </Dialog>
             </>
