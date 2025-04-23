@@ -263,7 +263,7 @@ export default function ProfilePage() {
                         },
                       }}
                       onClick={handlePasswordEditOpen}>
-                      Update Password
+                        Update Password
                     </Button>
                   </Box>
                   <Divider sx={{ mb: 2 }} />
@@ -289,7 +289,7 @@ export default function ProfilePage() {
                         },
                       }}
                       onClick={handlePersonalInfoEditOpen}>
-                      Edit Info
+                        Edit Info
                     </Button>
                   </Box>
                   <Divider sx={{ mb: 2 }} />
@@ -322,7 +322,7 @@ export default function ProfilePage() {
                             },
                           }}
                           onClick={() => handleLanguageEditOpen(lang.language, lang.proficiency)}>
-                          Edit
+                            Edit
                         </Button>
                       }>
                         <ListItemText
@@ -353,7 +353,7 @@ export default function ProfilePage() {
                       },
                     }}                  
                     onClick={handlePasswordEditClose}>
-                    Cancel
+                      Cancel
                   </Button>
                   <Button 
                     variant="contained"   
@@ -364,7 +364,7 @@ export default function ProfilePage() {
                     },
                     }}  
                     onClick={handlePasswordSave}>
-                    Save
+                      Save
                   </Button>
                 </DialogActions>
               </Dialog>
@@ -404,7 +404,9 @@ export default function ProfilePage() {
                         backgroundColor: "rgba(43, 68, 80, 0.08)", 
                       },
                     }}                  
-                    onClick={handlePersonalInfoEditClose}>Cancel</Button>
+                    onClick={handlePersonalInfoEditClose}>
+                      Cancel
+                    </Button>
                   <Button 
                     variant="contained" 
                     sx={{
@@ -414,7 +416,7 @@ export default function ProfilePage() {
                       },
                       }}
                     onClick={handlePersonalInfoSave}>
-                    Save
+                      Save
                   </Button>
                 </DialogActions>
               </Dialog>
@@ -449,9 +451,8 @@ export default function ProfilePage() {
                         backgroundColor: "rgba(43, 68, 80, 0.08)", 
                       },
                     }}
-                    onClick={handleLanguageEditClose}
-                  >
-                    Cancel
+                    onClick={handleLanguageEditClose}>
+                      Cancel
                   </Button>
                   <Button 
                     variant="contained" 
@@ -462,7 +463,7 @@ export default function ProfilePage() {
                       },
                       }}
                     onClick={handleLanguageSave}>
-                    Save
+                      Save
                   </Button>
                 </DialogActions>
               </Dialog>
