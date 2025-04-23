@@ -9,6 +9,7 @@ export default function Evaluation() {
     const [audioID, setAudioID] = useState('');
     const [audioURL, setAudioURL] = useState('null');
     const [metricsObj, setMetricsObj] = useState({});
+    const [submitted, setSubmitted] = useState(true);
     // const [sliders, setSliders] = useState({});
     const [sliderClarity, setSliderClarity] = useState(3);
     const [sliderIntelligibility, setSliderIntelligibility] = useState(3);
@@ -24,7 +25,7 @@ export default function Evaluation() {
 
     useEffect(() => {
         fetchAudioPath();
-    }, []);
+    }, [submitted]);
 
     const handleChangeClarity = function (event: any, new_value: number) {
         setSliderClarity(new_value);
@@ -56,8 +57,11 @@ export default function Evaluation() {
         });
 
         const res = await response.json();
-        fetchAudioFileData(res.audio_file);
-        setAudioID(res.audio_file);
+        const audio_id = res.audio_file;
+        console.log("AUDIO ID OBTAINED FROM QUEUE ", audio_id)
+        setAudioID(audio_id);
+        fetchAudioFileData(audio_id);
+        fetchAudioFile(audio_id);
     };
 
     const fetchAudioFileData = async (audio_id: string) => {
@@ -71,13 +75,15 @@ export default function Evaluation() {
         const res = await response.json();
 
         setMetricsObj(res.audio_file.metrics);
-        fetchAudioFile();
     }
 
-    const fetchAudioFile = async () => {
+    const fetchAudioFile = async (audio_id: string) => {
         const response = await fetch('http://localhost:8016/listener/getAudioFile', {
-            method:"GET",
-            credentials: 'include'
+            method:"POST",
+            credentials: 'include',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({'audio_id': audio_id}),
+
         });
 
         const blob = await response.blob();
@@ -96,35 +102,33 @@ export default function Evaluation() {
         return metric_array;
     }
 
-    async function submitRating() {
+    async function submitRating(e: React.FormEvent<HTMLFormElement>) {
+        e.preventDefault(); 
+    
         console.log("Submit rating was hit!!!", sliders);
-
-        // JSON.stringify({...sliders, 'audio_id': audioID})
-
+        console.log('audioId and ratings', { audioID, ratings: sliders });
+    
         try {
-            console.log('current slider values:', sliders);
-            console.log('audioId and ratings');
-            console.log({audioID, 'ratings': sliders});
-
             const response = await fetch(`http://localhost:8016/listener/submitRating`, {
-                method:"POST",
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({'audio_id': audioID, 'ratings': sliders}),
+                method: "POST",
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ audio_id: audioID, ratings: sliders }),
                 credentials: 'include'
-            })
-
-            if (response.ok) {
-                // const response = await response.json()
-                return // change later maybe
-            } else {
+            });
+    
+            if (!response.ok) {
                 const error = await response.json();
+                if (submitted == true) {
+                    setSubmitted(false);
+                } else {
+                    setSubmitted(true);
+                }
+                
                 setError(error.error);
             }
-
         } catch {
-            console.log("There was a network error unforunate/1111");
+            console.log("There was a network error unfortunate/1111");
             setError("Network Error: Fetch Request Failed");
-            return Error;
         }
     }
 
