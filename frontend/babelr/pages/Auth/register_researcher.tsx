@@ -15,7 +15,6 @@ export default function RegisterListener() {
 	const router = useRouter();
 
 
-	// Blur function to blur the password
 	function handleConfirmBlur() {
 		if (confirmPassword && password != "") {
 		setEqualPassError(password !== confirmPassword);
@@ -23,7 +22,6 @@ export default function RegisterListener() {
 	}
   
 
-	// submission API CALL for researcher
 	async function handleSubmit(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault()
 		const formData = new FormData(event.currentTarget);
@@ -38,9 +36,6 @@ export default function RegisterListener() {
 		}
 
 		try {
-			// Register listener API call
-			// Input: {email: string, pw: string, first_name: string, last_name: string}
-			// Output: response
 			const response = await fetch('http://localhost:8016/auth/registerResearcher', {
 			method:"POST",
 			headers: {'Content-Type': 'application/json'},
@@ -48,11 +43,11 @@ export default function RegisterListener() {
 				email,
 				pw,
 				first_name: "temp_fn",
-				last_name: "temp_ln"}), 
+				last_name: "temp_ln"}), //following /registerResearcher format 
 			})
 
 			if (response.ok) {
-				router.push("/Auth/login"); // Reroute to login. Note: Originally wanted to change to verification page but not in scope
+				router.push("/Auth/login"); // login for now change to verification later
 				setRegisterError("");
 			} else {
 				const error = await response.json();

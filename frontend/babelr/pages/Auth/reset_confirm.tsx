@@ -1,9 +1,8 @@
 import router from "next/router";
 import styles from "stylesheets/reset_confirm.module.css";
-import { FormEvent, useState } from "react";
+import { FormEvent } from "react";
 
 export default function ResetConfirmEmail() {
-    const [error, setError] = useState("")
 
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
             event.preventDefault()
@@ -13,7 +12,6 @@ export default function ResetConfirmEmail() {
             const pw = formData.get("new-password");
             const confirmPw = formData.get("confirm-password");
             try{
-                // Reset Password API call Note: does not require email verification just an email that is registered in the system
                 const response = await fetch('http://localhost:8016/auth/blindPasswordReset', {
                     method:"POST",
                     headers: {'Content-Type': 'application/json'},
@@ -21,15 +19,18 @@ export default function ResetConfirmEmail() {
                 })
     
                 if (response.ok) {
-                    router.push("/Auth/login");  // Reroute to login on successful reset
+                    console.log(JSON.stringify({"pw": pw, "pw_confirmation": confirmPw, "id": id}));
+                    router.push("/Auth/login"); // login for now change to verification later
                 } else {
-                    const e = await response.json();
-                    setError(e);
+                    const error = await response.json();
+                    console.log(error.error);
+                    console.log(JSON.stringify({"pw": pw, "pw_confirmation": confirmPw, "id": id}))
                 }
     
                 const formJson = Object.fromEntries(formData.entries());
+                console.log(formJson);
             } catch {
-                setError("Network Error");
+                console.log("Network Error: Fetch Request Failed")
             }
             
         }
