@@ -282,8 +282,8 @@ def getGraphStats():
     metrics = project.metrics.keys()
     models = project.models
     # all possible combinations with metrics and models of project
-    # model_metric_tuple_list = [{"model": mo, "metric": me} for mo, me in product(metrics, metrics)]
-    # logging.debug(model_metric_tuple_list) # test
+    model_metric_tuple_list = [{"model": mo, "metric": me} for mo, me in product(metrics, metrics)]
+    logging.debug("MODEL METRIC PAIRINGS",model_metric_tuple_list) # test
 
     graph_stats = []
 
@@ -299,14 +299,16 @@ def getGraphStats():
 
             for audio_id in project.audio_list:
                 audio_file = helpers.get_audio_from_audio_id(audio_id)
-                if audio_file.model == model:
-                    for evaluation in audio_file.allocated_listeners:
-                        if not isinstance(evaluation, dict) or len(evaluation) == 1:
-                            continue
-                        else:
-                            eval_sum += evaluation[model]
-                            if evaluation[model]:
-                                count += 1
+                if audio_file.model != model:
+                    continue
+
+                for evaluation in audio_file.allocated_listeners:
+                    if not isinstance(evaluation, dict) or len(evaluation) == 1:
+                        continue
+                    if metric in evaluation:
+                        eval_sum += evaluation[metric]
+                        count += 1
+
             if count == 0 :
                 mean = 0
             else:
@@ -314,12 +316,14 @@ def getGraphStats():
 
             for audio_id in project.audio_list:
                 audio_file = helpers.get_audio_from_audio_id(audio_id)
-                if audio_file.model == model:
-                    for evaluation in audio_file.allocated_listeners:
-                        if not isinstance(evaluation, dict) or len(evaluation) == 1:
-                            continue
-                        else:
-                            sum_for_std += pow((evaluation[model] - mean), 2)
+                if audio_file.model != model:
+                    continue
+
+                for evaluation in audio_file.allocated_listeners:
+                    if not isinstance(evaluation, dict) or len(evaluation) == 1:
+                        continue
+                    else:
+                        sum_for_std += pow((evaluation.get(model, 0) - mean), 2)
 
             if count == 0:
                 std = 0
@@ -458,7 +462,7 @@ def getRatingsStats():
                 logging.debug("not evaluated")
                 continue
             else:
-                audio_ratings["ratings"].append(evaluation[metric])
+                audio_ratings["ratings"].append(evaluation.get(metric, 0))
         rating_stats.append(audio_ratings)
 
     logging.debug("no here6")
