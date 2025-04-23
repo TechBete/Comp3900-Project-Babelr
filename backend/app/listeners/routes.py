@@ -517,7 +517,7 @@ def is_evaluated(id, allocated_listeners):
             return item
     return None
 
-@userBp.route('/redeemRewards', methods=['POST', 'OPTIONS'])
+@userBp.route('/redeemRewards', methods=['POST'])
 @jwt_required()
 def redeemRewards():
     data = request.json
@@ -561,8 +561,9 @@ def redeemRewards():
 def send_coupon_email(receiver_email, coupon_name, promo_code):
     subject = f"Babelr coupon code for {coupon_name}"
     body = f"""Thank you for submitting audio file evaluation,
-    we truly appreciate your time and effort to support research projects!
+    We truly appreciate your time and effort to support research projects!
     Here is your coupon code for {coupon_name}.
+    The coupon code is {promo_code}.
     Please enter the code in the app"""
 
     msg = MIMEText(body, "plain")
