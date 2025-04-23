@@ -83,6 +83,7 @@ export default function MainScreen() {
 				const data = await response.json();
                 console.log(data.message);
                 getProjects();
+                setIsModalOpen(false);
 			} else {
                 const error = await response.json()
 				console.log("NOT OK");
