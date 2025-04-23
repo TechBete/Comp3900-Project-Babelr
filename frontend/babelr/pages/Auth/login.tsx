@@ -51,7 +51,7 @@ export default function Login() {
                     if (first_time){
                         router.push("/Listener/first_time_listener");
                     } else {
-                        router.push("/Listener/clip_list");
+                        router.push("/Listener/home_listener");
                     }
                 } else {
                     setLoginError("Unknown type of user");

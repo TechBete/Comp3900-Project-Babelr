@@ -38,7 +38,7 @@ def verify_email(token):
     email = helper.verify_token(token)
 
     if not email:
-        return redirect(url_for('auth.login')), 404
+        return redirect('http://localhost:3000/'), 404
 
     # Find user and mark as verified
     listener = helper.is_listener_email(email)
@@ -50,7 +50,7 @@ def verify_email(token):
     else:
         pass
 
-    return redirect(url_for('auth.login'))
+    return redirect('http://localhost:3000/')
 
 '''
 # this route is for a user to login to the platform

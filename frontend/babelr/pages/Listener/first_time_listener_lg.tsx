@@ -43,7 +43,7 @@ export default function LanguageSelector() {
         }
     
         if (allSuccessful) {
-            router.push("/Listener/clip_list");
+            router.push("/Listener/home_listener");
         }
     };
 

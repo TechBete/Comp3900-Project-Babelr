@@ -130,4 +130,3 @@ def get_all_audio_files(projectName, id):
 
 def get_audio_from_audio_id(id):
     return AudioFile.query.filter_by(id=id).first()
-
