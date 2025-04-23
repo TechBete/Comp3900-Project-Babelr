@@ -280,8 +280,21 @@ def createListener():
         evaluation_history=[],
         allocated_audio_queue=[],
     )
-    
+
+    reward1 = RedeemShop(
+        name = 'Woolworths',
+        point = 0,
+        promo_code = 'htk3-htk2-ffas-kfna',
+    )
+    reward2 = RedeemShop(
+        name = 'Coles',
+        point = 0,
+        promo_code = 'htk3-htk2-ffas-kfna',
+    )
+
     try:
+        db.session.add(reward1)
+        db.session.add(reward2)
         db.session.add(user)
         #assignQualifiedAudio(user)
         db.session.commit()
