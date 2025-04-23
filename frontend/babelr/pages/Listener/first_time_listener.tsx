@@ -14,6 +14,7 @@ export default function First_time() {
     const [Error, setError] = useState("");
     const router = useRouter();
 
+    // function that captures the submit action on the button and calls the api call
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault()
         const formData = new FormData(event.currentTarget);
@@ -21,6 +22,9 @@ export default function First_time() {
         PostDemographics(formData)
     }
 
+    // API call to register demographics
+    // Input: {formData}; formdata contains all the details submitted from the page to the backend
+    // Output: {response}
     async function PostDemographics(formData: FormData) {
         try {
             const response = await fetch(`http://localhost:8016/listener/registerDemographics`, {
