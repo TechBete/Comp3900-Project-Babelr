@@ -280,28 +280,144 @@ export default function Evaluation() {
                 <div className={styles["form-container"]}>
                     <div className={styles["information-container"]}>
                         <div className={styles["header-wrapper"]}>
-                            <h1>Evaluation</h1>
+                            <h1 style={{ fontWeight: 'bold', fontSize: '1.9rem', paddingTop: '10px' }}>Audio Evaluation</h1>
                             <p>Play the audio clip and rate it based on the provided metrics.</p>
                             <form className={styles["login-form"]} method="post" onSubmit={submitRating}>
-                                {<audio controls id="audio" src={audioURL}></audio>}
+                                {<audio 
+                                    controls 
+                                    id="audio" 
+                                    src={audioURL}
+                                    style={{
+                                        display: 'block',
+                                        margin: '5px auto',
+                                        maxWidth: '100%',  
+                                    }}
+                                    ></audio>}
                                 <div>
                                     <div key='Clarity'>
-                                        <h2 className='metric-name'>Clarity</h2>
+                                    <h2 className='metric-name' style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>
+                                        Clarity
+                                    </h2>
                                         <h2 className='metric-description'>{test_metrics['Clarity'].description}</h2>
-                                        <Slider value={sliderClarity} onChange={handleChangeClarity} defaultValue={3} step={1} min={test_metrics['Clarity'].min} max={test_metrics['Clarity'].max} id='Clarity' marks={marks_clarity} />
+                                        <Slider
+                                            value={sliderClarity} 
+                                            onChange={handleChangeClarity} 
+                                            defaultValue={3} 
+                                            step={1} 
+                                            min={test_metrics['Clarity'].min} 
+                                            max={test_metrics['Clarity'].max} 
+                                            id='Clarity' 
+                                            marks={marks_clarity} 
+                                            sx={{
+                                                width: '80%',
+                                                margin: '0 auto', 
+                                                display: 'block',
+                                                color: "#2b4450",
+                                                "& .MuiSlider-thumb": {
+                                                  backgroundColor: "#2b4450",
+                                                  "&:hover": {
+                                                    backgroundColor: "#1f333c",
+                                                  },
+                                                },
+                                                "& .MuiSlider-track": {
+                                                  backgroundColor: "#2b4450",
+                                                },
+                                                "& .MuiSlider-rail": {
+                                                  backgroundColor: "#cccccc",
+                                                },
+                                                "& .MuiSlider-markLabel": {
+                                                    paddingTop: '15px',
+                                                },
+                                                paddingBottom: '40px',
+                                              }}/>
                                     </div>
                                     <div key='Intelligibility'>
-                                        <h2 className='metric-name'>Intelligibility</h2>
+                                        <h2 className='metric-name' style={{ fontWeight: 'bold', fontSize: '1.2rem', paddingTop: '30px' }}>
+                                            Intelligibility
+                                        </h2>
                                         <h2 className='metric-description'>{test_metrics['Intelligibility'].description}</h2>
-                                        <Slider value={sliderIntelligibility} onChange={handleChangeIntelligibility} defaultValue={3} step={1} min={test_metrics['Intelligibility'].min} max={test_metrics['Intelligibility'].max} id='Intelligibility' marks={marks_intelligibility} />
+                                        <Slider 
+                                            value={sliderIntelligibility} 
+                                            onChange={handleChangeIntelligibility} 
+                                            defaultValue={3} 
+                                            step={1} 
+                                            min={test_metrics['Intelligibility'].min} 
+                                            max={test_metrics['Intelligibility'].max} 
+                                            id='Intelligibility' 
+                                            marks={marks_intelligibility} 
+                                            sx={{
+                                                width: '80%',
+                                                margin: '0 auto', 
+                                                display: 'block',
+                                                color: "#2b4450",
+                                                "& .MuiSlider-thumb": {
+                                                  backgroundColor: "#2b4450",
+                                                  "&:hover": {
+                                                    backgroundColor: "#1f333c",
+                                                  },
+                                                },
+                                                "& .MuiSlider-track": {
+                                                  backgroundColor: "#2b4450",
+                                                },
+                                                "& .MuiSlider-rail": {
+                                                  backgroundColor: "#cccccc",
+                                                },
+                                                "& .MuiSlider-markLabel": {
+                                                    paddingTop: '15px',
+                                                },
+                                                paddingBottom: '40px',
+                                              }}/>
                                     </div>
                                     <div key='Naturalness'>
-                                        <h2 className='metric-name'>Naturalness</h2>
+                                    <h2 className='metric-name' style={{ fontWeight: 'bold', fontSize: '1.2rem', paddingTop: '30px' }}>
+                                        Naturalness
+                                    </h2>
                                         <h2 className='metric-description'>{test_metrics['Naturalness'].description}</h2>
-                                        <Slider value={sliderNaturalness} onChange={handleChangeNaturalness} defaultValue={3} step={1} min={test_metrics['Naturalness'].min} max={test_metrics['Naturalness'].max} id='Naturalness' marks={marks_naturalness} />
+                                        <Slider
+                                            value={sliderNaturalness} 
+                                            onChange={handleChangeNaturalness} 
+                                            defaultValue={3} 
+                                            step={1} 
+                                            min={test_metrics['Naturalness'].min} 
+                                            max={test_metrics['Naturalness'].max} 
+                                            id='Naturalness' 
+                                            marks={marks_naturalness}
+                                            sx={{
+                                                width: '80%',
+                                                margin: '0 auto', 
+                                                display: 'block',
+                                                color: "#2b4450",
+                                                "& .MuiSlider-thumb": {
+                                                  backgroundColor: "#2b4450",
+                                                  "&:hover": {
+                                                    backgroundColor: "#1f333c",
+                                                  },
+                                                },
+                                                "& .MuiSlider-track": {
+                                                  backgroundColor: "#2b4450",
+                                                },
+                                                "& .MuiSlider-rail": {
+                                                  backgroundColor: "#cccccc",
+                                                },
+                                                "& .MuiSlider-markLabel": {
+                                                    paddingTop: '15px',
+                                                },
+                                                paddingBottom: '40px',
+                                            }}/>
                                     </div>
                                 </div>
-                                <Button variant="contained" type='submit'>Submit Rating</Button>
+                                <Button
+                                    variant="contained"
+                                    sx={{
+                                        backgroundColor: "#2b4450",
+                                        "&:hover": {
+                                        backgroundColor: "#1f333c",
+                                        },
+                                        display: "block",           
+                                        margin: "30px auto 0",   
+                                      }}>
+                                        Submit Rating
+                                </Button>
                             </form>
                         </div>
                     </div>
