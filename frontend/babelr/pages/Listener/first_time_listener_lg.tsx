@@ -36,6 +36,7 @@ export default function LanguageSelector() {
         let allSuccessful = true;
 
         for (const entry of languages) {
+            console.log(entry)
             const success = await postLanguage(entry);
             if (!success) {
                 allSuccessful = false;

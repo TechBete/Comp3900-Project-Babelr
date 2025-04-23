@@ -15,9 +15,9 @@ export default function Evaluation() {
     const [sliderNaturalness, setSliderNaturalness] = useState(3);
     
     const [sliders, setSliders] = useState({
-        clarity: 3,
-        intelligibility: 3, 
-        naturalness: 3,
+        Clarity: 3,
+        Intelligibility: 3, 
+        Naturalness: 3,
     });
     
     const [value, setValue] = useState(3);
@@ -253,17 +253,17 @@ export default function Evaluation() {
             <div key='Clarity'>
                 <h2 className='metric-name'>Clarity</h2>
                 <h2 className='metric-description'>{test_metrics['Clarity'].description}</h2>
-                <Slider value={sliders.clarity} onChange={handleChangeClarity} defaultValue={3} step={1} min={test_metrics['Clarity'].min} max={test_metrics['Clarity'].max} id='Clarity' marks={marks_clarity} />
+                <Slider value={sliders.Clarity} onChange={handleChangeClarity} defaultValue={3} step={1} min={test_metrics['Clarity'].min} max={test_metrics['Clarity'].max} id='Clarity' marks={marks_clarity} />
             </div>
             <div key='Intelligibility'>
                 <h2 className='metric-name'>Intelligibility</h2>
                 <h2 className='metric-description'>{test_metrics['Intelligibility'].description}</h2>
-                <Slider value={sliders.intelligibility} onChange={handleChangeIntelligibility} defaultValue={3} step={1} min={test_metrics['Intelligibility'].min} max={test_metrics['Intelligibility'].max} id='Intelligibility' marks={marks_intelligibility} />
+                <Slider value={sliders.Intelligibility} onChange={handleChangeIntelligibility} defaultValue={3} step={1} min={test_metrics['Intelligibility'].min} max={test_metrics['Intelligibility'].max} id='Intelligibility' marks={marks_intelligibility} />
             </div>
             <div key='Naturalness'>
                 <h2 className='metric-name'>Naturalness</h2>
                 <h2 className='metric-description'>{test_metrics['Naturalness'].description}</h2>
-                <Slider value={sliders.naturalness} onChange={handleChangeNaturalness} defaultValue={3} step={1} min={test_metrics['Naturalness'].min} max={test_metrics['Naturalness'].max} id='Naturalness' marks={marks_naturalness} />
+                <Slider value={sliders.Naturalness} onChange={handleChangeNaturalness} defaultValue={3} step={1} min={test_metrics['Naturalness'].min} max={test_metrics['Naturalness'].max} id='Naturalness' marks={marks_naturalness} />
             </div>
         </div>
     }
