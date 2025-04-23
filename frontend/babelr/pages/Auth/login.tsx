@@ -9,9 +9,8 @@ export default function Login() {
     const [selectedOption, setSelectedOption] = useState("/Auth/register_listener");
     const [loginError, setLoginError] = useState("");
 
+    // submission function to submit login details
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-
-
         event.preventDefault()
     
         const formData = new FormData(event.currentTarget);
@@ -19,6 +18,9 @@ export default function Login() {
         const pw = formData.get("password")
 
         try {
+            // Login api call. 
+            // input: {email: string, pw: string}
+            // output: response
             const response = await fetch('http://localhost:8016/auth/login', {
                 method:"POST",
                 headers: {'Content-Type': 'application/json'},
@@ -26,6 +28,9 @@ export default function Login() {
                 credentials: 'include'
             })
 
+
+            // GetRole API call
+            // input: nothing but notably requires credentials which is how it role checks
             if (response.ok) {
                 const roleRes = await fetch("http://localhost:8016/auth/getRoleFromID", {
                     method: "GET",
@@ -36,29 +41,32 @@ export default function Login() {
                 const role = roleData.role;
                 const first_time = roleData.first_time;
 
+                // if an invalid role returns an error
                 if (!role) {
                     setLoginError("Unknown role");
                     return;
                 }
 
+                // if researcher pushes to the researcher pages
                 if (role == "researcher") {
                     if (first_time){
                         router.push("/Researcher/first_time_researcher");
                     } else {
                         router.push("/Researcher/project_list");
                     }
+                // else if listener pushes to listener pages
                 } else if (role == "listener") {
                     if (first_time){
                         router.push("/Listener/first_time_listener");
                     } else {
                         router.push("/Listener/home_listener");
                     }
+                // Another invalid role check for security
                 } else {
                     setLoginError("Unknown type of user");
                 }
             } else {
                 const error = await response.json();
-                console.log(error.error);
 				setLoginError(error.error);
             }
 
@@ -67,9 +75,9 @@ export default function Login() {
         }
     }
 
+    // Rerouting to either user or register registration
     function handleUserChange(event: React.ChangeEvent<HTMLSelectElement>) {
         setSelectedOption(event.target.value);
-        console.log("Selected:", event.target.value);
     }
 
 

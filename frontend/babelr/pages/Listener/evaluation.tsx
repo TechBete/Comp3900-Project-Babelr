@@ -408,6 +408,7 @@ export default function Evaluation() {
                                 </div>
                                 <Button
                                     variant="contained"
+                                    type="submit"
                                     sx={{
                                         backgroundColor: "#2b4450",
                                         "&:hover": {

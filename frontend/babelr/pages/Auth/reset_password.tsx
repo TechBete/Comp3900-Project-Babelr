@@ -1,9 +1,10 @@
 import {useRouter } from "next/router";
 import styles from "stylesheets/reset_password.module.css";
-import { FormEvent } from "react";
+import { FormEvent, useState } from "react";
 
 export default function ResetConfirmEmail() {
     const router = useRouter()
+    const [error, setError] = useState("")
 
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault()
@@ -19,22 +20,21 @@ export default function ResetConfirmEmail() {
 
 			if (response.ok) {
                 const data = await response.json();
-                console.log(data);
+
                 if (data.listener_id) {
                     localStorage.setItem("id", data.listener_id);
                 } else if (data.researcher_id) {
                     localStorage.setItem("id", data.researcher_id);
                 }
+
 				router.push("/Auth/reset_confirm"); // login for now change to verification later
 			} else {
 				const error = await response.json();
-				console.log(error.error);
-			}
+                setError(error)
 
-			const formJson = Object.fromEntries(formData.entries());
-			console.log(formJson);
+			}
 		} catch {
-			console.log("Network Error: Fetch Request Failed")
+			setError("Network Error: Fetch Request Failed")
     	}
         
     }
