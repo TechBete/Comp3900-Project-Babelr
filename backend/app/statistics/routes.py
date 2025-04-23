@@ -282,8 +282,8 @@ def getGraphStats():
     metrics = project.metrics.keys()
     models = project.models
     # all possible combinations with metrics and models of project
-    model_metric_tuple_list = [{"model": mo, "metric": me} for mo, me in product(metrics, metrics)]
-    logging.debug("MODEL METRIC PAIRINGS",model_metric_tuple_list) # test
+    # model_metric_tuple_list = [{"model": mo, "metric": me} for mo, me in product(metrics, metrics)]
+    # logging.debug("MODEL METRIC PAIRINGS",model_metric_tuple_list) # test
 
     graph_stats = []
 

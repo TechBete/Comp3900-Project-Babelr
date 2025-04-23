@@ -487,13 +487,13 @@ def submitRating():
             for metrics in ratings:
                 eval_target[metrics] = ratings[metrics]
             flag_modified(audio_file, "allocated_listeners")
-        
-        # update the evaluation status for listener
-        listener.currently_assigned_audio = None
 
         # move the audio file to evaluation history
-        listener.evaluation_history.append(audio_id)
-        
+        listener.evaluation_history.append(listener.currently_assigned_audio)
+        # update the evaluation status for listener
+        # listener.currently_assigned_audio = listener.allocated_audio_queue.pop(0)
+
+
         # add reward points after rating
         metrics_count = len(audio_file.metrics.get("metrics", {}))
         listener.reward_points = listener.reward_points + metrics_count
@@ -624,7 +624,7 @@ def getAssignedAudio():
             return jsonify({"error": "Invalid audio file format"}), 400
 
         audio_file = listener.allocated_audio_queue.pop(0)
-        
+        flag_modified(listener, "allocated_audio_queue")
         # check if audio file exists
         if not audio_file:
             return jsonify({"error": "Audio file does not exist"}), 400
@@ -632,6 +632,7 @@ def getAssignedAudio():
         # assign file to currently_assigned_audio for listener
         
         listener.currently_assigned_audio = audio_file
+        flag_modified(listener, "currently_assigned_audio")
         db.session.add(listener)
         db.session.commit()
 
@@ -644,9 +645,19 @@ def getAssignedAudio():
         db.session.rollback()
         return jsonify({"error": "Error: 500, An error occurred while getting the audio file"}), 500
 
-@userBp.route('/getAudioFile')
+@userBp.route('/getAudioFile', methods=['POST'])
 @jwt_required()
 def getAudioFile():
+    data = request.json
+    required_fields = ['audio_id']
+
+    validation_error = helpers.validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error
+    
+    audio_id = data['audio_id']
+    logging.debug(f'AUDIO ID IS {audio_id}')
+    
     id = get_jwt_identity()
     id = uuid.UUID(id)
     listener = helpers.is_listener_id(id)
@@ -658,10 +669,10 @@ def getAudioFile():
     if len(listener.allocated_audio_queue) == 0:
         return jsonify({"error": "There is no assigned audio file"}), 404
     # forgot to add to current before popping
-    listener.currently_assigned_audio = listener.allocated_audio_queue[0]
-    audio_file_id = listener.allocated_audio_queue.pop(0)
+    # listener.currently_assigned_audio = listener.allocated_audio_queue[0]
+    # audio_file_id = listener.allocated_audio_queue.pop(0)
 
-    audio_file = helpers.get_audio_from_audio_id(audio_file_id)
+    audio_file = helpers.get_audio_from_audio_id(audio_id)
     
     try:
         return send_file(audio_file.file_path, mimetype='audio/wav')
