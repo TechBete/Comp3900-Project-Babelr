@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from email.mime.text import MIMEText
 from flask import jsonify, request
 from app.listeners import userBp
-from app.models import Gender, Listener, AudioFile, RedeemShop
+from app.models import Gender, Listener, RedeemShop
 import app.helpers as helpers
 import uuid, logging, os, smtplib
 from app import db
@@ -73,7 +73,6 @@ def testGetListener():
         "Evaluation history": user.evaluation_history if user.evaluation_history else None,
         "Allocated audio queue": user.allocated_audio_queue if user.allocated_audio_queue else None,
     }), 200
-
 
 
 @userBp.route('/addLanguage', methods=['POST'])
@@ -439,10 +438,13 @@ def submitRating():
 
     user_id = get_jwt_identity()
     user_id = uuid.UUID(user_id)
+    
     # check listener availability
     listener = helpers.is_listener_id(user_id)
+    
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
+    
     # check if audio file to submit ratings exists
     audio_id = data['audio_id']
     audio_file = helpers.get_audio_from_audio_id(audio_id)
@@ -450,41 +452,65 @@ def submitRating():
         return jsonify({"error": "Audio file not found"}), 404
 
     ratings = data["ratings"]
-    # add evaluation in the audio listener list
-    eval_target = is_evaluated(user_id, audio_file.allocated_listeners)
-    if eval_target is None:
-        return jsonify({"error": "Listener is not allocated to the audio file"}), 404
-    else:
-        # for metric in ratings:
-        #     eval_target[metric] = ratings[metric]
-        eval_target.update(ratings)
-        flag_modified(audio_file, "allocated_listeners")
+    # # add evaluation in the audio listener list
+    # eval_target = is_evaluated(user_id, audio_file.allocated_listeners)
+    # if eval_target is None:
+    #     return jsonify({"error": "Listener is not allocated to the audio file"}), 404
+    # else:
+    #     # for metric in ratings:
+    #     #     eval_target[metric] = ratings[metric]
+    #     eval_target.update(ratings)
+    #     flag_modified(audio_file, "allocated_listeners")
 
-    # update the evaluation status for listener
-    listener.evaluation_history.append(audio_id)
-    if not audio_id in listener.evaluation_history:
-        return jsonify({"error": "Audio file failed transferring to evaluation history"}), 404
+    # # update the evaluation status for listener
+    # listener.evaluation_history.append(audio_id)
+    # if not audio_id in listener.evaluation_history:
+    #     return jsonify({"error": "Audio file failed transferring to evaluation history"}), 404
 
-    # find user in audio file allocated listeners and append ratings to user id
-    # audio_file.allocated_listeners[listener.id] = audio_file.allocated_listeners.get(listener.id, {})
-    # for metric in ratings:
-    #         audio_file.allocated_listeners[listener.id][metric] = ratings[metric]
+    # # find user in audio file allocated listeners and append ratings to user id
+    # # audio_file.allocated_listeners[listener.id] = audio_file.allocated_listeners.get(listener.id, {})
+    # # for metric in ratings:
+    # #         audio_file.allocated_listeners[listener.id][metric] = ratings[metric]
 
-    # if listener has more than one allocated audio in the queue, move that audio file to currently_assigned_audio
-    # otherwise, keep currently_assigned_audio as null.
-    if listener.allocated_audio_queue != [] or listener.allocated_audio_queue is not None:
-        listener.currently_assigned_audio = listener.allocated_audio_queue.pop(0)
-    else:
+    # # if listener has more than one allocated audio in the queue, move that audio file to currently_assigned_audio
+    # # otherwise, keep currently_assigned_audio as null.
+    # if listener.allocated_audio_queue != [] or listener.allocated_audio_queue is not None:
+    #     listener.currently_assigned_audio = listener.allocated_audio_queue.pop(0)
+    # else:
+    try:
+        # add evaluation in the audio listener list
+        eval_target = is_evaluated(user_id, audio_file.allocated_listeners)
+        if eval_target is None:
+            return jsonify({"error": "Listener is not allocated to the audio file"}), 404
+        else:
+            # check if eval_target has a metric field
+            # if not, create the metrics field
+            for metrics in ratings:
+                eval_target[metrics] = ratings[metrics]
+            flag_modified(audio_file, "allocated_listeners")
+        
+        # update the evaluation status for listener
         listener.currently_assigned_audio = None
 
-    # add reward points after rating
-    listener.reward_points = listener.reward_points + len(audio_file.metrics["metrics"])
-    for column in ["allocated_audio_queue", "currently_assigned_audio", "reward_points"]:
-        flag_modified(listener, column)
-    db.session.commit()
+        # move the audio file to evaluation history
+        listener.evaluation_history.append(audio_id)
+        
+        # add reward points after rating
+        metrics_count = len(audio_file.metrics.get("metrics", {}))
+        listener.reward_points = listener.reward_points + metrics_count
+        
+        # flag modified fields
+        for column in ["allocated_audio_queue", "currently_assigned_audio", "reward_points", "evaluation_history"]:
+            flag_modified(listener, column)
+        
+        db.session.commit()
 
-    return jsonify({"message": "Rating submission(audio evaluation) Successful"}), 200
-
+        return jsonify({"message": "Rating submission(audio evaluation) Successful"}), 200
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Error: 500, An error has occured while submitting the rating"}), 500
+    
 def is_evaluated(id, allocated_listeners):
     id = str(id)
     for item in allocated_listeners:
@@ -554,112 +580,6 @@ def send_coupon_email(receiver_email, coupon_name, promo_code):
     except Exception as e:
         return jsonify({"error": "Error: 500, An error has occured while sending out the email"}), 500
 
-# This route is used to update the audio metrics for a listener
-# Args:
-#    Mandatory fields: assigned_audio_src, metrics
-#
-# NOTE:
-#    Assigned_audio is the file path of the audio file allocated to the listener
-#    Metrics field is a dictionary of audio assigned metrics and values pulled from the audio JSON
-#    Metrics are updated in the listener's assigned_audio column
-#    General idea for the route is so the user can "save" the metrics
-#    Then the user can submit the evaluation using submit evaluation route (TBD)
-#
-# side NOTE:
-#    real devs test in prod(demo)
-#
-# Returns:
-#    400: Error: Audio file is not allocated to the listener
-#    400: Error: Metrics must be a dictionary of numeric values
-#    400: Invalid metric: metric must be a string and value must be numeric
-#
-#    404: Listener not found
-#
-#    200: Audio metrics updated successfully and updated metrics
-#
-#    500: Existing metrics must be a dictionary
-#    500: Error: An error occurred while updating the project metrics
-
-@userBp.route('/userAudioEval', methods=['POST'])
-@jwt_required()
-def userAudioEval():
-    data = request.json
-    required_fields = ['audio_name', 'audio_path', 'metrics']
-    validation_error = helpers.validate_required_fields(data, required_fields)
-    if validation_error:
-        return validation_error
-
-    listener_id = get_jwt_identity()
-    listener_id = uuid.UUID(listener_id)
-
-    # Validate listener
-    listener = helpers.is_listener_id(listener_id)
-    if not listener:
-        return jsonify({"error": "Listener not found"}), 404
-
-    audio_file_path = data['audio_path']
-    audio_file_name = data['audio_name']
-    frontend_metrics = data['metrics']
-    logging.debug(audio_file_path)
-    logging.debug(frontend_metrics)
-
-    # ensure audio files are allocated to the listener
-    if listener.assigned_audio is None:
-        return jsonify({"error": "User has no audio assigned yet"}), 400
-
-    assigned_audio_file = None
-    # check if audio file path and name are in the listener's assigned audio list
-    for audio_file in listener.assigned_audio:
-        if audio_file['file_path'] == audio_file_path and audio_file['name'] == audio_file_name:
-            assigned_audio_file = audio_file
-            break
-    if assigned_audio_file is None:
-            return jsonify({"error": "Audio file is not allocated to the listener"}), 400
-
-    # Validate metrics from the frontend
-    if not isinstance(frontend_metrics, dict):
-        return jsonify({
-            "error": "Metrics must include metric name, min, max, minimum label, maximum label, and description"
-            }), 400
-
-    try:
-        with db.session.begin_nested():
-            # Check if existing metrics are present
-            existing_metrics = assigned_audio_file.get('metrics', {})
-
-            # Validate metrics
-            required_fields = ['min', 'max', 'minimum label', 'maximum label', 'description']
-            for metric_name, metric_value in frontend_metrics.items():
-                if not isinstance(metric_name, str):
-                    return jsonify({"error": "Invalid metric: {} must be a string".format(metric_name)}), 400
-                for field in required_fields:
-                    if field not in metric_value:
-                        return jsonify({"error": "Invalid metric: {} must include {}".format(metric_name, field)}), 400
-
-            # update the existing metrics with the new metrics set by the user
-            for metric_name, metric_value in frontend_metrics.items():
-                if metric_name in existing_metrics:
-                    existing_metrics[metric_name].update({
-                        "min": metric_value.get('min', existing_metrics[metric_name]['min']),
-                        "max": metric_value.get('max', existing_metrics[metric_name]['max']),
-                        "minimum label": metric_value.get('minimum label', existing_metrics[metric_name]['minimum label']),
-                        "maximum label": metric_value.get('maximum label', existing_metrics[metric_name]['maximum label']),
-                        "description": metric_value.get('description', existing_metrics[metric_name]['description'])
-                    })
-                else:
-                    existing_metrics[metric_name] = metric_value
-            existing_metrics.update(frontend_metrics)
-
-            # Mark the assigned_audio as modified and commit changes
-            flag_modified(listener, "assigned_audio")
-
-    except Exception as e:
-        db.session.rollback()
-        logging.error(f"An error occurred while updating project metrics: {e}")
-        return jsonify({"error": "Error: 500, An error occurred while updating the project metrics"}), 500
-
-    return jsonify({"message": "Audio metrics updated successfully", "metrics": listener.assigned_audio['metrics']})
-
 # This route is used to get the assigned audio file for a listener so that it can be played on the frontend
 # Args:
 #    Mandatory fields: None
@@ -675,6 +595,7 @@ def userAudioEval():
 #    400: Error: Invalid audio file format
 #    400: Error: Audio file does not exist
 #    500: Error: An error occurred while getting the audio file
+
 
 @userBp.route('/getAssignedAudioFile', methods=['GET'])
 @jwt_required()
@@ -714,22 +635,3 @@ def getAssignedAudio():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": "Error: 500, An error occurred while getting the audio file"}), 500        
-
-
-@userBp.route('/getAudioFile')
-@jwt_required()
-def getAudioFile():
-    id = get_jwt_identity()
-    id = uuid.UUID(id)
-    listener = helpers.is_listener_id(id)
-    if not listener:
-        return jsonify({"error": "Listener not found"}), 404
-
-    logging.debug(f"assigned audio {listener.assigned_audio}")
-
-    if len(listener.assigned_audio) == 0:
-        return jsonify({"error": "There is no assigned audio file"}), 404
-    # forgot to add to current before popping
-    listener.currently_assigned_audio = listener.assigned_audio[0]
-    audio_file = listener.assigned_audio.pop(0)
-    return jsonify({"audio_file": audio_file})
