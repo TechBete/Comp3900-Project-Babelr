@@ -31,7 +31,6 @@ export default function RegisterListener() {
 		const pw = formData.get("pw") 
 
 		const formJson = Object.fromEntries(formData.entries());
-		console.log(formJson);
 
 		if (emailError || equalPassError) {
 			return;
@@ -56,12 +55,8 @@ export default function RegisterListener() {
 				setRegisterError("");
 			} else {
 				const error = await response.json();
-				console.log(error.error);
 				setRegisterError(error.error);
 			}
-
-			const formJson = Object.fromEntries(formData.entries());
-			console.log(formJson);
 		} catch {
 			setRegisterError("Network Error: Fetch Request Failed");
 		}
