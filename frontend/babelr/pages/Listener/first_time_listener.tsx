@@ -17,16 +17,11 @@ export default function First_time() {
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault()
         const formData = new FormData(event.currentTarget);
-        // formData.set("age", String(getAge(new Date(formData.get("dob") as string))));
-        console.log("hello", Object.fromEntries(formData.entries()));
 
         PostDemographics(formData)
-        console.log(Error)
     }
 
     async function PostDemographics(formData: FormData) {
-        console.log("DEMOGRAPHICS POST BELOW");
-        console.log("after", JSON.stringify(Object.fromEntries(formData)));
         try {
             const response = await fetch(`http://localhost:8016/listener/registerDemographics`, {
                 method:"POST",
@@ -36,7 +31,6 @@ export default function First_time() {
             })
     
             if (response.ok) {
-                // const response = await response.json()
                 router.push('first_time_listener_lg')
             } else {
                 const error = await response.json();
@@ -80,9 +74,6 @@ export default function First_time() {
                                     onChange={(e) => setLastName(e.target.value)}
                                     required
                                 />
-        
-                                {/* <label className={styles.label} htmlFor="phone">Phone Number</label>
-                                <input className={styles.input} type="text" id="phone" name="phone" required/> */}
         
                                 <label className={styles.label} htmlFor="gender">Gender</label>
                                 <select 
