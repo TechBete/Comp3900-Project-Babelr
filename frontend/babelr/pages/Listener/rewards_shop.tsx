@@ -46,16 +46,16 @@ export default function Rewards_shop() {
     ));
 
     return (
-        <div>
+        <div className={styles.pageWrapper}>
             <Navbar_Listener></Navbar_Listener>
             <div className={styles["second_bar"]}>
-                <h1 className="">Rewards Shop</h1>
-                <p></p>
-                <p></p>
-                <p>Please redeem information below.</p>
+                <h1 className="text-3xl font-bold text-center mb-4">Rewards Shop</h1>
+                <p className=" text-center">Please redeem your reward below.</p>
             </div>
             <div className={styles["container"]}>
+                <div className="grid grid-cols-2 gap-40">
                 {reward_grid}
+                </div>
             </div>
         </div>
     );

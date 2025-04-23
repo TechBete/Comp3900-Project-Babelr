@@ -20,6 +20,7 @@
 .container {
     background-color: #fff;
     padding: 50px;
+    padding-top: 30px;
     border-radius: 20px;
     width: 450px;
     /* height: 567px; */
@@ -77,4 +78,8 @@
     margin-left: 20px;
     margin-right: 20px;
     place-items: center;
+}
+
+.pageWrapper {
+    padding-top: 50px;
 }
