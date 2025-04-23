@@ -83,6 +83,7 @@ export default function MainScreen() {
 				const data = await response.json();
                 console.log(data.message);
                 getProjects();
+                setIsModalOpen(false);
 			} else {
                 const error = await response.json()
 				console.log("NOT OK");
@@ -101,11 +102,8 @@ export default function MainScreen() {
                     <div className={styles["main-content"]}>
                         <div className={styles["main-top"]}>
                             <h2 className={styles["projects-h2"]}>
-                                Projects     
+                                Your Projects     
                             </h2>
-                            <div className={styles["search-bar"]}>
-                                <input type="text" placeholder="Search" />
-                            </div>
                         </div>
                         <table className={styles["table"]} >
                             <thead className={styles["thead"]}>

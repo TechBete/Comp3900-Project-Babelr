@@ -6,7 +6,7 @@ import Sidebar from "components/project_sidebar"
 import Modal from "components/popout_modal";
 import styles from "stylesheets/file_upload.module.css";
 // import AudioClipsTable from "components/clips_table";
-import {Box, Button} from "@mui/material";
+import {Box, Button, Typography} from "@mui/material";
 
 import Table from "components/table";
 import RoleCheck from "components/role_checker";
@@ -231,7 +231,8 @@ export default function FileUploadPage() {
                 <div className={styles.container}>
                     <Sidebar project_name={projectName}></Sidebar>
                     <div className={styles.mainContent}>
-                        <h2 className={styles.heading}>Audio Library</h2>
+                        <Typography variant="h4" gutterBottom>Audio Library</Typography>
+                        {/* <h2 className={styles.heading}>Audio Library</h2> */}
 
                         {/* Metrics Section */}
                         <div className={styles.metricsContainer}>
