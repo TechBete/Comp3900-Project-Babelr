@@ -455,8 +455,10 @@ def submitRating():
     if eval_target is None:
         return jsonify({"error": "Listener is not allocated to the audio file"}), 404
     else:
-        for metric in ratings:
-            eval_target[metric] = ratings[metric]
+        # for metric in ratings:
+        #     eval_target[metric] = ratings[metric]
+        eval_target.update(ratings)
+        flag_modified(audio_file, "allocated_listeners")
 
     # update the evaluation status for listener
     listener.evaluation_history.append(audio_id)
@@ -464,10 +466,9 @@ def submitRating():
         return jsonify({"error": "Audio file failed transferring to evaluation history"}), 404
 
     # find user in audio file allocated listeners and append ratings to user id
-    if listener.id in audio_file.allocated_listeners:
-        audio_file.allocated_listeners[listener.id] = audio_file.allocated_listeners.get(listener.id, {})
-        for metric in ratings:
-             audio_file.allocated_listeners[listener.id][metric] = ratings[metric]
+    # audio_file.allocated_listeners[listener.id] = audio_file.allocated_listeners.get(listener.id, {})
+    # for metric in ratings:
+    #         audio_file.allocated_listeners[listener.id][metric] = ratings[metric]
 
     # if listener has more than one allocated audio in the queue, move that audio file to currently_assigned_audio
     # otherwise, keep currently_assigned_audio as null.
@@ -485,6 +486,7 @@ def submitRating():
     return jsonify({"message": "Rating submission(audio evaluation) Successful"}), 200
 
 def is_evaluated(id, allocated_listeners):
+    id = str(id)
     for item in allocated_listeners:
         if item["listener_id"] == id:
             return item

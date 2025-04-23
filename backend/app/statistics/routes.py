@@ -301,9 +301,12 @@ def getGraphStats():
                 audio_file = helpers.get_audio_from_audio_id(audio_id)
                 if audio_file.model == model:
                     for evaluation in audio_file.allocated_listeners:
-                        eval_sum += evaluation[model]
-                        if evaluation[model]:
-                            count += 1
+                        if not isinstance(evaluation, dict) or len(evaluation) == 1:
+                            continue
+                        else:
+                            eval_sum += evaluation[model]
+                            if evaluation[model]:
+                                count += 1
             if count == 0 :
                 mean = 0
             else:
@@ -313,7 +316,10 @@ def getGraphStats():
                 audio_file = helpers.get_audio_from_audio_id(audio_id)
                 if audio_file.model == model:
                     for evaluation in audio_file.allocated_listeners:
-                        sum_for_std += pow((evaluation[model] - mean), 2)
+                        if not isinstance(evaluation, dict) or len(evaluation) == 1:
+                            continue
+                        else:
+                            sum_for_std += pow((evaluation[model] - mean), 2)
 
             if count == 0:
                 std = 0
@@ -362,22 +368,45 @@ def getDemographicStats():
     genders = {}
     for listener_id in project.listener_list:
         listener_data = Listener.query.filter_by(id=listener_id).first()
-        # update language stats
-        if listener_data.languages["language"] not in languages.keys():
-            languages.update(listener_data.languages["language"], 1)
+
+        for lang_entry in listener_data.languages:
+            language = lang_entry.get("language")
+            if language:
+                if language not in languages:
+                    languages[language] = 1
+                else:
+                    languages[language] += 1
+
+        country = listener_data.country_of_residence
+        if country not in countries:
+                countries[country] = 1
         else:
-            languages[listener_data.languages["language"]] += 1
-        # update country of residence stats
-        if listener_data.country_of_residence not in countries.keys():
-            countries.update(listener_data.country_of_residence, 1)
-        else:
-            countries[listener_data.country_of_residence] += 1
-        # update gender stats
-        if listener_data.gender is not None:
-            if listener_data.gender not in genders.keys():
-                genders.update(listener_data.genders, 1)
+            countries[country] += 1
+
+        gender = listener_data.gender
+        if gender is not None:
+            gender_val = gender.value
+            if gender_val not in genders:
+                genders[gender_val] = 1
             else:
-                genders[listener_data.genders] += 1
+                genders[gender_val] += 1
+    
+        # update language stats
+        # if listener_data.languages["language"] not in languages.keys():
+        #     languages.update(listener_data.languages["language"], 1)
+        # else:
+        #     languages[listener_data.languages["language"]] += 1
+        # update country of residence stats
+        # if listener_data.country_of_residence not in countries.keys():
+        #     countries.update(listener_data.country_of_residence, 1)
+        # else:
+        #     countries[listener_data.country_of_residence] += 1
+        # # update gender stats
+        # if listener_data.gender is not None:
+        #     if listener_data.gender not in genders.keys():
+        #         genders.update(listener_data.genders, 1)
+        #     else:
+        #         genders[listener_data.genders] += 1
 
 
     demographic_stat = {
@@ -425,7 +454,11 @@ def getRatingsStats():
             "ratings": []
         }
         for evaluation in audio_data.allocated_listeners:
-            audio_ratings["ratings"].append(evaluation[metric])
+            if not isinstance(evaluation, dict) or len(evaluation) == 1:
+                logging.debug("not evaluated")
+                continue
+            else:
+                audio_ratings["ratings"].append(evaluation[metric])
         rating_stats.append(audio_ratings)
 
     logging.debug("no here6")
