@@ -3,7 +3,7 @@ from flask import jsonify
 from email.mime.text import MIMEText
 from itsdangerous import URLSafeTimedSerializer
 from password import PasswordHash
-from app.models import Researcher, Listener, Project, AudioFile # ls
+from app.models import Researcher, Listener, Project, AudioFile, RedeemShop # ls
 from app import db
 import os, smtplib, re, uuid #(?) uuid not in use?
 
@@ -99,7 +99,7 @@ def sanitize_project_name(projectName):
 def check_invalid_project_name(projectName):
     return re.search(r'[<>:"/\\|?*]', projectName)
 
-def find_project(projectName, id) -> Project | None:
+def find_project(projectName, id):
     return Project.query.filter_by(project_name=projectName, creator_id=id).first()
 
 def find_researcher_project(projectName, id):
@@ -129,8 +129,7 @@ def get_all_audio_files(projectName, id):
     return AudioFile.query.filter_by(project_name=projectName, researcher_id=id).all()
 
 def get_audio_from_audio_id(id):
-    audio_file = AudioFile.query.filter_by(id=id).first()
-    if not audio_file:
-        return jsonify({"error": "Audio file not found"}), 404
+    return AudioFile.query.filter_by(id=id).first()
 
-    return audio_file
+def is_reward_name(name):
+    return RedeemShop.query.filter_by(name=name).first()

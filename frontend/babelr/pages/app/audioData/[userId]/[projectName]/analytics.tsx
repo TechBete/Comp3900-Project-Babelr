@@ -118,11 +118,6 @@ export default function AnalyticsPage() {
       setRawAudioData(data);
       setSummaryData(summary);
       setGraphData(graph);
-      // setGraphData([
-      //   {metric: 'Nat', model: 'hel223', mean: 2.7, std: 1.2, ci_low: 0.5, ci_high: 1.6},
-      //   {metric: 'Int', model: 'he2l223', mean: 3.7, std: 5.2, ci_low: 0.25, ci_high: 2.6},
-      //   {metric: 'Int', model: 'hel223', mean: 7.7, std: 2.2, ci_low: 3.25, ci_high: 2.6}
-      // ]);
     }
   
     fetchStats();

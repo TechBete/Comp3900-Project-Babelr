@@ -3,46 +3,120 @@ import Navbar_Listener from "components/nav_bar_listener";
 import { useState, useEffect } from "react";
 import { Button } from "@mui/material";
 import Slider from '@mui/material/Slider';
-// import ch_0 from 'ch_0.wav';
 
 export default function Evaluation() {
     const [Error, setError] = useState("");
-    // const [audioUrl, setAudioUrl] = useState("");
+    const [audioID, setAudioID] = useState('');
+    const [audioURL, setAudioURL] = useState('null');
+    const [metricsObj, setMetricsObj] = useState({});
+    // const [sliders, setSliders] = useState({});
+    const [sliderClarity, setSliderClarity] = useState(3);
+    const [sliderIntelligibility, setSliderIntelligibility] = useState(3);
+    const [sliderNaturalness, setSliderNaturalness] = useState(3);
+    
+    const [sliders, setSliders] = useState({
+        Clarity: 3,
+        Intelligibility: 3, 
+        Naturalness: 3,
+    });
+    
+    const [value, setValue] = useState(3);
 
-    /*
-    const fetchAudio = async () => {
-        const response = await fetch('http://127.0.0.1:8016/listener/getAudio', {
+    useEffect(() => {
+        fetchAudioPath();
+    }, []);
+
+    const handleChangeClarity = function (event: any, new_value: number) {
+        setSliderClarity(new_value);
+    }
+
+    const handleChangeIntelligibility = function (event: any, new_value: number) {
+        setSliderIntelligibility(new_value);
+    }
+
+    const handleChangeNaturalness = function (event: any, new_value: number) {
+        setSliderNaturalness(new_value);
+    }
+
+    const handleSliderChange = (metric: string) => (_: any, new_value: number) => {
+        // sliders[metric] = new_value
+
+        setSliders((sliders: any) => ({
+            ...sliders,
+            [metric]: new_value,
+        }));
+
+        // setValue(sliders);
+    };
+
+    const fetchAudioPath = async () => {
+        const response = await fetch('http://localhost:8016/listener/getAssignedAudioFile', {
             method:"GET",
             credentials: 'include'
         });
+
+        const res = await response.json();
+        fetchAudioFileData(res.audio_file);
+        setAudioID(res.audio_file);
+    };
+
+    const fetchAudioFileData = async (audio_id: string) => {
+        const response = await fetch('http://localhost:8016/audio/getAudioFileData', {
+            method:"POST",
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({audio_id}),
+            credentials: 'include'
+        });
+
+        const res = await response.json();
+
+        setMetricsObj(res.audio_file.metrics);
+        fetchAudioFile();
+    }
+
+    const fetchAudioFile = async () => {
+        const response = await fetch('http://localhost:8016/listener/getAudioFile', {
+            method:"GET",
+            credentials: 'include'
+        });
+
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
-        setAudioUrl(url);
-        console.log("url is: ", url);
+        setAudioURL(url);
     };
-    */
 
-    useEffect(() => {
-        // fetchAudio();
-        // Audio_Receiver();
-    }, []);
+    const metric_object_to_array = function (metric_obj: object) {
+        const metric_array: any[] = [];
+
+        Object.entries(metric_obj).forEach(([key, value]) => {
+            const mini_obj = {'name': key, ...value};
+            metric_array.push(mini_obj);
+        });
+
+        return metric_array;
+    }
 
     async function submitRating() {
-        console.log("Submit rating was hit!!!")
+        console.log("Submit rating was hit!!!", sliders);
+
+        // JSON.stringify({...sliders, 'audio_id': audioID})
+
         try {
+            console.log('current slider values:', sliders);
+            console.log('audioId and ratings');
+            console.log({audioID, 'ratings': sliders});
+
             const response = await fetch(`http://localhost:8016/listener/submitRating`, {
                 method:"POST",
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({"id": 2, 'ratings': [{'clarity': 4}, {'fluency': 2}]}),
+                body: JSON.stringify({'audio_id': audioID, 'ratings': sliders}),
                 credentials: 'include'
             })
 
             if (response.ok) {
-                console.log("HAHAHAHAHA!!!");
                 // const response = await response.json()
                 return // change later maybe
             } else {
-                console.log("Banana!!");
                 const error = await response.json();
                 setError(error.error);
             }
@@ -54,61 +128,145 @@ export default function Evaluation() {
         }
     }
 
-    /*
-    async function Audio_Receiver() {
-        try {
-            const response = await fetch(`http://localhost:8016/listener/getAudio`, {
-                method:"GET",
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({}),
-                credentials: 'include'
-            })
-    
-            if (response.ok) {
-                const response = await response.json()
-
-                console.log('what is response?');
-                console.log(response);
-
-                // setAudio(response);
-
-                return // change later maybe
-            } else {
-                const error = await response.json();
-                setError(error.error);
-            }
-    
-        } catch {
-            setError("Network Error: Fetch Request Failed");
-            return Error;
+    const test_metrics = {
+        "Clarity": {
+            "description": "How clear the audio sounds",
+            "max": 5,
+            "maximum label": "Clear",
+            "min": 1,
+            "minimum label": "Unclear"
+        },
+        "Intelligibility": {
+            "description": "How easy it is to understand the audio",
+            "max": 5,
+            "maximum label": "Intelligible",
+            "min": 1,
+            "minimum label": "Unintelligible"
+        },
+        "Naturalness": {
+            "description": "How natural the audio sounds",
+            "max": 5,
+            "maximum label": "Natural",
+            "min": 1,
+            "minimum label": "Robotic"
         }
+    }
+
+    /*
+    function getValueSafe<T extends object>(obj: T, key: keyof T): T[keyof T] | undefined {
+        return key in obj ? obj[key] : undefined;
     }
     */
 
-    // const test_metric_names = ["Clarity", "Intelligibility"];
-    const test_metrics = [
-        {'name': 'Clarity', 'description': 'How clear is the speech?'},
-        {'name': 'Intelligibility', 'description': 'How easy to understand is the speech?'}
-    ]
+    const metrics_array = metric_object_to_array(metricsObj);
 
-    const marks = [
+    /*
+    for (const [key, value] of Object.entries(metrics_array)) {
+        setSliders((sliders: any) => ({
+            ...sliders,
+            [key]: {'rating': 3, ...value},
+        }));
+    }
+
+    const new_metric_grid = sliders.map((metric: object) => {
+        const marks = [{value: metric.min, label: metric['minimum label']}, {value: metric.max, label: metric['maximum label']}]
+        // const metric_name: string = metric.name
+        // const val: number = sliders[metric_name as keyof string];
+        const val = getValueSafe(sliders, metric.name)
+
+        return (
+            <div key={metric.name}>
+                <h2 className='metric-name'>{metric.name}</h2>
+                <h2 className='metric-description'>{metric.description}</h2>
+                <Slider value={val} onChange={handleSliderChange(metric.name)} defaultValue={3} step={1} min={metric.min} max={metric.max} id={metric.name} marks={marks} />
+            </div>
+        )
+    });
+
+    const metric_grid = metrics_array.map((metric) => {
+        const marks = [{value: metric.min, label: metric['minimum label']}, {value: metric.max, label: metric['maximum label']}]
+        // const metric_name: string = metric.name
+        // const val: number = sliders[metric_name as keyof string];
+        const val = getValueSafe(sliders, metric.name)
+
+        return (
+            <div key={metric.name}>
+                <h2 className='metric-name'>{metric.name}</h2>
+                <h2 className='metric-description'>{metric.description}</h2>
+                <Slider value={val} onChange={handleSliderChange(metric.name)} defaultValue={3} step={1} min={metric.min} max={metric.max} id={metric.name} marks={marks} />
+            </div>
+        )
+    });
+    */
+
+    /*
+    const metric_grid = metrics_array.map((metric) => {
+        const marks = [{value: metric.min, label: metric['minimum label']}, {value: metric.max, label: metric['maximum label']}]
+        // const metric_name: string = metric.name
+        // const val: number = sliders[metric_name as keyof string];
+        // const val = getValueSafe(sliders, metric.name)
+
+        return (
+            <div key={metric.name}>
+                <h2 className='metric-name'>{metric.name}</h2>
+                <h2 className='metric-description'>{metric.description}</h2>
+                <Slider value={val} onChange={handleSliderChange(metric.name)} defaultValue={3} step={1} min={metric.min} max={metric.max} id={metric.name} marks={marks} />
+            </div>
+        )
+    });
+    */
+
+    const marks_clarity = [
         {
           value: 1,
-          label: '1',
+          label: 'Unclear',
         },
         {
           value: 5,
-          label: '5',
+          label: 'Clear',
         },
-      ];
+    ]
 
-    const metric_grid = test_metrics.map((metric) => (
-        <div key={metric.name}>
-            <h2 className='metric-name'>{metric.name}</h2>
-            <h2 className='metric-description'>{metric.description}</h2>
-            <Slider defaultValue={3} step={1} min={1} max={5} id={metric.name} valueLabelDisplay="auto" marks={marks} />
+    const marks_intelligibility = [
+        {
+          value: 1,
+          label: 'Unintelligible',
+        },
+        {
+          value: 5,
+          label: 'Intelligible',
+        },
+    ]
+    const marks_naturalness = [
+        {
+          value: 1,
+          label: 'Robotic',
+        },
+        {
+          value: 5,
+          label: 'Natural',
+        },
+    ]
+
+    const metric_grid_2 = function() {
+        <div>
+            <div key='Clarity'>
+                <h2 className='metric-name'>Clarity</h2>
+                <h2 className='metric-description'>{test_metrics['Clarity'].description}</h2>
+                <Slider value={sliders.Clarity} onChange={handleChangeClarity} defaultValue={3} step={1} min={test_metrics['Clarity'].min} max={test_metrics['Clarity'].max} id='Clarity' marks={marks_clarity} />
+            </div>
+            <div key='Intelligibility'>
+                <h2 className='metric-name'>Intelligibility</h2>
+                <h2 className='metric-description'>{test_metrics['Intelligibility'].description}</h2>
+                <Slider value={sliders.Intelligibility} onChange={handleChangeIntelligibility} defaultValue={3} step={1} min={test_metrics['Intelligibility'].min} max={test_metrics['Intelligibility'].max} id='Intelligibility' marks={marks_intelligibility} />
+            </div>
+            <div key='Naturalness'>
+                <h2 className='metric-name'>Naturalness</h2>
+                <h2 className='metric-description'>{test_metrics['Naturalness'].description}</h2>
+                <Slider value={sliders.Naturalness} onChange={handleChangeNaturalness} defaultValue={3} step={1} min={test_metrics['Naturalness'].min} max={test_metrics['Naturalness'].max} id='Naturalness' marks={marks_naturalness} />
+            </div>
         </div>
-    ));
+    }
 
     return (
         <div>
@@ -120,14 +278,24 @@ export default function Evaluation() {
                             <h1>Evaluation</h1>
                             <p>Play the audio clip and rate it based on the provided metrics.</p>
                             <form className={styles["login-form"]} method="post" onSubmit={submitRating}>
-                                {/*audioUrl && <audio controls src={audioUrl}></audio>*/}
-                                {/*<audio controls id="audio" src="ch_0.wav"></audio>*/}
-                                {/*<Button variant="contained" id='playButton'>Play</Button>*/}
-                                {metric_grid}
-
-                                {/*<audio controls src={ch_0}>Play Audio</audio>*/}
-
-                                {/*<button id='playButton'>Play Audio</button>*/}
+                                {<audio controls id="audio" src={audioURL}></audio>}
+                                <div>
+                                    <div key='Clarity'>
+                                        <h2 className='metric-name'>Clarity</h2>
+                                        <h2 className='metric-description'>{test_metrics['Clarity'].description}</h2>
+                                        <Slider value={sliderClarity} onChange={handleChangeClarity} defaultValue={3} step={1} min={test_metrics['Clarity'].min} max={test_metrics['Clarity'].max} id='Clarity' marks={marks_clarity} />
+                                    </div>
+                                    <div key='Intelligibility'>
+                                        <h2 className='metric-name'>Intelligibility</h2>
+                                        <h2 className='metric-description'>{test_metrics['Intelligibility'].description}</h2>
+                                        <Slider value={sliderIntelligibility} onChange={handleChangeIntelligibility} defaultValue={3} step={1} min={test_metrics['Intelligibility'].min} max={test_metrics['Intelligibility'].max} id='Intelligibility' marks={marks_intelligibility} />
+                                    </div>
+                                    <div key='Naturalness'>
+                                        <h2 className='metric-name'>Naturalness</h2>
+                                        <h2 className='metric-description'>{test_metrics['Naturalness'].description}</h2>
+                                        <Slider value={sliderNaturalness} onChange={handleChangeNaturalness} defaultValue={3} step={1} min={test_metrics['Naturalness'].min} max={test_metrics['Naturalness'].max} id='Naturalness' marks={marks_naturalness} />
+                                    </div>
+                                </div>
                                 <Button variant="contained" type='submit'>Submit Rating</Button>
                             </form>
                         </div>
@@ -137,15 +305,3 @@ export default function Evaluation() {
         </div>
     );
 }
-
-
-/*
-{test_metric_names.map((metric, index) => (
-    <div key={index}>
-        <label>Slider: {metric}</label>
-        <div>
-            <input type="range" min="1" max="5" value="3" id={metric}></input>
-        </div>
-    </div>
-))}
-*/

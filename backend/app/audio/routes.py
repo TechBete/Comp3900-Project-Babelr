@@ -370,9 +370,9 @@ def getAudioFileData():
     listener_id = uuid.UUID(listener_id)
 
     listener = helper.is_listener_id(listener_id)
-    # Validate researcher
+    # Validate listener
     if not listener:
-        return jsonify({"error": "listener not found"}), 404
+        return jsonify({"error": "Listener not found"}), 404
 
     audio_id = data['audio_id']
 
@@ -389,10 +389,11 @@ def getAudioFileData():
             if project is None:
                 return jsonify({"error": "Project not found"}), 404
             
+            '''
             if audio_file.id not in project.audio_list:
                 if listener.id not in project.listener_list:
-                    return jsonify({"error": "Audio file not found"}), 404 
-            
+                    return jsonify({"error": "Audio file not found"}), 404
+            '''
             # ensure metrics are consistent with audio file and the project         
             # ensure that the metrics are in a valid format
             if not isinstance(project.metrics, dict):
@@ -403,6 +404,9 @@ def getAudioFileData():
             
             # update audio file metrics from project metrics
             audio_file.metrics = project.metrics
+
+            logging.debug("Audio file metrics below")
+            logging.debug(f"{audio_file.metrics}")
             
             # make sure that audiofile can be returned as a JSON object
             audio_file_dict = {

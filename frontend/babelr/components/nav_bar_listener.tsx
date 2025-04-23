@@ -30,7 +30,7 @@ export default function Navbar() {
 
     return ( 
         <div className={styles["nav-bar"]}>
-            <Link href='/Listener/clip_list'><HomeIcon /></Link>
+            <Link href='/Listener/home_listener'><HomeIcon/></Link>
             <div className={styles["top-nav-right"]}>
                 <div className={styles["profile-options"]}>
                     <span><Link href='/Listener/rewards_shop'>Points: {points !== null ? points : "..."}</Link></span>
