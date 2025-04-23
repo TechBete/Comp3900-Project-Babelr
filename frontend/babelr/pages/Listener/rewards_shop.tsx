@@ -41,7 +41,15 @@ export default function Rewards_shop() {
           <img src='/babelr_icon.png' alt={reward.title} className="w-20 h-20 object-cover rounded-md" />
           <h2 className="text-center text-sm font-medium">{reward.title}</h2>
           <h4 className="text-center text-sm font-medium">{reward.cost} Points</h4>
-          <Button variant="contained" onClick={() => Redeem(reward.id)}>Redeem</Button>
+          <Button 
+            sx={{
+            backgroundColor: "#2b4450",
+            "&:hover": {
+                backgroundColor: "#1f333c",
+            },
+            }}  
+            variant="contained" 
+            onClick={() => Redeem(reward.id)}>Redeem</Button>
         </div>
     ));
 
