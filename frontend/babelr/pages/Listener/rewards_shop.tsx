@@ -12,7 +12,7 @@ export default function Rewards_shop() {
             const response = await fetch(`http://localhost:8016/listener/redeemRewards`, {
                 method:"POST",
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({'redeem_name': name}),
+                body: JSON.stringify({'redeem_name': name, 'point': 4}),
                 credentials: 'include'
             })
     
