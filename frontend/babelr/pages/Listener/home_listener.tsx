@@ -9,7 +9,7 @@ export default function Home_Listener() {
             <div className={styles["body"]}>
                 <div className={styles["container"]}>
                     <h2 className={styles["header"]}>User Register</h2>
-                    <p>Here are the instructions for how the rating process will work for a user.</p>
+                    <p>Click the Start Rating button to begin.</p>
                     <p className={styles["button"]}>
                         <Link href="/Listener/evaluation">Start Rating</Link>
                     </p>
