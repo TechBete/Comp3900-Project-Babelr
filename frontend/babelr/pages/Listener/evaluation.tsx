@@ -118,13 +118,14 @@ export default function Evaluation() {
     
             if (!response.ok) {
                 const error = await response.json();
+                
+                setError(error.error);
+            } else {
                 if (submitted == true) {
                     setSubmitted(false);
                 } else {
                     setSubmitted(true);
                 }
-                
-                setError(error.error);
             }
         } catch {
             console.log("There was a network error unfortunate/1111");
