@@ -1,51 +1,43 @@
+import { useEffect, useState } from "react";
+import styles from "../stylesheets/nav_bar.module.css";
+import HomeIcon from "./homeicon";
+import Link from "next/link";
 
-import { useState, useEffect } from "react";
-import styles from "../stylesheets/nav_bar.module.css"
-import HomeIcon from "../components/homeicon"
-import Link from "next/link"
-
-export default function Navbar_Listener() {
-    const [Error, setError] = useState("");
-    const [Points, setPoints] = useState(0);
+export default function Navbar() {
+    const [points, setPoints] = useState<number | null>(null);
 
     useEffect(() => {
-        getCurrentPoints();
-    });
+        const fetchPoints = async () => {
+            try {
+                const res = await fetch("http://localhost:8016/listener/getCurrentPoints", {
+                    method: "GET",
+                    credentials: "include",  // Needed for cookie-based JWT
+                });
 
-    async function getCurrentPoints() {
-        try {
-            const response = await fetch(`http://localhost:8016/getCurrentPoints`, {
-                method:"GET",
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({}),
-                credentials: 'include'
-            })
-    
-            if (response.ok) {
-                const res = await response.json()
-                setPoints(res.reward_points);
-                return // change later maybe
-            } else {
-                const error = await response.json();
-                setError(error.error);
+                if (!res.ok) {
+                    throw new Error(`Failed to fetch points: ${res.status} ${res.statusText}`);
+                }
+
+                const data = await res.json();
+                setPoints(data.reward_points);
+            } catch (error) {
+                console.error("Error fetching points:", error);
             }
-    
-        } catch {
-            // setError("Network Error: Fetch Request Failed");
-            return Error;
-        }
-    }
+        };
+
+        fetchPoints();
+    }, []);
 
     return ( 
         <div className={styles["nav-bar"]}>
             <Link href='/Listener/home_listener'><HomeIcon/></Link>
             <div className={styles["top-nav-right"]}>
                 <div className={styles["profile-options"]}>
-                    <span><Link href='/Listener/rewards_shop'>Points: {Points}</Link></span>
+                    <span><Link href='/Listener/rewards_shop'>Points: {points !== null ? points : "..."}</Link></span>
                     <span><Link href='/Listener/profile'>My Profile</Link></span>
                     <span><Link href='/'>Logout</Link></span>
                 </div>
             </div>
         </div>
-    )
+    );
 }
