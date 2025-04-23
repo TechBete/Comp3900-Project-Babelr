@@ -14,29 +14,33 @@ export default function LanguageSelector() {
     const [error, setError] = useState("");
     const router = useRouter();
 
+
+    // update the languages whenever a change occurs in a language entry that's displayed
     const handleChange = (index: number, field: keyof LanguageEntry, value: string) => {
         const newLanguages = [...languages];
         newLanguages[index][field] = value;
         setLanguages(newLanguages);
     };
 
+    // add a language, proficiency box for the user to fill in
     const addLanguage = () => {
         setLanguages([...languages, { language: "", proficiency: "" }]);
     };
 
+    // remove language, proficiency from page
     const removeLanguage = (index: number) => {
         const updated = [...languages];
         updated.splice(index, 1);
         setLanguages(updated);
     };
 
+    // on submit add all the language, proficiency pairing one by one.
     const handleSubmit = async (event: FormEvent) => {
         event.preventDefault();
 
         let allSuccessful = true;
 
         for (const entry of languages) {
-            console.log(entry)
             const success = await postLanguage(entry);
             if (!success) {
                 allSuccessful = false;
@@ -48,6 +52,9 @@ export default function LanguageSelector() {
         }
     };
 
+    // API call for adding language
+    // Input: entry which is of type Language entry 
+    // Output: Bool to indicate if it works or not
     const postLanguage = async (entry: LanguageEntry): Promise<boolean> => {
         try {
             const response = await fetch("http://localhost:8016/listener/addLanguage", {

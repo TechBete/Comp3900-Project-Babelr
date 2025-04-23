@@ -3,6 +3,7 @@ import Navbar_Listener from "components/nav_bar_listener";
 import { useState } from "react";
 import Image from "next/image";
 import { Button } from "@mui/material";
+import RoleCheck from "components/role_checker";
 
 export default function Rewards_shop() {
     const [Error, setError] = useState("");
@@ -54,17 +55,19 @@ export default function Rewards_shop() {
     ));
 
     return (
-        <div className={styles.pageWrapper}>
-            <Navbar_Listener></Navbar_Listener>
-            <div className={styles["second_bar"]}>
-                <h1 className="text-3xl font-bold text-center mb-4">Rewards Shop</h1>
-                <p className=" text-center">Redeem your reward below</p>
-            </div>
-            <div className={styles["container"]}>
-                <div className="grid grid-cols-2 gap-40">
-                {reward_grid}
+        <RoleCheck requiredRole="listener">
+            <div className={styles.pageWrapper}>
+                <Navbar_Listener></Navbar_Listener>
+                <div className={styles["second_bar"]}>
+                    <h1 className="text-3xl font-bold text-center mb-4">Rewards Shop</h1>
+                    <p className=" text-center">Redeem your reward below</p>
+                </div>
+                <div className={styles["container"]}>
+                    <div className="grid grid-cols-2 gap-40">
+                    {reward_grid}
+                    </div>
                 </div>
             </div>
-        </div>
+        </RoleCheck>
     );
 }
