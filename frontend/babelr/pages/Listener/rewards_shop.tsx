@@ -41,21 +41,29 @@ export default function Rewards_shop() {
           <Image src={reward.logo} alt={reward.title} className="w-20 h-20 object-cover rounded-md" />
           <h2 className="text-center text-sm font-medium">{reward.title}</h2>
           <h4 className="text-center text-sm font-medium">{reward.cost} Points</h4>
-          <Button variant="contained" onClick={() => Redeem(reward.title)}>Redeem</Button>
+          <Button 
+            sx={{
+            backgroundColor: "#2b4450",
+            "&:hover": {
+                backgroundColor: "#1f333c",
+            },
+            }}  
+            variant="contained" 
+            onClick={() => Redeem(reward.title)}>Redeem</Button>
         </div>
     ));
 
     return (
-        <div>
+        <div className={styles.pageWrapper}>
             <Navbar_Listener></Navbar_Listener>
             <div className={styles["second_bar"]}>
-                <h1 className="">Rewards Shop</h1>
-                <p></p>
-                <p></p>
-                <p>Please redeem information below.</p>
+                <h1 className="text-3xl font-bold text-center mb-4">Rewards Shop</h1>
+                <p className=" text-center">Redeem your reward below</p>
             </div>
             <div className={styles["container"]}>
+                <div className="grid grid-cols-2 gap-40">
                 {reward_grid}
+                </div>
             </div>
         </div>
     );

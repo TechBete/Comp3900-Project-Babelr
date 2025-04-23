@@ -153,7 +153,7 @@ export default function AnalyticsPage() {
   return (
     <RoleCheck requiredRole="researcher">
       <Navbar />
-      <Box sx={{ display: "flex" }}>
+      <Box sx={{ display: "flex", backgroundColor: "#DFEBED", minHeight: "100vh"}}>
         <Sidebar project_name={projectName} />
 
         <Box sx={{ flexGrow: 1, overflowX:'hidden', display: "flex", flexDirection: "column", mt: "50px", p: 3, gap: 4 }}>

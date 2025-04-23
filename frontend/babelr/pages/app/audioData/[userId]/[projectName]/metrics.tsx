@@ -195,9 +195,12 @@ const MetricsPage = () => {
           <Box className={styles.sidebar}>
             <Sidebar project_name={projectName} />
           </Box>
-
+          
           <Box className={styles.content}>
-            <Box className={styles.createButtonWrapper}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} mt={5}>
+              <Typography variant="h4" gutterBottom>
+                Metrics Dashboard
+              </Typography>
               <Button
                 variant="contained"
                 className={styles.createButton}
@@ -210,7 +213,6 @@ const MetricsPage = () => {
                 + Create New Metric
               </Button>
             </Box>
-
             <Box mt={4}>
               {metrics.map((metric, index) => (
                 <Box key={index} className={styles.metricCard}>

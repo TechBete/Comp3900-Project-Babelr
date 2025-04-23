@@ -1,6 +1,7 @@
 .container {
     display: flex;
     height: 100vh;
+    background-color: #DFEBED;
   }
   
 .sidebar {
@@ -29,12 +30,13 @@
   
 .metricCard {
     padding: 16px;
-    border: 1px solid #ddd;
+    border: 2px solid #ddd;
     border-radius: 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 16px;
+    background-color: white;
 }
   
 .metricDetails {
