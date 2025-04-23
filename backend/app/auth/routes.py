@@ -1,4 +1,4 @@
-from app.models import Listener, Researcher, Project, AudioFile, PermissionLevel, Gender
+from app.models import Listener, Researcher, Project, AudioFile, PermissionLevel, Gender, RedeemShop
 from email_validator import validate_email, EmailNotValidError
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.exc import IntegrityError
@@ -542,6 +542,36 @@ def createTestUser():
             # db.session.add(test_audio)
             # db.session.commit()
         # no need to send verification email for testing account
+    except IntegrityError as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
+    except Exception as e:
+        db.session.rollback()
+        logging.debug(e)
+        return jsonify({"error": "Error Code: 500"}), 500
+    return jsonify({"message": "Registration Successful"})
+
+def createTestRewards():
+    woolies = RedeemShop(
+        name="Woolworhts",
+        point=2,
+        promo_code="GETWOOLIESSALE"
+    )
+    coles = RedeemShop(
+        name="Coles",
+        point=5,
+        promo_code="PROMOCOLES"
+    )
+    try:
+        with db.session.begin_nested():
+            existing_reward = helper.is_reward_name(woolies.name)
+            if not existing_reward:
+                db.session.add(woolies)
+            existing_reward = helper.is_reward_name(coles.name)
+            if not existing_reward:
+                db.session.add(coles)
+            db.session.commit()
     except IntegrityError as e:
         db.session.rollback()
         logging.debug(e)

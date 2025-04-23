@@ -3,7 +3,7 @@ from flask import jsonify
 from email.mime.text import MIMEText
 from itsdangerous import URLSafeTimedSerializer
 from password import PasswordHash
-from app.models import Researcher, Listener, Project, AudioFile # ls
+from app.models import Researcher, Listener, Project, AudioFile, RedeemShop # ls
 from app import db
 import os, smtplib, re, uuid #(?) uuid not in use?
 
@@ -130,3 +130,6 @@ def get_all_audio_files(projectName, id):
 
 def get_audio_from_audio_id(id):
     return AudioFile.query.filter_by(id=id).first()
+
+def is_reward_name(name):
+    return RedeemShop.query.filter_by(name=name).first()
