@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import RegisterListener from "../pages/Auth/register_listener"; 
+import RegisterResearcher from "../pages/Auth/register_researcher"; 
 // import '@testing-library/jest-dom/extend-expect';
 import { useRouter } from 'next/router';
 import '@testing-library/jest-dom'
@@ -9,7 +9,7 @@ jest.mock('next/router', () => ({
     useRouter: jest.fn(),
   }));
 
-describe('Register Listener Page', () => {
+describe('Register Researcher Page', () => {
   const pushMock = jest.fn();
 
   beforeEach(() => {
@@ -20,8 +20,8 @@ describe('Register Listener Page', () => {
   });
 
   it('renders the register page', () => {
-    render(<RegisterListener />);
-    expect(screen.getByRole('heading', { name: /user register/i })).toBeInTheDocument();
+    render(<RegisterResearcher />);
+    expect(screen.getByRole('heading', { name: /researcher register/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/confirm password/i)).toBeInTheDocument();
@@ -29,7 +29,7 @@ describe('Register Listener Page', () => {
   });  
 
   it('shows error when passwords do not match', () => {
-    render(<RegisterListener />);
+    render(<RegisterResearcher />);
 
     fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'password123' } });
     fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'password456' } });
@@ -41,7 +41,7 @@ describe('Register Listener Page', () => {
   it('submits form and redirects on successful registration', async () => {
     global.fetch = jest.fn().mockResolvedValueOnce({ ok: true, json: async () => ({}) });
 
-    render(<RegisterListener />);
+    render(<RegisterResearcher />);
 
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } });
     fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'password123' } });
@@ -61,7 +61,7 @@ describe('Register Listener Page', () => {
       json: async () => ({ error: "Email already exists" }),
     });
 
-    render(<RegisterListener />);
+    render(<RegisterResearcher />);
 
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'duplicate@example.com' } });
     fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'password123' } });
@@ -78,7 +78,7 @@ describe('Register Listener Page', () => {
   it('shows network error if fetch throws', async () => {
     global.fetch = jest.fn().mockRejectedValueOnce(new Error('Network error'));
 
-    render(<RegisterListener />);
+    render(<RegisterResearcher />);
 
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } });
     fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'password123' } });
