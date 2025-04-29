@@ -11,11 +11,10 @@ export default function Evaluation() {
     const [audioURL, setAudioURL] = useState('null');
     const [metricsObj, setMetricsObj] = useState({});
     const [submitted, setSubmitted] = useState(true);
-    // const [sliders, setSliders] = useState({});
     const [sliderClarity, setSliderClarity] = useState(3);
     const [sliderIntelligibility, setSliderIntelligibility] = useState(3);
     const [sliderNaturalness, setSliderNaturalness] = useState(3);
-    
+    // set default slider values to 3
     const [sliders, setSliders] = useState({
         Clarity: 3,
         Intelligibility: 3, 
@@ -23,7 +22,7 @@ export default function Evaluation() {
     });
     
     const [value, setValue] = useState(3);
-
+    // gets new audio once submitted
     useEffect(() => {
         fetchAudioPath();
     }, [submitted]);
@@ -41,16 +40,14 @@ export default function Evaluation() {
     }
 
     const handleSliderChange = (metric: string) => (_: any, new_value: number) => {
-        // sliders[metric] = new_value
 
         setSliders((sliders: any) => ({
             ...sliders,
             [metric]: new_value,
         }));
 
-        // setValue(sliders);
     };
-
+    // gets audio file id from the backend
     const fetchAudioPath = async () => {
         const response = await fetch('http://localhost:8016/listener/getAssignedAudioFile', {
             method:"GET",
@@ -64,7 +61,7 @@ export default function Evaluation() {
         fetchAudioFileData(audio_id);
         fetchAudioFile(audio_id);
     };
-
+    // gets audio file data (metrics)
     const fetchAudioFileData = async (audio_id: string) => {
         const response = await fetch('http://localhost:8016/audio/getAudioFileData', {
             method:"POST",
@@ -77,7 +74,7 @@ export default function Evaluation() {
 
         setMetricsObj(res.audio_file.metrics);
     }
-
+    // gets the audio file itself
     const fetchAudioFile = async (audio_id: string) => {
         const response = await fetch('http://localhost:8016/listener/getAudioFile', {
             method:"POST",
@@ -91,7 +88,7 @@ export default function Evaluation() {
         const url = URL.createObjectURL(blob);
         setAudioURL(url);
     };
-
+    // converts metrics to array 
     const metric_object_to_array = function (metric_obj: object) {
         const metric_array: any[] = [];
 
@@ -102,7 +99,7 @@ export default function Evaluation() {
 
         return metric_array;
     }
-
+    // post/submit ratings to the backend
     async function submitRating(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault(); 
     
@@ -158,69 +155,8 @@ export default function Evaluation() {
         }
     }
 
-    /*
-    function getValueSafe<T extends object>(obj: T, key: keyof T): T[keyof T] | undefined {
-        return key in obj ? obj[key] : undefined;
-    }
-    */
-
     const metrics_array = metric_object_to_array(metricsObj);
 
-    /*
-    for (const [key, value] of Object.entries(metrics_array)) {
-        setSliders((sliders: any) => ({
-            ...sliders,
-            [key]: {'rating': 3, ...value},
-        }));
-    }
-
-    const new_metric_grid = sliders.map((metric: object) => {
-        const marks = [{value: metric.min, label: metric['minimum label']}, {value: metric.max, label: metric['maximum label']}]
-        // const metric_name: string = metric.name
-        // const val: number = sliders[metric_name as keyof string];
-        const val = getValueSafe(sliders, metric.name)
-
-        return (
-            <div key={metric.name}>
-                <h2 className='metric-name'>{metric.name}</h2>
-                <h2 className='metric-description'>{metric.description}</h2>
-                <Slider value={val} onChange={handleSliderChange(metric.name)} defaultValue={3} step={1} min={metric.min} max={metric.max} id={metric.name} marks={marks} />
-            </div>
-        )
-    });
-
-    const metric_grid = metrics_array.map((metric) => {
-        const marks = [{value: metric.min, label: metric['minimum label']}, {value: metric.max, label: metric['maximum label']}]
-        // const metric_name: string = metric.name
-        // const val: number = sliders[metric_name as keyof string];
-        const val = getValueSafe(sliders, metric.name)
-
-        return (
-            <div key={metric.name}>
-                <h2 className='metric-name'>{metric.name}</h2>
-                <h2 className='metric-description'>{metric.description}</h2>
-                <Slider value={val} onChange={handleSliderChange(metric.name)} defaultValue={3} step={1} min={metric.min} max={metric.max} id={metric.name} marks={marks} />
-            </div>
-        )
-    });
-    */
-
-    /*
-    const metric_grid = metrics_array.map((metric) => {
-        const marks = [{value: metric.min, label: metric['minimum label']}, {value: metric.max, label: metric['maximum label']}]
-        // const metric_name: string = metric.name
-        // const val: number = sliders[metric_name as keyof string];
-        // const val = getValueSafe(sliders, metric.name)
-
-        return (
-            <div key={metric.name}>
-                <h2 className='metric-name'>{metric.name}</h2>
-                <h2 className='metric-description'>{metric.description}</h2>
-                <Slider value={val} onChange={handleSliderChange(metric.name)} defaultValue={3} step={1} min={metric.min} max={metric.max} id={metric.name} marks={marks} />
-            </div>
-        )
-    });
-    */
 
     const marks_clarity = [
         {
