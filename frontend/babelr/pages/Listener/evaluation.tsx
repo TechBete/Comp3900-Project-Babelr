@@ -108,12 +108,14 @@ export default function Evaluation() {
     
         console.log("Submit rating was hit!!!", sliders);
         console.log('audioId and ratings', { audioID, ratings: sliders });
+
+        const body = {audio_id: audioID, ratings: {'Clarity': sliderClarity, 'Intelligibility': sliderIntelligibility, 'Naturalness': sliderNaturalness,}}
     
         try {
             const response = await fetch(`http://localhost:8016/listener/submitRating`, {
                 method: "POST",
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ audio_id: audioID, ratings: sliders }),
+                body: JSON.stringify(body),
                 credentials: 'include'
             });
     
