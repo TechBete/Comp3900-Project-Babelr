@@ -8,7 +8,6 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt, jwt_requ
 from sqlalchemy.orm.attributes import flag_modified
 
 
-# dont forget to add docstrings to the routes
 def formatTags(tags: str) -> list[str]:
     return tags.split(",")
 
@@ -17,6 +16,35 @@ def getRequirements(tags: list[str]) -> tuple[str, ProficiencyLevel]:
     proficiency_level = ProficiencyLevel[f'{tags[3]}']
     return (language, proficiency_level)
 
+
+'''
+# this route is for researcher to upload audio file on the existing project
+# to upload the audio file, status of project must not be draft
+
+ARGS:
+    - token: str
+    - project_name: srt
+    - model: str
+    - language: str
+    = min_proficiency: str(enum)
+    - tagsL list[str]
+
+RESPONSE:
+    - 200: “File" is successfully uploaded and stored
+    - 400: Validation Error
+    - 400: File doesn't exists
+    - 400: There is no selected file
+    - 400: Researcher does not exist on database!
+    - 400: Audio file already exists
+    - 400: The Project status must be set to 'draft' to upload audio clips
+    - 500: Server Error
+
+RETURNS:
+    - str of successful message
+
+UPDATES:
+    - Database: Project
+'''
 @audioBp.route('/uploadAudioFile', methods=['POST'])
 @jwt_required()
 def uploadAudioFile():
@@ -181,11 +209,31 @@ def testUploadAudioFile():
 
     return jsonify({"message": "file is successfully uploaded and stored!"}), 200
 
+'''
 # this route is to get the metrics for a specific audio file in a project
 # this will return the metrics for the audio file
 # the route will check if the audio file exists in the project
 # if the audio file does not exist, it will return an error
 
+ARGS:
+    - token: str
+    - project_name: srt
+    - audio_file_name
+
+RESPONSE:
+    - 200: audio_file_metrics.
+    - 400: Validation error
+    - 404: Researcher not found
+    - 404: Project not found
+    - 404: Audio file not Found
+    - 500: An error has occurred while retrieving the audio file metrics
+
+RETURNS:
+    - Metrics in the form of list[dict]
+
+UPDATES:
+    - N/A
+'''
 @audioBp.route('/getAudioFileMetrics', methods=['POST'])
 @jwt_required()
 def getAudioFileMetrics():
@@ -225,9 +273,30 @@ def getAudioFileMetrics():
 
     return jsonify({"audio_file_metrics": audio_file_metrics})
 
+'''
 # this route is to get the audio files for a specific project
 # this will return the audio files for the project
 # might need to check this route, pretty sure it is broken
+
+ARGS:
+    - token: str
+    - project_name: srt
+
+RESPONSE:
+    - 200: audio_files
+    - 400: Validation Error
+    - 404: Researcher not found
+    - 404: Project not found
+    - 404: No audio files found for this project
+    - 404: Audio files not found
+    - 500: Error: 500, An error has occurred while retrieving the audio files
+
+RETURNS:
+    - A list of dictionaries containing audio file information
+
+UPDATES:
+    - N/A
+'''
 @audioBp.route('/getProjectAudioFiles', methods=['POST'])
 @jwt_required()
 def getProjectAudioFiles():
@@ -336,9 +405,31 @@ def testgetProjectAudioFiles():
 
     return jsonify({"audio_file_metrics": audio_file_names})
 
+'''
 # this route is to get specific audio file from a project
 # and return the audio data so that it can be allocated to the users
 # database
+
+ARGS:
+    - token: str
+    - audio_id: srt
+
+RESPONSE:
+    - 200: audio_files
+    - 400: Validation Error
+    - 404: Listener not found
+    - 404: Audio file not found
+    - 404: Project not found
+    - 500: Project metrics are not in a valid format
+    - 500: Audio file metrics are not in a valid format
+    - 500: error: Error: 500, An error has occurred while retrieving the audio file
+
+RETURNS:
+    - a dictionary that contains the audio file data
+
+UPDATES:
+    - N/A
+'''
 @audioBp.route('/getAudioFileData', methods=['POST'])
 @jwt_required()
 def getAudioFileData():
@@ -447,7 +538,31 @@ def testgetAudioFileData():
 
     return jsonify({"audio_file": audio_file})
 
+'''
 # this function is used to update the metrics of a specific audio file in a project
+
+ARGS:
+    - token: str
+    - audio_file_name: str
+
+RESPONSE:
+    - 200: audio_files
+    - 400: Validation Error
+    - 404: Researcher not found
+    - 404: Project not found
+    - 404: Audio file not found
+    - 500: Project metrics are not in a valid format
+    - 500: Audio file metrics are not in a valid format
+    - 500: error: Metric data is not in a valid format
+    - 500: error: Metric name is missing a required field
+    - 500: error: Error: 500, An error has occured while updating the audio file metrics
+
+RETURNS:
+    - Str message: Audio metrics updated successfully
+
+UPDATES:
+    - Database: AudioFile
+'''
 @audioBp.route('/updateAudioMetrics', methods=['POST'])
 @jwt_required()
 def updateAudioMetrics():
@@ -510,9 +625,32 @@ def updateAudioMetrics():
             return jsonify({"error": "Error: 500, An error has occured while updating the audio file metrics"}), 500
     return jsonify({"message": "Audio metrics updated successfully"}), 200
 
-
+'''
 # this function is used to update the metrics of all audio files in a project
 # this will be called when the project is set to Published
+
+ARGS:
+    - token: str
+    - project_name: str
+
+RESPONSE:
+    - 200: audio_files
+    - 400: Validation Error
+    - 404: Researcher not found
+    - 404: Project not found
+    - 500: Project metrics are not in a valid format
+    - 404: error: No audio files found for this project
+    - 404: Audio file not found
+    - 500: error: Metric data is not in a valid format
+    - 500: error: Metric name is missing a required field
+    - 500: error: Error: 500, An error has occured while updating the audio file metrics
+
+RETURNS:
+    - Str: Audio metrics updated successfully
+
+UPDATES:
+    - Database: AudioFile
+'''
 @audioBp.route('/updateAllAudioMetrics', methods=['POST'])
 @jwt_required()
 def updateAllAudioMetrics():
@@ -575,6 +713,22 @@ def updateAllAudioMetrics():
     return jsonify({"message": "Audio metrics updated successfully"}), 200
 
 
+'''
+# this routes returns all audio files
+
+ARGS:
+    - N/A
+
+RESPONSE:
+    - 200: audio_files
+
+RETURNS:
+    - Audio files in the format of list[dict]
+    - If the list is empty, return empty list itself.
+
+UPDATES:
+    - N/A
+'''
 @audioBp.route('getAudioFiles', methods=['GET'])
 def getAudioFiles():
     AudioFiles = AudioFile.query.all()
