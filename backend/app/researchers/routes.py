@@ -26,45 +26,41 @@ RETURNS:
     Researcher information in JSON format
     Uuid, First Name, Last Name, Email, Password,
     Date of Birth, Gender, Country, Education, Organisation,
-    Project List. 
-    
+    Project List.
+
 UPDATES:
     - None
 '''
-
-# updated route to get specific researcher
 @researchersBp.route('/getResearcher', methods=['GET'])
 @jwt_required()
 def getResearchers():
     # get user information from the given uuid
     id = get_jwt_identity()
     user_id = uuid.UUID(id)
-    
+
     # check if listener is valid user
     user = helper.is_researcher_id(user_id)
-    
+
     if not user:
         return jsonify({"error": "User does not exist on database!"}), 400
-    
+
     # check if user is a researcher
     if not user.permission.value == "researcher":
         return jsonify({"error": "User is not a researcher!"}), 400
-    
+
     return jsonify({
         "Uuid": str(user.id),
         "First Name": user.first_name,
         "Last Name": user.last_name,
         "Email": user.email,
         "Password": user.pw_hash,
-        
         "Date of Birth": user.date_of_birth,
         "Gender": str(user.gender.value),
         "Country": user.country_of_residence,
         "Education": user.education,
         "Organisation": user.organisation,
-        
         "Project List": user.project_list,
-        }), 200 
+        }), 200
 
 
 '''
@@ -84,28 +80,25 @@ ARGS:
     - country: str
     - education: str
     - organisation: str
-    
+
 RESPONSE:
     - 200: Researcher profile updated successfully, updated fields
     - 400: No data was provided
     - 400: Researcher does not exist on database
-    - 400: Email already exists
     - 500: Internal Server Error
-    
+
 RETURNS:
     - Researcher information in JSON format
     - updated values
-    
+
 UPDATES:
     - Database: Researcher
-        
 '''
-
 @researchersBp.route('/updateResearcherProfile', methods=['POST'])
 @jwt_required()
 def updateResearcherProfile():
     data = request.json
-    
+
     # check if request body is empty
     if not data:
         return jsonify({"error": "No data was provided"}), 400
@@ -136,20 +129,41 @@ def updateResearcherProfile():
         return jsonify({"error": "An error has occurred while updating the Researcher Profile"}), 500
     return jsonify({"message": "Profile Update successful"}), 200
 
+'''
+# This route is called when the researcher accesses the platform for the first time
+
+ARGS:
+    - first_name: str
+    - last_name: str
+    - organisation: str
+
+RESPONSE:
+    - 200: Researcher profile updated successfully, updated fields
+    - 400: No data was provided
+    - 400: Researcher does not exist on database
+    - 500: Internal Server Error
+
+RETURNS:
+    - Researcher information in JSON format
+    - updated values
+
+UPDATES:
+    - Database: Researcher
+'''
 @researchersBp.route('/updateFirstTime', methods=['POST'])
 @jwt_required()
 def updateFirstTime():
     data = request.json
-    
+
     if not data:
         return jsonify({"error": "No data was provided"}), 400
-    
+
     researcher_id = get_jwt_identity()
     researcher_id = uuid.UUID(researcher_id)
-    
+
     # search researcher name from researcher uuid
     researcher = helper.is_researcher_id(researcher_id)
-    
+
     if not researcher:
         return jsonify({"error": "Researcher does not exist on database!"}), 400
     try:
