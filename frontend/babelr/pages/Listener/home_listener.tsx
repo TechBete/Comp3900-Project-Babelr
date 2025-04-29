@@ -10,10 +10,10 @@ export default function Home_Listener() {
                 <Navbar_Listener></Navbar_Listener>
                 <div className={styles["body"]}>
                     <div className={styles["container"]}>
-                        <h2 className={styles["header"]}>User Register</h2>
+                        <h2 className={styles["header"]}>Review Here</h2>
                         <p>Click the Start Rating button to begin.</p>
-                        <p className={styles["button"]}>
-                            <Link href="/Listener/evaluation">Start Rating</Link>
+                        <p>
+                            <Link href="/Listener/evaluation" className={styles["button"]}>Start Rating</Link>
                         </p>
                     </div>
                 </div>
