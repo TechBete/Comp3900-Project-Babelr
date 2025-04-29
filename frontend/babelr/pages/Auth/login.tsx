@@ -95,7 +95,7 @@ export default function Login() {
                     </div>
 
                     <div className={styles["login-form-details"]}>
-                        <label htmlFor="pw">Password</label> <span><Link href={"/Auth/reset_password"}>Forgot your Password?</Link></span>
+                        <label htmlFor="password">Password</label> <span><Link href={"/Auth/reset_password"}>Forgot your Password?</Link></span>
                         <input type="password" id="password" name="password" required />
                     </div>
 

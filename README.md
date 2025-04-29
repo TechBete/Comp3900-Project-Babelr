@@ -36,7 +36,11 @@ once the server is up and running you should be able to connect to the frontend 
 ```localhost:3000                       (takes user to login page)```
 ```localhost:3000/register_listener     (register user page)```
 ```localhost:3000/register_researcher   (register researcher page)```
-```localhost:3000/firsttimelistener     (firstime listener page)```
+```localhost:3000/first_time_listener     (firstime listener page)```
+
+#### FRONTEND TESTING
+To run the frontend mock tests using jest. On a terminal go to the ```frontend/babler/``` folder and run ```npm install``` after a successfull install you can just run npm run test in the same directory and it'll run all the test suites.
+To view tests go to ```frontend/babler/__tests__/```
 
 #### BACKEND - Implemented Routes
 
