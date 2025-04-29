@@ -9,19 +9,11 @@ export default function Evaluation() {
     const [Error, setError] = useState("");
     const [audioID, setAudioID] = useState('');
     const [audioURL, setAudioURL] = useState('null');
-    const [metricsObj, setMetricsObj] = useState({});
     const [submitted, setSubmitted] = useState(true);
     const [sliderClarity, setSliderClarity] = useState(3);
     const [sliderIntelligibility, setSliderIntelligibility] = useState(3);
     const [sliderNaturalness, setSliderNaturalness] = useState(3);
-    // set default slider values to 3
-    const [sliders, setSliders] = useState({
-        Clarity: 3,
-        Intelligibility: 3, 
-        Naturalness: 3,
-    });
-    
-    const [value, setValue] = useState(3);
+
     // gets new audio once submitted
     useEffect(() => {
         fetchAudioPath();
@@ -39,14 +31,6 @@ export default function Evaluation() {
         setSliderNaturalness(new_value);
     }
 
-    const handleSliderChange = (metric: string) => (_: any, new_value: number) => {
-
-        setSliders((sliders: any) => ({
-            ...sliders,
-            [metric]: new_value,
-        }));
-
-    };
     // gets audio file id from the backend
     const fetchAudioPath = async () => {
         const response = await fetch('http://localhost:8016/listener/getAssignedAudioFile', {
@@ -56,7 +40,7 @@ export default function Evaluation() {
 
         const res = await response.json();
         const audio_id = res.audio_file;
-        console.log("AUDIO ID OBTAINED FROM QUEUE ", audio_id)
+
         setAudioID(audio_id);
         fetchAudioFileData(audio_id);
         fetchAudioFile(audio_id);
@@ -71,8 +55,6 @@ export default function Evaluation() {
         });
 
         const res = await response.json();
-
-        setMetricsObj(res.audio_file.metrics);
     }
     // gets the audio file itself
     const fetchAudioFile = async (audio_id: string) => {
@@ -88,23 +70,10 @@ export default function Evaluation() {
         const url = URL.createObjectURL(blob);
         setAudioURL(url);
     };
-    // converts metrics to array 
-    const metric_object_to_array = function (metric_obj: object) {
-        const metric_array: any[] = [];
 
-        Object.entries(metric_obj).forEach(([key, value]) => {
-            const mini_obj = {'name': key, ...value};
-            metric_array.push(mini_obj);
-        });
-
-        return metric_array;
-    }
     // post/submit ratings to the backend
     async function submitRating(e: React.FormEvent<HTMLFormElement>) {
-        e.preventDefault(); 
-    
-        console.log("Submit rating was hit!!!", sliders);
-        console.log('audioId and ratings', { audioID, ratings: sliders });
+        e.preventDefault();
 
         const body = {audio_id: audioID, ratings: {'Clarity': sliderClarity, 'Intelligibility': sliderIntelligibility, 'Naturalness': sliderNaturalness,}}
     
@@ -128,7 +97,6 @@ export default function Evaluation() {
                 }
             }
         } catch {
-            console.log("There was a network error unfortunate/1111");
             setError("Network Error: Fetch Request Failed");
         }
     }
@@ -156,9 +124,6 @@ export default function Evaluation() {
             "minimum label": "Robotic"
         }
     }
-
-    const metrics_array = metric_object_to_array(metricsObj);
-
 
     const marks_clarity = [
         {
@@ -191,26 +156,6 @@ export default function Evaluation() {
           label: 'Natural',
         },
     ]
-
-    const metric_grid_2 = function() {
-        <div>
-            <div key='Clarity'>
-                <h2 className='metric-name'>Clarity</h2>
-                <h2 className='metric-description'>{test_metrics['Clarity'].description}</h2>
-                <Slider value={sliders.Clarity} onChange={handleChangeClarity} defaultValue={3} step={1} min={test_metrics['Clarity'].min} max={test_metrics['Clarity'].max} id='Clarity' marks={marks_clarity} />
-            </div>
-            <div key='Intelligibility'>
-                <h2 className='metric-name'>Intelligibility</h2>
-                <h2 className='metric-description'>{test_metrics['Intelligibility'].description}</h2>
-                <Slider value={sliders.Intelligibility} onChange={handleChangeIntelligibility} defaultValue={3} step={1} min={test_metrics['Intelligibility'].min} max={test_metrics['Intelligibility'].max} id='Intelligibility' marks={marks_intelligibility} />
-            </div>
-            <div key='Naturalness'>
-                <h2 className='metric-name'>Naturalness</h2>
-                <h2 className='metric-description'>{test_metrics['Naturalness'].description}</h2>
-                <Slider value={sliders.Naturalness} onChange={handleChangeNaturalness} defaultValue={3} step={1} min={test_metrics['Naturalness'].min} max={test_metrics['Naturalness'].max} id='Naturalness' marks={marks_naturalness} />
-            </div>
-        </div>
-    }
 
     return (
         <RoleCheck requiredRole="listener">
