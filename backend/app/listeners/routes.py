@@ -10,7 +10,22 @@ import uuid, logging, os, smtplib
 from app import db
 
 
-# test route to get a listener by id once listener cookie is implemented
+'''
+# get listener information
+
+ARGS:
+    - JWT Token: Token
+
+RESPONSE:
+    - 200: Successful
+    - 404: Listener not found
+
+RETURNS:
+    - listener information: Dictionary
+
+UPDATES:
+    - N/A
+'''
 @userBp.route('/getListener', methods=['GET'])
 @jwt_required()
 def getListener():
@@ -39,7 +54,7 @@ def getListener():
         "Current audio": user.currently_assigned_audio if user.currently_assigned_audio else None,
         "Evaluation history": user.evaluation_history if user.evaluation_history else None,
         "Allocated audio queue": user.allocated_audio_queue if user.allocated_audio_queue else None,
-        }), 200 
+        }), 200
 
 # Test route for /getListener/<uuid:listener_id> , remove for final
 @userBp.route('/testGetListener', methods=['GET'])
@@ -74,7 +89,28 @@ def testGetListener():
         "Allocated audio queue": user.allocated_audio_queue if user.allocated_audio_queue else None,
     }), 200
 
+'''
+# get listener information
 
+ARGS:
+    - JWT Token: Token
+    - language: str
+    - proficiency: str
+
+
+RESPONSE:
+    - 200: Successful
+    - 400: Validation Error.
+    - 404: error: Listener not found.
+    - 500: Database integrity error: Error code 500
+    - 500: Error Code 500.
+
+RETURNS:
+    - Str (Add language Successful)
+
+UPDATES:
+    - Database: Listener
+'''
 @userBp.route('/addLanguage', methods=['POST'])
 @jwt_required()
 def addLanguage():
@@ -100,25 +136,19 @@ def addLanguage():
             "proficiency": data['proficiency'],
         }
 
-        # implement new validation check to make sure if language is in lanuage list
-
         if new_language not in listener.languages:
             listener.languages.append(new_language)
             flag_modified(listener, "languages")
             listener.update_allocated_audio()
-            
             db.session.commit()
     except IntegrityError as e:
         db.session.rollback()
-        logging.debug(e)
         return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
     except Exception as e:
         db.session.rollback()
-        logging.debug(e)
         return jsonify({"error": "Error Code: 500"}), 500
     return jsonify({"message": "Add language Successful"}), 200
 
-# dont forget to remove this test route for final version
 def testAddLanguage():
     try:
         listener = db.session.query(Listener).filter_by(first_name="Alice").first()
@@ -136,14 +166,35 @@ def testAddLanguage():
             db.session.commit()
     except IntegrityError as e:
         db.session.rollback()
-        logging.debug(e)
         return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
     except Exception as e:
         db.session.rollback()
-        logging.debug(e)
         return jsonify({"error": "Error Code: 500"}), 500
     return jsonify({"message": "Add language Successful"}), 200
 
+'''
+# edit listener language-proficiency
+
+ARGS:
+    - JWT Token: Token
+    - language: str
+    - new_proficiency: str
+
+
+RESPONSE:
+    - 200: Successful
+    - 400: Validation Error.
+    - 404: Listener not found.
+    - 400: Language not found.
+    - 500: Database integrity error: Error code 500
+    - 500: Error Code 500.
+
+RETURNS:
+    - Str (Edit language Successful)
+
+UPDATES:
+    - Database: Listener
+'''
 @userBp.route('/editLanguage', methods=['POST'])
 @jwt_required()
 def editLanguage():
@@ -177,15 +228,12 @@ def editLanguage():
             return jsonify({"error": "Language not found"}), 400
     except IntegrityError as e:
         db.session.rollback()
-        logging.debug(e)
         return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
     except Exception as e:
         db.session.rollback()
-        logging.debug(e)
         return jsonify({"error": "Error Code: 500"}), 500
     return jsonify({"message": "Edit language Successful"}), 200
 
-# dont forget to remove this test route for final version
 def testEditLanguage():
     data = {
         "language": "Japanese",
@@ -209,14 +257,34 @@ def testEditLanguage():
             return jsonify({"error": "Language not found"}), 400
     except IntegrityError as e:
         db.session.rollback()
-        logging.debug(e)
         return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
     except Exception as e:
         db.session.rollback()
-        logging.debug(e)
         return jsonify({"error": "Error Code: 500"}), 500
     return jsonify({"message": "Edit language Successful"}), 200
 
+'''
+# delete listener language
+
+ARGS:
+    - JWT Token: Token
+    - language: str
+    - proficiency: str
+
+
+RESPONSE:
+    - 200: Successful
+    - 400: Validation Error.
+    - 404: Listener not found.
+    - 500: Database integrity error: Error code 500
+    - 500: Error Code 500.
+
+RETURNS:
+    - Str (Delete language Successful)
+
+UPDATES:
+    - Database: Listener
+'''
 @userBp.route('/deleteLanguage', methods=['POST'])
 @jwt_required()
 def deleteLanguage():
@@ -242,8 +310,6 @@ def deleteLanguage():
             "proficiency": data['proficiency'],
         }
 
-        # implement new validation check to make sure if language is in lanuage list
-
         if find_language not in listener.languages:
             return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
         if find_language in listener.languages:
@@ -252,15 +318,13 @@ def deleteLanguage():
             db.session.commit()
     except IntegrityError as e:
         db.session.rollback()
-        logging.debug(e)
         return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
     except Exception as e:
         db.session.rollback()
-        logging.debug(e)
         return jsonify({"error": "Error Code: 500"}), 500
     return jsonify({"message": "Delete language Successful"}), 200
 
-# dont forget to remove this test route for final version
+
 def testDeleteLanguage():
     try:
         listener = db.session.query(Listener).filter_by(first_name="Alice").first()
@@ -280,16 +344,29 @@ def testDeleteLanguage():
             db.session.commit()
     except IntegrityError as e:
         db.session.rollback()
-        logging.debug(e)
         return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
     except Exception as e:
         db.session.rollback()
-        logging.debug(e)
         return jsonify({"error": "Error Code: 500"}), 500
     return jsonify({"message": "Add language Successful"}), 200
 
 
-# Helper function to return current point status of listener
+'''
+# get current poiunt of listener
+
+ARGS:
+    - JWT Token: Token
+
+RESPONSE:
+    - 200: Successful
+    - 404: Listener not found.
+
+RETURNS:
+    - Int (listener reward point)
+
+UPDATES:
+    - N/A
+'''
 @userBp.route('/getCurrentPoints', methods=['GET'])
 @jwt_required()
 def getCurrentPoints():
@@ -302,7 +379,31 @@ def getCurrentPoints():
 
     return jsonify({"reward_points": listener.reward_points})
 
+'''
+# register listener demographic
+
+ARGS:
+    - JWT Token: Token
+    - first_name: str
+    - last_name: str
+    - date_of_birth: str
+    - country_of_residence: str
+    - education: str
+
+RESPONSE:
+    - 200: Successful
+    - 400: Validation Error
+    - 404: Listener not found
+    - 500: Error Code 500.
+
+RETURNS:
+    - Str (Register demographic Successful)
+
+UPDATES:
+    - Dabase: Listener
+
 # removed languages and background info since frontend does not parse data on the two fields.
+'''
 @userBp.route('/registerDemographics', methods=['POST'])
 @jwt_required()
 def registerDemographics():
@@ -322,7 +423,6 @@ def registerDemographics():
     listener = helpers.is_listener_id(listener_id)
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
-    logging.debug("Listener before register %s", repr(listener))
     try:
         listener.date_of_birth=data['date_of_birth'],
         listener.country_of_residence=data['country_of_residence'],
@@ -336,20 +436,38 @@ def registerDemographics():
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        logging.debug(e)
         return jsonify({"error": "Error Code: 500"}), 500
-
-    logging.debug("Listener after register %s", repr(listener))
     return jsonify({"message": "Register demographic Successful"}), 200
 
 
-# Change the demographic settings of a given user
-# Args:
-#    Mandatory fields: first_name, last_name, date_of_birth, country_of_residence, education
-#    Optional fields: gender, background_info
-#    NOTE: Languages can be set it up later.
-#    However, listeners can't be allocated to audio file if languages are empty
-#    since allocation matching algorithm uses languages information to match audio file and user.
+'''
+#   Change the demographic settings of a given user
+#   NOTE: Languages can be set it up later.
+#   However, listeners can't be allocated to audio file if languages are empty
+#   since allocation matching algorithm uses languages information to match audio file and user.
+
+ARGS:
+    - JWT Token: Token
+    - first_name: str
+    - last_name: str
+    - date_of_birth: str
+    - country_of_residence: str
+    - education: str
+
+OPTIONAL ARGS:
+    - gender: enum
+    - bacground_info: str (1024 char limit)
+
+RESPONSE:
+    - 200: Successful
+    - 500: Error Code 500, database rollback
+
+RETURNS:
+    - Str (Demographic Edit Successful)
+
+UPDATES:
+    - Dabase: Listener
+'''
 @userBp.route('/changeDemographics', methods = ['POST'])
 @jwt_required()
 def changeDemographics():
@@ -378,7 +496,7 @@ def changeDemographics():
         listener.education = data['education']
         # optional fields (nullable=True)
         listener.gender = data['gender']
-        # background info should be a text box field with an 1k char limit 
+        # background info should be a text box field with an 1k char limit
         listener.background_info = data['background_info']
         # update databse and alert listern table
         db.session.add(listener)
@@ -388,7 +506,6 @@ def changeDemographics():
         return jsonify({"error": "An error has occurred while updating the demographics"}), 500
     return jsonify({"message": "Demographic Edit successful"}), 200
 
-# dont forget to remove this test route for final version
 def testChangeDemographics():
     data = {
         "first_name": "new",
@@ -425,6 +542,29 @@ def testChangeDemographics():
         return jsonify({"error": f"An error has occurred while updating the demographics: {e}"}), 500
     return jsonify({"message": "Demographic Edit successful"}), 200
 
+
+'''
+#   Submit ratings(evaluation) for allocated audio file
+
+ARGS:
+    - JWT Token: Token
+    - audio_id: str
+    - ratings: dict
+
+RESPONSE:
+    - 200: Successful
+    - 400: Validation Error
+    - 404: Listener not found.
+    - 404: Audio file not found.
+    - 404: Listener is not allocated to the audio file
+    - 500: An error has occurred while submitting the rating.
+
+RETURNS:
+    - Str (Rating submission(audio evaluation) Successful)
+
+UPDATES:
+    - Dabase: Listener, AudioFile
+'''
 @userBp.route('/submitRating', methods=['POST'])
 @jwt_required()
 def submitRating():
@@ -437,13 +577,13 @@ def submitRating():
 
     user_id = get_jwt_identity()
     user_id = uuid.UUID(user_id)
-    
+
     # check listener availability
     listener = helpers.is_listener_id(user_id)
-    
+
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
-    
+
     # check if audio file to submit ratings exists
     audio_id = data['audio_id']
     audio_file = helpers.get_audio_from_audio_id(audio_id)
@@ -451,31 +591,7 @@ def submitRating():
         return jsonify({"error": "Audio file not found"}), 404
 
     ratings = data["ratings"]
-    # # add evaluation in the audio listener list
-    # eval_target = is_evaluated(user_id, audio_file.allocated_listeners)
-    # if eval_target is None:
-    #     return jsonify({"error": "Listener is not allocated to the audio file"}), 404
-    # else:
-    #     # for metric in ratings:
-    #     #     eval_target[metric] = ratings[metric]
-    #     eval_target.update(ratings)
-    #     flag_modified(audio_file, "allocated_listeners")
 
-    # # update the evaluation status for listener
-    # listener.evaluation_history.append(audio_id)
-    # if not audio_id in listener.evaluation_history:
-    #     return jsonify({"error": "Audio file failed transferring to evaluation history"}), 404
-
-    # # find user in audio file allocated listeners and append ratings to user id
-    # # audio_file.allocated_listeners[listener.id] = audio_file.allocated_listeners.get(listener.id, {})
-    # # for metric in ratings:
-    # #         audio_file.allocated_listeners[listener.id][metric] = ratings[metric]
-
-    # # if listener has more than one allocated audio in the queue, move that audio file to currently_assigned_audio
-    # # otherwise, keep currently_assigned_audio as null.
-    # if listener.allocated_audio_queue != [] or listener.allocated_audio_queue is not None:
-    #     listener.currently_assigned_audio = listener.allocated_audio_queue.pop(0)
-    # else:
     try:
         # add evaluation in the audio listener list
         eval_target = is_evaluated(user_id, audio_file.allocated_listeners)
@@ -491,25 +607,45 @@ def submitRating():
         # move the audio file to evaluation history
         listener.evaluation_history.append(listener.currently_assigned_audio)
         # update the evaluation status for listener
-        # listener.currently_assigned_audio = listener.allocated_audio_queue.pop(0)
-
 
         # add reward points after rating
         metrics_count = len(audio_file.metrics.get("metrics", {}))
         listener.reward_points = listener.reward_points + metrics_count
-        
+
         # flag modified fields
         for column in ["allocated_audio_queue", "currently_assigned_audio", "reward_points", "evaluation_history"]:
             flag_modified(listener, column)
-        
         db.session.commit()
 
         return jsonify({"message": "Rating submission(audio evaluation) Successful"}), 200
     except Exception as e:
         db.session.rollback()
-        logging.debug(e)
         return jsonify({"error": "Error: 500, An error has occured while submitting the rating"}), 500
-    
+
+
+'''
+#   Helper function for submitRatings
+#   to find if the user is found in an audio files list of allocated listeners.
+
+ARGS:
+    - id: UUID(str)
+    - allocated_listeners: list(UUID(str))
+
+RESPONSE:
+    - 200: Successful
+    - 400: Validation Error
+    - 404: Listener not found.
+    - 404: Audio file not found.
+    - 404: Listener is not allocated to the audio file
+    - 500: An error has occurred while submitting the rating.
+
+RETURNS:
+    - if successful, listener_id
+    - if not, None
+
+UPDATES:
+    - N/A
+'''
 def is_evaluated(id, allocated_listeners):
     id = str(id)
     for item in allocated_listeners:
@@ -517,6 +653,27 @@ def is_evaluated(id, allocated_listeners):
             return item
     return None
 
+'''
+#   Listener reward shop redeem
+
+ARGS:
+    - JWT Token: Token
+    - redeem_name: str
+
+RESPONSE:
+    - 200: Successful
+    - 400: Validation Error
+    - 404: Listener not found.
+    - 404: Redeem does not exist
+    - 404: error: Not enough points to redeem this coupon
+    - 500: error: Error: 500, An error has occurred while redeem the points
+
+RETURNS:
+    - str (Reward point successfully rewarded to listener)
+
+UPDATES:
+    - N/A
+'''
 @userBp.route('/redeemRewards', methods=['POST'])
 @jwt_required()
 def redeemRewards():
@@ -554,9 +711,9 @@ def redeemRewards():
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        logging.debug(e)
         return jsonify({"error": "Error: 500, An error has occured while redeem the points"}), 500
     return jsonify({'message': 'Reward point successfully rewarded to listener'}), 200
+
 
 def send_coupon_email(receiver_email, coupon_name, promo_code):
     subject = f"Babelr coupon code for {coupon_name}"
@@ -580,23 +737,28 @@ def send_coupon_email(receiver_email, coupon_name, promo_code):
     except Exception as e:
         return jsonify({"error": "Error: 500, An error has occured while sending out the email"}), 500
 
+'''
 # This route is used to get the assigned audio file for a listener so that it can be played on the frontend
-# Args:
-#    Mandatory fields: None
-#    Optional fields: None
-#
 # NOTE: The route will return the first audio file assigned to the listener in the user's allocated audio list
-#       The route will return the file source path of the audio file for the frontend to play
-#
-# Returns:
-#    200: Audio file srcs path
-#    404: Listener not found
-#    400: Error: No audio file assigned to the listener
-#    400: Error: Invalid audio file format
-#    400: Error: Audio file does not exist
-#    500: Error: An error occurred while getting the audio file
+# The route will return the file source path of the audio file for the frontend to play
 
+ARGS:
+    - JWT Token: Token
 
+RESPONSE:
+    - 200: Audio file srcs path
+    - 404: Listener not found
+    - 400: No audio file assigned to the listener
+    - 400: Invalid audio file format
+    - 400: Audio file does not exist
+    - 500: An error occurred while getting the audio file
+
+RETURNS:
+    - str (Reward point successfully rewarded to listener)
+
+UPDATES:
+    - N/A
+'''
 @userBp.route('/getAssignedAudioFile', methods=['GET'])
 @jwt_required()
 def getAssignedAudio():
@@ -606,11 +768,6 @@ def getAssignedAudio():
 
         # check if listener is valid user
         listener = helpers.is_listener_id(listener_id)
-
-        logging.debug("**************************************************")
-        logging.debug(f"{listener}")
-
-
         if not listener:
             return jsonify({"error": "Listener not found"}), 404
 
@@ -629,23 +786,39 @@ def getAssignedAudio():
         # check if audio file exists
         if not audio_file:
             return jsonify({"error": "Audio file does not exist"}), 400
-        
+
         # assign file to currently_assigned_audio for listener
-        
         listener.currently_assigned_audio = audio_file
         flag_modified(listener, "currently_assigned_audio")
         db.session.add(listener)
         db.session.commit()
 
-        logging.debug(f"audio_file: {audio_file}")
-        
         # return uuid of the audio file
         return jsonify({"audio_file": str(audio_file)}), 200
-        
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": "Error: 500, An error occurred while getting the audio file"}), 500
 
+
+'''
+# Gets audio file from the file storage directory
+
+ARGS:
+    - JWT Token: Token
+    - audio_id: str
+
+RESPONSE:
+    - 200: Audio file srcs path
+    - 404: Listener not found
+    - 404: No assigned audio file
+    - 404: File not found
+
+RETURNS:
+    - Audio file with mimetype: audio/wav.
+
+UPDATES:
+    - N/A
+'''
 @userBp.route('/getAudioFile', methods=['POST'])
 @jwt_required()
 def getAudioFile():
@@ -655,26 +828,19 @@ def getAudioFile():
     validation_error = helpers.validate_required_fields(data, required_fields)
     if validation_error:
         return validation_error
-    
+
     audio_id = data['audio_id']
-    logging.debug(f'AUDIO ID IS {audio_id}')
-    
     id = get_jwt_identity()
     id = uuid.UUID(id)
     listener = helpers.is_listener_id(id)
     if not listener:
         return jsonify({"error": "Listener not found"}), 404
 
-    logging.debug(f"assigned audio {listener.allocated_audio_queue}")
-
     if len(listener.allocated_audio_queue) == 0:
         return jsonify({"error": "There is no assigned audio file"}), 404
-    # forgot to add to current before popping
-    # listener.currently_assigned_audio = listener.allocated_audio_queue[0]
-    # audio_file_id = listener.allocated_audio_queue.pop(0)
 
     audio_file = helpers.get_audio_from_audio_id(audio_id)
-    
+
     try:
         return send_file(audio_file.file_path, mimetype='audio/wav')
     except FileNotFoundError:
