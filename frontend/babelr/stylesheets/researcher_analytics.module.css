@@ -1,0 +1,63 @@
+.pageContainer {
+  display: flex;
+  background-color: #dfebed;
+  min-height: 100vh;
+}
+
+.contentContainer {
+  flex-grow: 1;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  margin-top: 50px;
+  padding: 24px;
+  gap: 32px;
+}
+
+.summaryBox {
+  flex-grow: 1;
+  border: 2px solid #f57c00;
+  border-radius: 8px;
+  padding: 16px;
+  background-color: #fff3e0;
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.demographicsBox {
+  width: 300px;
+  border: 2px solid #1976d2;
+  border-radius: 8px;
+  padding: 16px;
+  background-color: #e3f2fd;
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.graphBox {
+  flex-grow: 1;
+  border: 2px solid #1976d2;
+  border-radius: 8px;
+  padding: 16px;
+  background-color: #e3f2fd;
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tableBox {
+  border: 2px solid #388e3c;
+  border-radius: 8px;
+  padding: 16px;
+  background-color: #e8f5e9;
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.exportBox {
+  margin-top: 16px;
+}
+
+.heading {
+  margin-bottom: 16px;
+}
+.subHeading {
+  margin-bottom: 8px;
+}

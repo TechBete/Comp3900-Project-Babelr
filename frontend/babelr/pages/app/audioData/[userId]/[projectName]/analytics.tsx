@@ -8,7 +8,7 @@ import RatingsSummaryTable, { SummaryRowRes } from "components/analytics/rating_
 import RoleCheck from "components/role_checker";
 import Metrics from "components/analytics/metric_picker";
 
-import { styles } from "stylesheets/analytics.module";
+import styles from "stylesheets/researcher_analytics.module.css";
 import { Box, Typography, Divider} from '@mui/material';
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
@@ -133,44 +133,44 @@ export default function AnalyticsPage() {
   return (
     <RoleCheck requiredRole="researcher">
       <Navbar />
-      <Box sx={styles.pageContainer}>
+      <Box className={styles.pageContainer}>
         <Sidebar project_name={projectName} />
 
-        <Box sx={styles.contentContainer}>
-          <Typography variant="h4" sx={styles.heading}>
+        <Box className={styles.contentContainer}>
+          <Typography variant="h4" className={styles.heading}>
             Analytics Dashboard
           </Typography>
           {/* Top Section - Summary and demogrpahics */}
           <Box sx={{ display: "flex", gap: 2 }}>
             {/* Summary Box */}
-            <Box sx={styles.summaryBox}>
-              <Typography variant="h6" sx={styles.subHeading}>
+            <Box className={styles.summaryBox}>
+              <Typography variant="h6" className={styles.subHeading}>
                 Summary Statistics
               </Typography>
               <Divider sx={{ mb: 2 }} />
               {summaryData? <RatingsSummaryTable data={summaryData}/>: <div>No Data</div>}
             </Box>
             {/* Demographics Box*/}
-            <Box sx={styles.demographicsBox}>
+            <Box className={styles.demographicsBox}>
               <DemographicsBox projectName={projectName} />
             </Box>
           </Box>
 
           {/* Middle Section - Summary Stats (displaying as a graph) */}
-          <Box sx={styles.graphBox}>
+          <Box className={styles.graphBox}>
             {graphData ? <RatingChart data={graphData} /> : <div>No data</div>}
           </Box>
           <Metrics onMetricSelect={(metric: string) => setMetric(metric)}/>
 
           {/* Bottom Section - Raw Data Output */}
-          <Box sx={styles.tableBox}>
+          <Box className={styles.tableBox}>
             <Typography variant="h6" sx={{ mb: 1 }}>{metric} Data</Typography>
             <Divider sx={{ mb: 2 }} />
             {rawAudioData ? <RatingsTable data={rawAudioData} /> : <div>No Data</div>}
           </Box>
 
           {/* Export Buttons */}
-          <Box sx={styles.exportBox}>
+          <Box className={styles.exportBox}>
             <ExportButtons />
           </Box>
         </Box>
