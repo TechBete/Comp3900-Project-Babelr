@@ -32,7 +32,7 @@ describe("Home Listener Page", () => {
     expect(screen.getByText(/mocked navbar/i)).toBeInTheDocument();
 
     // Check if heading appears
-    expect(screen.getByRole('heading', { name: /user register/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Review Here/i })).toBeInTheDocument();
 
     // Check if instruction text appears
     expect(screen.getByText(/click the start rating button to begin/i)).toBeInTheDocument();
