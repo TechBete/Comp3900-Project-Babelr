@@ -49,7 +49,7 @@ const MetricsPage = () => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: name.includes("Value") ? Number(value) : value });
   };
-
+  // getting existing metrics from the backend
   const fetchMetrics = async () => {
     if (!projectName || typeof projectName !== "string") return;
 
@@ -77,14 +77,15 @@ const MetricsPage = () => {
       setMetrics(parsedMetrics);
     }
   };
-
+  // only fetches after getting the porject name 
   useEffect(() => {
     fetchMetrics();
   }, [projectName]);
 
+  // when a metric is either added or updated
   const handleSave = async () => {
     if (!projectName || typeof projectName !== "string") return;
-  
+    // error checking
     const errors: Record<string, string> = {};
     if (!form.name.trim()) errors.name = "Metric name is required";
     if (!form.minLabel.trim()) errors.minLabel = "Minimum label is required";
@@ -97,13 +98,13 @@ const MetricsPage = () => {
     setFormErrors(errors);
   
     if (Object.keys(errors).length > 0) return;
-  
+    // checks for duplicate metric names
     const existingNames = metrics.map((m) => m.name.toLowerCase());
     if (editingIndex === null && existingNames.includes(form.name.toLowerCase())) {
       setFormErrors({ name: "A metric with this name already exists" });
       return;
     }
-  
+    // picks the API call depending on whether the metric is being edited or created
     const url = editingIndex !== null
       ? `http://localhost:8016/projects/updateProjectMetrics`
       : `http://localhost:8016/projects/setProjectMetricField`;
@@ -140,7 +141,7 @@ const MetricsPage = () => {
     setEditingIndex(index);
     setModalOpen(true);
   };
-
+  // deleting a metric
   const handleDelete = async (index: number) => {
     if (!projectName || typeof projectName !== "string") return;
 
@@ -213,6 +214,7 @@ const MetricsPage = () => {
                 + Create New Metric
               </Button>
             </Box>
+            {/* displays the metrics  */}
             <Box mt={4}>
               {metrics.map((metric, index) => (
                 <Box key={index} className={styles.metricCard}>
@@ -235,6 +237,7 @@ const MetricsPage = () => {
                       {metric.minLabel} ({metric.minValue}) - {metric.maxLabel} ({metric.maxValue})
                     </Typography>
                   </Box>
+                  {/* edit and delete buttons */}
                   <Box className={styles.actionButtons}>
                     <Button variant="contained" onClick={() => handleEdit(index)}>Edit</Button>
                     <Button variant="contained" color="error" onClick={() => handleDelete(index)}>Delete</Button>
@@ -242,7 +245,7 @@ const MetricsPage = () => {
                 </Box>
               ))}
             </Box>
-
+            {/* editing and creating metric modal */}
             <Dialog open={modalOpen} onClose={handleClose}>
               <DialogTitle>{editingIndex !== null ? "Edit Metric" : "Add Metric"}</DialogTitle>
               <DialogContent>
