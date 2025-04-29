@@ -8,7 +8,7 @@ import RoleCheck from "components/role_checker";
 
 
 
-
+// displays each project in individual rows
 function Project({ project_name, path, status, creator_name } : { project_name: string; path: string; status: string; creator_name: string }) {
     console.log('status is', status);
     const StatusStyle = () => {
@@ -27,7 +27,7 @@ function Project({ project_name, path, status, creator_name } : { project_name: 
         </tr>
     );
 }
-
+// displays the whole list of projects
 function ProjectList({ projects }: { projects: { project_name: string; path: string; status: string; creator_name: string }[] }) {
     return (
         <tbody>
@@ -42,13 +42,14 @@ function ProjectList({ projects }: { projects: { project_name: string; path: str
 
 export default function MainScreen() {
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [projectName, setProjectName] = useState(""); // change this to empty string later for production
+    const [projectName, setProjectName] = useState("");
     const [createError, setCreateError] = useState("");
     const [projectsData, setProjectData] = useState([]);
 
     useEffect(() => {
         getProjects();
     }, [])
+    // gets the list of projects from the backend
     async function getProjects() {
         try {
             const response = await fetch('http://localhost:8016/projects/getProjects' , {
@@ -67,7 +68,7 @@ export default function MainScreen() {
 
         }
     } 
-
+    // handles creating a new project
     async function handleCreate(event: FormEvent<HTMLFormElement>) {
         event.preventDefault()
 
@@ -105,6 +106,7 @@ export default function MainScreen() {
                                 Your Projects     
                             </h2>
                         </div>
+                        {/* displays the list of projects */}
                         <table className={styles["table"]} >
                             <thead className={styles["thead"]}>
                                 <tr className={styles["tr"]}>
@@ -116,7 +118,7 @@ export default function MainScreen() {
                             </thead>
                             <ProjectList projects={projectsData}/>
                         </table>
-
+                        {/* modal to create a new project */}
                         <CreateButton onClick={() => setIsModalOpen(true)}></CreateButton>
                         <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} hasCloseBtn>
                             <h2 className={styles.modalTitle}>New Project</h2>

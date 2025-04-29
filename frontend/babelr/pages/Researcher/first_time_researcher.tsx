@@ -16,11 +16,10 @@ export default function First_time() {
         console.log(Error)
     }
 
-    // dont actually have demographics for researcher but can consider
     async function PostDemographics(formData: FormData) {
         console.log("DEMOGRAPHICS POST BELOW");
         console.log("after", JSON.stringify(Object.fromEntries(formData)));
-        router.push('project_list')// FOR NOW BEFORE OTHER ADD API CALLS ARE DEVELOPED
+        router.push('project_list')
         try {
             const response = await fetch(`http://localhost:8016/researcher/updateFirstTime`, {
                 method:"POST",
