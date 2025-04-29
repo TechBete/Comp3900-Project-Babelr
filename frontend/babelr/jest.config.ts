@@ -97,12 +97,11 @@ const config: Config = {
 
   // A map from regular expressions to module names or to arrays of module names that allow to stub out resources with a single module
   moduleNameMapper: {
+    '^components/(.*)$': '<rootDir>/components/$1',
+    '^stylesheets/(.*)$': '<rootDir>/stylesheets/$1',
     '^.+\\.module\\.(css|sass|scss)$': 'identity-obj-proxy',
     '^.+\\.(css|sass|scss)$': '<rootDir>/__mocks__/styleMock.ts',
     '^.+\\.(png|jpg|jpeg|gif|webp|avif|svg)$': '<rootDir>/__mocks__/fileMock.ts',
-    '^@/(.*)$': '<rootDir>/$1',
-    '^stylesheets/(.*)$': '<rootDir>/stylesheets/$1',
-    '^components/(.*)$': '<rootDir>/client/components/$1',
   },
 
   // An array of regexp pattern strings, matched against all module paths before considered 'visible' to the module loader
