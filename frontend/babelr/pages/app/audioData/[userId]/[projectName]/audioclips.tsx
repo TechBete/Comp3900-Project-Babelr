@@ -262,16 +262,18 @@ export default function FileUploadPage() {
                             <h2 className={styles.modalTitle}>Upload New Audio</h2>
 
                             <form onSubmit={handleUpload}>
-                                <label className={styles.formLabel}>Choose File</label>
+                                <label htmlFor="file" className={styles.formLabel}>Choose File</label>
                                 <input 
+                                    id="file"
                                     type="file" 
                                     accept="audio/*" 
                                     className={styles.fileInput} 
                                     onChange={handleFileChange} 
                                 />
 
-                            <label className={styles.formLabel}>Model</label>
+                            <label htmlFor="model" className={styles.formLabel}>Model</label>
                                 <input
+                                    id="model"
                                     type="text"
                                     value={model}
                                     onChange={(e) => setModel(e.target.value)}
@@ -279,8 +281,9 @@ export default function FileUploadPage() {
                                     required
                                 />
 
-                                <label className={styles.formLabel}>Language</label>
+                                <label htmlFor="language" className={styles.formLabel}>Language</label>
                                     <select
+                                        id="language"
                                         value={language}
                                         onChange={(e) => setLanguage(e.target.value)}
                                         className={styles.inputField}
@@ -294,8 +297,9 @@ export default function FileUploadPage() {
                                         ))}
                                     </select>
 
-                                <label className={styles.formLabel}>Language Proficiency</label>
+                                <label htmlFor="language proficiency" className={styles.formLabel}>Language Proficiency</label>
                                     <select
+                                        id="language proficiency"
                                         value={langProf}
                                         onChange={(e) => setLangProf(e.target.value as LangProf)}
                                         className={styles.inputField}
@@ -308,8 +312,9 @@ export default function FileUploadPage() {
                                         ))}
                                 </select>
 
-                                <label className={styles.formLabel}>Tags (comma separated)</label>
+                                <label htmlFor="tags" className={styles.formLabel}>Tags (comma separated)</label>
                                 <input
+                                    id="tags"
                                     type="text"
                                     value={tags}
                                     onChange={(e) => setTags(e.target.value)}
