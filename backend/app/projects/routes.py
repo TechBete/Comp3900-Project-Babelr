@@ -4,7 +4,7 @@ from app.models import Researcher, Project, AudioFile, ProjectStatus
 from flask import jsonify, request
 from app import db
 import app.helpers as helper
-import os, uuid, shutil, logging
+import os, uuid, shutil
 from sqlalchemy.orm.attributes import flag_modified
 from app.projects import projectsBp
 
