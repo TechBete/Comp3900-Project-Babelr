@@ -1,8 +1,14 @@
 import React, { useState, ChangeEvent, useEffect } from "react";
 import { useRouter } from "next/router";
 import {
-  Button, Dialog, DialogTitle, DialogContent,
-  TextField, Slider, Box, Typography
+  	Button, 
+	Dialog, 
+	DialogTitle, 
+	DialogContent,
+  	TextField, 
+	Slider, 
+	Box, 
+	Typography
 } from "@mui/material";
 import Navbar from "components/nav_bar_researcher";
 import Sidebar from "components/project_sidebar";
@@ -10,21 +16,21 @@ import RoleCheck from "components/role_checker";
 import styles from "stylesheets/researcher_metrics.module.css";
 
 interface Metric {
-  name: string;
-  minValue: number;
-  maxValue: number;
-  minLabel: string;
-  maxLabel: string;
-  description: string;
-  value: number;
+	name: string;
+	minValue: number;
+	maxValue: number;
+	minLabel: string;
+	maxLabel: string;
+	description: string;
+	value: number;
 }
 
 type RawMetric = {
-  min: number;
-  max: number;
-  "minimum label": string;
-  "maximum label": string;
-  description: string;
+	min: number;
+	max: number;
+	"minimum label": string;
+	"maximum label": string;
+	description: string;
 };
 
 const MetricsPage = () => {
