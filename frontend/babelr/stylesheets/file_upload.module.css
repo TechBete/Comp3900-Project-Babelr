@@ -194,7 +194,7 @@
     margin-top: 16px;
     width: 100%;
     padding: 10px;
-    background: #28a745;
+    background: #2b4450;
     color: white;
     border: none;
     border-radius: 5px;
@@ -203,7 +203,7 @@
 }
 
 .submitButton:hover {
-    background: #218838;
+    background: #1f333c;
 }
 
 /* Error Message */
