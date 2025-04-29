@@ -481,11 +481,11 @@ def createTestUser():
         languages=test_lang,
         is_verified=True,
         jti = None,
-        blindlogin = None, 
+        blindlogin = None,
         first_time=False,
         currently_assigned_audio=[],
         evaluation_history=[],
-        allocated_audio_queue=["3975b85e-05a5-4671-944b-d53b5a167420"],
+        allocated_audio_queue=[],
     )
 
     allocated_listener = Listener(
@@ -508,7 +508,7 @@ def createTestUser():
         first_time=False,
         currently_assigned_audio=[],
         evaluation_history=[],
-        allocated_audio_queue=["3975b85e-05a5-4671-944b-d53b5a167420"],
+        allocated_audio_queue=[],
     )
 
     user2 = Researcher(
@@ -518,13 +518,7 @@ def createTestUser():
         email=data2['email'],
         pw_hash=hashed_password2.value,
         permission=PermissionLevel.researcher,
-        project_list=[
-        {
-            "project_id": "3975b85e-05a5-4671-944b-d53b5a167420",
-            "project_name": "Test Project 1",
-            
-        }
-        ],
+        project_list=[],
         date_of_birth= data2["date_of_birth"],
         gender= data2["gender"],
         country_of_residence= data2["country_of_residence"],
@@ -535,7 +529,7 @@ def createTestUser():
         blindlogin = None,
         first_time=False,
     )
-    
+
     # update project and audio tables with information
 
     try:
