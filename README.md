@@ -12,11 +12,11 @@ To correctly implement the software framework in docker for the platform the sof
 
 >```./dockerInstall.sh```
 
-This shell script should be run on the first installation of the platform. It will install and build all the necessary containers, networks, packages, and volumes for the platform. A prompt will also present it self for validation for running the script.This script comprises of the following docker command ```docker-compose up --build```
+This shell script should be run on the first installation of the platform. It will install and build all the necessary containers, networks, packages, and volumes for the platform. A prompt will also present itself for validation for running the script.This script comprises of the following docker command ```docker-compose up --build```
 
 > ```./dockerRebuild.sh```
 
-This script will remove all volumes, containers, networks and saved data inside docker. The shell script will also create the overall framework. A prompt will also present it self for validation. This script comprises of the following docker commands ```docker-compose down -v and docker-compose up --build```
+This script will remove all volumes, containers, networks and saved data inside docker. The shell script will also create the overall framework. A prompt will also present itself for validation. This script comprises of the following docker commands ```docker-compose down -v and docker-compose up --build```
 
 > ```./dockerBoot.sh```
 
@@ -24,9 +24,9 @@ This script should be used to reboot the platform in docker. This script does no
 
 >```./dockerUninstall.sh```
 
-This script should be used if the user ever wants uninstall the Babelr platform as it will disassociate all containers, networks, packages and volumes from the platform. A prompt will also present it self for validation. This script will run the following docker command ```docker-compose down -v```
+This script should be used if the user ever wants uninstall the Babelr platform as it will disassociate all containers, networks, packages and volumes from the platform. A prompt will also present itself for validation. This script will run the following docker command ```docker-compose down -v```
 
-<h5><u> Babelr Installation: </u></h5>
+<h4><u> Babelr Installation: </u></h4>
 
 If this is the first time the user is installing the platform, the user should run the ```./dockerInstall.sh``` script in the root directory to build the software framework.
 
