@@ -62,7 +62,7 @@ export default function FileUploadPage() {
     const [audioData, setAudioData] = useState<AudioData[]>([]);
     const [status, setStatus] = useState('');
     
-
+    // fetches when projectname changes or is available
     useEffect(() => {
         if (typeof projectName === 'string') {
             async function fetchProject()  {
@@ -73,12 +73,13 @@ export default function FileUploadPage() {
             }
             fetchProject();
         }
-    },[projectName, status] ); // <- only runs when projectName changes
+    },[projectName, status] ); 
 
+    // else returns Loading? to catch errors getting projectName
     if (typeof projectName !== 'string') {
         return <div>Loading?</div>;
     }
-
+    // changes project status to 'in_progress' when start button is clicked
     async function startProject() {
         try {
             const response = await fetch('http://localhost:8016/projects/updateProjectStatus' , {
@@ -99,7 +100,7 @@ export default function FileUploadPage() {
         } catch {
         } 
     }
-
+    // fetches current status 
     async function getProjectStatus(): Promise<string> {
         try {
             const response = await fetch('http://localhost:8016/projects/getProject' , {
@@ -123,7 +124,7 @@ export default function FileUploadPage() {
             return ''
         }
     }
-
+    // gets all the audio clips for the project
     async function getAudioClips() {
         console.log('project name is ',JSON.stringify({project_name: projectName}))
         try {
@@ -161,7 +162,7 @@ export default function FileUploadPage() {
         }
     } 
     
-
+    
     function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
         if (event.target.files && event.target.files.length > 0) {
             const selectedFile = event.target.files[0];
@@ -180,7 +181,6 @@ export default function FileUploadPage() {
 
         const fileExtension = file.name.split(".").pop(); // Keep original extension
         const newFileName = `${fileName}.${fileExtension}`;
-        //const combinedTags = [model, language, langProf, tags].filter(Boolean).join(",");
 
         const formData = new FormData();
         formData.append("file", file);
@@ -232,7 +232,6 @@ export default function FileUploadPage() {
                     <Sidebar project_name={projectName}></Sidebar>
                     <div className={styles.mainContent}>
                         <Typography variant="h4" gutterBottom>Audio Library</Typography>
-                        {/* <h2 className={styles.heading}>Audio Library</h2> */}
 
                         {/* Metrics Section */}
                         <div className={styles.metricsContainer}>
@@ -249,29 +248,31 @@ export default function FileUploadPage() {
                                 <p>{audioData.filter(audio => audio.evaluated).length}</p>
                             </div>
                         </div>
-
+                        {/* status buttons */}
                         <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end' }}>
                             <Button className={`${styles.startButton} ${status === 'in_progress' ? styles.inProgress : ''}`} sx={{ marginLeft: "auto" }}  onClick={() => startProject()}>
                                 {status === 'in_progress'? "In Progress" : "Start"} 
                             </Button>
                             <Button className={styles.addAudioBtn} sx={{ marginLeft: "20px" }}  onClick={() => setIsModalOpen(true)}> + </Button>
                         </Box>
-
+                        {/* audio clips table */}
                         <Table audioData={audioData}></Table>
                         <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} hasCloseBtn>
                             <h2 className={styles.modalTitle}>Upload New Audio</h2>
 
                             <form onSubmit={handleUpload}>
-                                <label className={styles.formLabel}>Choose File</label>
+                                <label htmlFor="file" className={styles.formLabel}>Choose File</label>
                                 <input 
+                                    id="file"
                                     type="file" 
                                     accept="audio/*" 
                                     className={styles.fileInput} 
                                     onChange={handleFileChange} 
                                 />
 
-                            <label className={styles.formLabel}>Model</label>
+                            <label htmlFor="model" className={styles.formLabel}>Model</label>
                                 <input
+                                    id="model"
                                     type="text"
                                     value={model}
                                     onChange={(e) => setModel(e.target.value)}
@@ -279,8 +280,9 @@ export default function FileUploadPage() {
                                     required
                                 />
 
-                                <label className={styles.formLabel}>Language</label>
+                                <label htmlFor="language" className={styles.formLabel}>Language</label>
                                     <select
+                                        id="language"
                                         value={language}
                                         onChange={(e) => setLanguage(e.target.value)}
                                         className={styles.inputField}
@@ -294,8 +296,9 @@ export default function FileUploadPage() {
                                         ))}
                                     </select>
 
-                                <label className={styles.formLabel}>Language Proficiency</label>
+                                <label htmlFor="language proficiency" className={styles.formLabel}>Language Proficiency</label>
                                     <select
+                                        id="language proficiency"
                                         value={langProf}
                                         onChange={(e) => setLangProf(e.target.value as LangProf)}
                                         className={styles.inputField}
@@ -308,8 +311,9 @@ export default function FileUploadPage() {
                                         ))}
                                 </select>
 
-                                <label className={styles.formLabel}>Tags (comma separated)</label>
+                                <label htmlFor="tags" className={styles.formLabel}>Tags (comma separated)</label>
                                 <input
+                                    id="tags"
                                     type="text"
                                     value={tags}
                                     onChange={(e) => setTags(e.target.value)}

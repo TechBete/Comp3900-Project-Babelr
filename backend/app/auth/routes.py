@@ -26,13 +26,11 @@ RESPONSE:
 
 RETURNS:
     - redirect to login page
-    
+
 UPDATES:
     - Database: Listener, Researcher
     - is_verified: bool
 '''
-
-# this route is to verify a user's email address
 @authBp.route('/verify/<token>')
 def verify_email(token):
     email = helper.verify_token(token)
@@ -72,7 +70,7 @@ RESPONSE:
     - 401: Invalid email-password combination
     - 404: Email not verified
     - 500: Internal server error
-    
+
 RETURNS:
     - None
 
@@ -115,9 +113,7 @@ def login():
 
     # assign user to either researcher or listener
     existing_researcher = helper.is_researcher_email(Email)
-    logging.debug(existing_researcher)
     existing_listener = helper.is_listener_email(Email)
-    logging.debug(existing_listener)
 
     # updated for researcher login; check if user is a listener or researcher,
     # updated token id as uuid for validation in backend routes.
@@ -177,7 +173,7 @@ def login():
 
 ARGS:
     - None
-    
+
 RESPONSE:
     - 200: Successful logout
 
@@ -189,9 +185,6 @@ UPDATES:
     - jti: None
 
 '''
-
-#logout route needs work to get it implemented correctly
-# unset cookie on logout - look into this when possible
 @authBp.route('/logout', methods=['POST'])
 @jwt_required()
 def logout():
@@ -214,7 +207,7 @@ ARGS:
     - last_name: str
     - email: str
     - pw: str
-    
+
 RESPONSE:
     - 200: Successful registration
     - 400: Validation error
@@ -223,18 +216,16 @@ RESPONSE:
     - 401: Invalid email-password combination
     - 409: Email already registered
     - 500: Internal server error
-    
+
 RETURNS:
     - None
-    
+
 UPDATES:
     - Database: Listener
     - AudioFile: allocated_listeners
     - Project: allocated_listeners
 
 '''
-
-# this route is for a Listener user to register to the platform
 @authBp.route('/registerListener', methods=['POST'])
 def createListener():
     data = request.json
@@ -289,14 +280,13 @@ def createListener():
     reward2 = RedeemShop(
         name = 'Coles',
         point = 0,
-        promo_code = 'htk3-htk2-ffas-kfna',
+        promo_code = 'wt89-w24w-adsb-q3tg',
     )
 
     try:
         db.session.add(reward1)
         db.session.add(reward2)
         db.session.add(user)
-        #assignQualifiedAudio(user)
         db.session.commit()
         # this redirects to a 404 page, need to check that routing is done correctly
         # to redirect to the login page
@@ -305,11 +295,9 @@ def createListener():
         helper.send_verification_email(data['email'], verification_url)
     except IntegrityError as e:
         db.session.rollback()
-        logging.debug(e)
         return jsonify({"error": "Database integrity error: 400"}), 400
     except Exception as e:
         db.session.rollback()
-        logging.debug(e)
         return jsonify({"error": "Error Code: 500"}), 500
 
     # Ensure languages_proficiency is serialized as a list
@@ -337,15 +325,13 @@ RESPONSE:
     - 401: Invalid email-password combination
     - 403: User already registered
     - 500: Internal server error
-    
+
 RETURNS:
     - None
-    
+
 UPDATES:
-    - Database: Researcher 
-    
+    - Database: Researcher
 '''
-# this route is for a Researcher user to register to the platform
 @authBp.route('/registerResearcher', methods=['POST'])
 def createResearcher():
     data = request.json
@@ -386,7 +372,7 @@ def createResearcher():
         blindlogin = None,
         first_time =True
     )
-    
+
     try:
         db.session.add(user)
         db.session.commit()
@@ -397,22 +383,16 @@ def createResearcher():
         helper.send_verification_email(data['email'], verification_url)
     except IntegrityError as e:
         db.session.rollback()
-        logging.debug(e)
         return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
     except Exception as e:
         db.session.rollback()
-        logging.debug(e)
         return jsonify({"error": "Error Code: 500"}), 500
     return jsonify({"message": "Registration Successful"})
 
 '''
-# this function is for a user to create a test user
-# necessary for presentation purposes but can be removed 
-# before deployment
+# this function is for creating test users
+# please refer to how to create test user and how they interacts based on this function
 '''
-
-# remove this function before Prod
-# update route for project and audio creation
 def createTestUser():
     data = {
         "first_name": "Alice",
@@ -424,7 +404,7 @@ def createTestUser():
         "education": "Bachelor of Arts",
         "gender": "other",
     }
-    
+
     data2 = {
         "first_name": "Jim",
         "last_name": "Bill",
@@ -481,11 +461,11 @@ def createTestUser():
         languages=test_lang,
         is_verified=True,
         jti = None,
-        blindlogin = None, 
+        blindlogin = None,
         first_time=False,
         currently_assigned_audio=[],
         evaluation_history=[],
-        allocated_audio_queue=["3975b85e-05a5-4671-944b-d53b5a167420"],
+        allocated_audio_queue=[],
     )
 
     allocated_listener = Listener(
@@ -508,7 +488,7 @@ def createTestUser():
         first_time=False,
         currently_assigned_audio=[],
         evaluation_history=[],
-        allocated_audio_queue=["3975b85e-05a5-4671-944b-d53b5a167420"],
+        allocated_audio_queue=[],
     )
 
     user2 = Researcher(
@@ -518,13 +498,7 @@ def createTestUser():
         email=data2['email'],
         pw_hash=hashed_password2.value,
         permission=PermissionLevel.researcher,
-        project_list=[
-        {
-            "project_id": "3975b85e-05a5-4671-944b-d53b5a167420",
-            "project_name": "Test Project 1",
-            
-        }
-        ],
+        project_list=[],
         date_of_birth= data2["date_of_birth"],
         gender= data2["gender"],
         country_of_residence= data2["country_of_residence"],
@@ -535,7 +509,7 @@ def createTestUser():
         blindlogin = None,
         first_time=False,
     )
-    
+
     # update project and audio tables with information
 
     try:
@@ -550,55 +524,19 @@ def createTestUser():
             if not existing_listener:
                 db.session.add(allocated_listener)
             db.session.commit()
-            # update audio and project tables with information
-            # db.session.add(test_project)
-            # db.session.add(test_audio)
-            # db.session.commit()
         # no need to send verification email for testing account
     except IntegrityError as e:
         db.session.rollback()
-        logging.debug(e)
         return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
     except Exception as e:
         db.session.rollback()
-        logging.debug(e)
-        return jsonify({"error": "Error Code: 500"}), 500
-    return jsonify({"message": "Registration Successful"})
-
-def createTestRewards():
-    woolies = RedeemShop(
-        name="Woolworhts",
-        point=2,
-        promo_code="GETWOOLIESSALE"
-    )
-    coles = RedeemShop(
-        name="Coles",
-        point=5,
-        promo_code="PROMOCOLES"
-    )
-    try:
-        with db.session.begin_nested():
-            existing_reward = helper.is_reward_name(woolies.name)
-            if not existing_reward:
-                db.session.add(woolies)
-            existing_reward = helper.is_reward_name(coles.name)
-            if not existing_reward:
-                db.session.add(coles)
-            db.session.commit()
-    except IntegrityError as e:
-        db.session.rollback()
-        logging.debug(e)
-        return jsonify({"error": "Database integrity error: " + "Error Code 400"}), 400
-    except Exception as e:
-        db.session.rollback()
-        logging.debug(e)
         return jsonify({"error": "Error Code: 500"}), 500
     return jsonify({"message": "Registration Successful"})
 
 '''
 # this route is to update (reset) a user's password
 # this is done by sending a post request to the /userResetPassword endpoint
-# the user must provide a new password and the password confirmationation string (same password) 
+# the user must provide a new password and the password confirmationation string (same password)
 # in the request body.
 # the users JWT is verified then the password is updated in the database
 # the user must be logged in to access this route
@@ -621,15 +559,13 @@ RESPONSE:
     - 500: Database integrity error
     - 500: Database rollback error
     - 500: Internal server error
-    
+
 RETURNS:
     - None
-    
+
 UPDATES:
     - pw_hash: str
 '''
-
-# this route is to reset a user's password
 @authBp.route('/userResetPassword', methods=['POST'])
 @jwt_required()
 def userResetPassword():
@@ -680,7 +616,6 @@ def userResetPassword():
             return jsonify({"message": "Password reset successful"}), 200
         except Exception as e:
             db.session.rollback()
-            logging.debug(e)
             return jsonify({"error": "Error: 500, An error has occured while updating the password"}), 500
 
 '''
@@ -694,7 +629,7 @@ def userResetPassword():
 
 ARGS:
     - email: str
-    
+
 RESPONSE:
     - 200: verification email sent (tbd)
     - 200: blind login uuid generated
@@ -709,13 +644,11 @@ RESPONSE:
 RETURNS:
     - blindlogin: str(uuid)
     - email: str
-    
+
 UPDATES:
     - blindlogin: str(uuid)
-        
+
 '''
-# this route is to reset a user's password if they have forgotten thier password
-# this is to be updated to use email user verification once decerntralization is implemented
 @authBp.route('/blindEmailParse', methods=['POST'])
 def blindEmailParse():
     data = request.json
@@ -740,20 +673,19 @@ def blindEmailParse():
     existing_researcher = helper.is_researcher_email(Email)
 
     # return blind login uuid
-    # need to update this to send the uuid to the email
     if existing_listener:
         existing_listener.blindlogin = uuid.uuid4()
-        db.session.commit() # update the database with the new blind login uuid, atomic commit
-        return jsonify({"listener_id": str(existing_listener.blindlogin), "email": str(existing_listener.email)}), 200 # added underscore for my sanity
+        db.session.commit()
+        return jsonify({"listener_id": str(existing_listener.blindlogin), "email": str(existing_listener.email)}), 200
     else:
         existing_researcher.blindlogin = uuid.uuid4()
         db.session.commit() # update the database with the new blind login uuid, atomic commit
-        return jsonify({"researcher_id": str(existing_researcher.blindlogin), "email": str(existing_researcher.email)}), 200   # added underscore for my sanity
+        return jsonify({"researcher_id": str(existing_researcher.blindlogin), "email": str(existing_researcher.email)}), 200
 
 '''
 # this route is to reset a user's password if they have forgotten thier password
 # this is done by sending a post request to the /blindPasswordReset endpoint
-# the user must provide their new password and the password confirmationation string (same password), 
+# the user must provide their new password and the password confirmationation string (same password),
 # as well as the blind login uuid in the request body
 # the password is then validated and checked against the database and updated
 
@@ -776,13 +708,12 @@ RESPONSE:
 
 RETURNS:
     - None
-    
+
 UPDATES:
     - pw_hash: str
     - blindlogin: str(uuid)
-    
+
 '''
-# this route is to reset a user's password if they have forgotten thier password after email verification
 @authBp.route('/blindPasswordReset', methods=['POST'])
 def blindPasswordReset():
     data = request.json
@@ -813,7 +744,6 @@ def blindPasswordReset():
 
         if pw_validated:
             return jsonify({"error": "Error: Password cannot be the same as the previous password"}), 400
-       
         try:
             isUser.pw_hash = hashed_password.value
             isUser.blindlogin = None
@@ -823,7 +753,6 @@ def blindPasswordReset():
             return jsonify({"message": "Password reset successful"}), 200
         except Exception as e:
             db.session.rollback()
-            logging.debug(e)
             return jsonify({"error": "Error: 500, An error has occured while updating the password"}), 500
 
 '''
@@ -835,14 +764,14 @@ def blindPasswordReset():
 
 ARGS:
     - None
-    
+
 RESPONSE:
     - 200: Successful
     - 400: Validation error
     - 401: Invalid token
     - 404: User not found
     - 500: Internal server error
-    
+
 RETURNS:
     - role: str
 
@@ -850,7 +779,6 @@ UPDATES:
     - first_time: bool
 
 '''
-# this route is to get the role of a user
 @authBp.route('/getRoleFromID', methods=['GET'])
 @jwt_required()
 def getRoleFromID():
@@ -874,4 +802,3 @@ def getRoleFromID():
         return jsonify({"role": str(role), "first_time": first_time})
     else:
         return jsonify({"error": "User ID not found"}), 404
-    
