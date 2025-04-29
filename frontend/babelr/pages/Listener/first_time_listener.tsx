@@ -106,7 +106,7 @@ export default function First_time() {
                                     onChange={(e) => setCountry(e.target.value)}
                                     required
                                 >       
-                                    <option value="" disabled selected>Select Your Country of Residence</option> 
+                                    <option value="" disabled>Select Your Country of Residence</option> 
                                     <option>Australia</option>
                                     <option>USA</option>
                                     <option>UK</option>
@@ -124,7 +124,7 @@ export default function First_time() {
                                     onChange={(e) => setEducation(e.target.value)}
                                     required
                                     >
-                                    <option value="" disabled selected>Select Your Education Level</option> 
+                                    <option value="" disabled>Select Your Education Level</option> 
                                     <option>University</option>
                                     <option>High School</option>
                                     <option>Elementary</option>
